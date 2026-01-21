@@ -11,8 +11,8 @@
 /typo3-installer.phar
 /.env
 /.env.local
-/typo3-test-installation/*
-!/typo3-test-installation/.gitkeep
+/test-installer-root/public/*
+!/test-installer-root/public/.gitkeep
 /var/
 /.phpstan.cache
 /frontend/dist/

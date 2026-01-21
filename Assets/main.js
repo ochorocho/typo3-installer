@@ -1,4 +1,5 @@
-// Main entry point - imports all components
+// Main entry point - imports styles and all components
+import './styles/main.css';
 import './components/installer-app.js';
 import './components/step-packages.js';
 import './components/step-requirements.js';

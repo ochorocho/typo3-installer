@@ -40,9 +40,9 @@ class Application
             return $this->handleApiRequest($path, $method, $request);
         }
 
-        // Serve static assets (JS, CSS)
-        if (str_starts_with($path, '/assets/')) {
-            return $this->serveAsset($path);
+        // Serve static assets (JS, CSS) - files like /installer.js, /installer.css
+        if (preg_match('/^\/(installer\.(js|css))$/', $path, $matches)) {
+            return $this->serveAsset($matches[1]);
         }
 
         // Serve frontend
@@ -69,26 +69,11 @@ class Application
         }
     }
 
-    private function serveAsset(string $path): Response
+    private function serveAsset(string $filename): Response
     {
-        // Remove leading /assets/ to get the filename
-        $filename = substr($path, 8); // "/assets/" is 8 characters
-
-        // Security: only allow specific file extensions and no path traversal
-        if (str_contains($filename, '..') || str_contains($filename, '/')) {
-            return new Response('Not found', 404);
-        }
-
         $contentTypes = [
             'js' => 'application/javascript',
             'css' => 'text/css',
-            'html' => 'text/html',
-            'svg' => 'image/svg+xml',
-            'png' => 'image/png',
-            'jpg' => 'image/jpeg',
-            'gif' => 'image/gif',
-            'woff' => 'font/woff',
-            'woff2' => 'font/woff2',
         ];
 
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
@@ -116,17 +101,6 @@ class Application
 
     private function serveFrontend(): Response
     {
-        // Determine if we're running from PHAR or development
-        $assetPath = $this->getAssetPath();
-
-        if (file_exists($assetPath . '/index.html')) {
-            $content = file_get_contents($assetPath . '/index.html');
-            if ($content !== false) {
-                return new Response($content, 200, ['Content-Type' => 'text/html']);
-            }
-        }
-
-        // Fallback to simple HTML if assets not built yet
         return new Response($this->getDefaultHtml(), 200, ['Content-Type' => 'text/html']);
     }
 
@@ -134,10 +108,10 @@ class Application
     {
         // Check if running from PHAR
         if (str_starts_with(__FILE__, 'phar://')) {
-            return 'phar://' . \Phar::running(false) . '/public/assets';
+            return 'phar://' . \Phar::running(false) . '/public';
         }
 
-        return __DIR__ . '/../public/assets';
+        return __DIR__ . '/../public';
     }
 
     private function getDefaultHtml(): string
@@ -149,32 +123,11 @@ class Application
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TYPO3 Installer</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background: #f5f5f5;
-        }
-        .container {
-            text-align: center;
-            padding: 2rem;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        h1 { color: #ff8700; }
-    </style>
+    <script type="module" crossorigin src="/installer.js"></script>
+    <link rel="stylesheet" crossorigin href="/installer.css">
 </head>
 <body>
-    <div class="container">
-        <h1>TYPO3 Installer</h1>
-        <p>Assets not built. Please run:</p>
-        <code>composer run build:frontend</code>
-    </div>
+    <installer-app></installer-app>
 </body>
 </html>
 HTML;

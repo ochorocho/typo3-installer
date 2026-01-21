@@ -42,7 +42,7 @@
             "@build:phar"
         ],
         "build:frontend": "npm install && npm run build",
-        "build:phar": "box compile",
+        "build:phar": "box compile && cp -Rp typo3-installer.phar test-installer-root/public/",
         "serve": "php -S localhost:8080 -t public/",
         "test:unit": "phpunit",
         "test:e2e": "cd tests/e2e && npx playwright test",

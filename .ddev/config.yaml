@@ -1,7 +1,8 @@
 name: typo3-installer
 type: php
-docroot: public
-# docroot: "typo3-test-install/public/"
+# docroot: public
+# Use a dedicated folder for testing. The folder should be (almost) empty.
+docroot: "test-installer-root/public/"
 php_version: "8.3"
 webserver_type: nginx-fpm
 xdebug_enabled: false

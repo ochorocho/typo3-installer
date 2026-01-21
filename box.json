@@ -6,7 +6,7 @@
     "main": "src/bootstrap.php",
     "directories": [
         "src",
-        "public/assets"
+        "public"
     ],
     "finder": [
         {
@@ -14,7 +14,9 @@
             "exclude": [
                 "Tests",
                 "tests",
-                "humbug"
+                "humbug",
+                "node_modules",
+                "test-installer-root"
             ],
             "in": "vendor"
         }
