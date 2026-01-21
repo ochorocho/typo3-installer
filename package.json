@@ -1,0 +1,19 @@
+{
+  "name": "typo3-installer",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lit": "^3.1.0",
+    "@lit/context": "^1.1.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "vite-plugin-singlefile": "^2.0.0",
+    "terser": "^5.36.0"
+  }
+}

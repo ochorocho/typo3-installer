@@ -1,0 +1,61 @@
+{
+    "name": "typo3/installer",
+    "description": "Self-contained TYPO3 CMS installer - single PHAR file for easy installation",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "TYPO3 Community"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "ext-json": "*",
+        "ext-pdo": "*",
+        "ext-fileinfo": "*",
+        "composer/composer": "^2.7",
+        "symfony/console": "^7.0",
+        "symfony/filesystem": "^7.0",
+        "symfony/process": "^7.0",
+        "symfony/http-foundation": "^7.0",
+        "psr/log": "^3.0",
+        "monolog/monolog": "^3.0"
+    },
+    "require-dev": {
+        "humbug/box": "^4.6",
+        "phpunit/phpunit": "^11.0",
+        "phpstan/phpstan": "^1.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "TYPO3\\Installer\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "TYPO3\\Installer\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "build": [
+            "@build:frontend",
+            "@build:phar"
+        ],
+        "build:frontend": "npm install && npm run build",
+        "build:phar": "box compile",
+        "serve": "php -S localhost:8080 -t public/",
+        "test:unit": "phpunit",
+        "test:e2e": "cd tests/e2e && npx playwright test",
+        "install:playwright": "cd tests/e2e && npm install && npx playwright install",
+        "phpstan": "phpstan analyse src --level=9"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

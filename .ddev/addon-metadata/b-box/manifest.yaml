@@ -1,0 +1,14 @@
+name: b-box
+repository: /Users/jochen/Development/b-box/
+version: ""
+install_date: "2026-01-21T11:09:23+01:00"
+project_files: []
+global_files:
+    - commands/web/mmfb
+    - global_config.b-box.example.yaml
+removal_actions:
+    - |
+      #ddev-description:Removing b-box files
+      rm -f ~/.ddev/commands/web/mmfb
+      rm -f ~/.ddev/global_config.b-box.example.yaml
+      echo "b-box add-on removed. Your config file (~/.ddev/global_config.b-box.yaml) was preserved."

@@ -1,0 +1,18 @@
+{
+  "name": "typo3-installer-e2e",
+  "version": "1.0.0",
+  "description": "E2E tests for TYPO3 Installer",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test api.spec.js",
+    "test:ui": "playwright test installer.spec.js --ui",
+    "test:ui-only": "playwright test installer.spec.js",
+    "test:headed": "playwright test --headed",
+    "test:all": "playwright test --reporter=html",
+    "test:debug": "playwright test --debug"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}

@@ -1,0 +1,27 @@
+{
+    "chmod": "0755",
+    "compression": "GZ",
+    "output": "typo3-installer.phar",
+    "stub": "stub.php",
+    "main": "src/bootstrap.php",
+    "directories": [
+        "src",
+        "public/assets"
+    ],
+    "finder": [
+        {
+            "name": "*.php",
+            "exclude": [
+                "Tests",
+                "tests",
+                "humbug"
+            ],
+            "in": "vendor"
+        }
+    ],
+    "blacklist": [
+        "vendor/humbug"
+    ],
+    "exclude-composer-files": true,
+    "exclude-dev-files": true
+}
