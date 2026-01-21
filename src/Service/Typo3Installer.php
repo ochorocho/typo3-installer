@@ -104,6 +104,8 @@ class Typo3Installer
         try {
             chdir($installDir);
             putenv('COMPOSER_HOME=' . sys_get_temp_dir() . '/composer');
+            // Set absolute path for composer.json to avoid PHAR path resolution issues
+            putenv('COMPOSER=' . $installDir . '/composer.json');
 
             $input = new ArrayInput([
                 'command' => 'init',
@@ -133,6 +135,8 @@ class Typo3Installer
             if ($originalDir !== false) {
                 chdir($originalDir);
             }
+            // Clean up COMPOSER env var
+            putenv('COMPOSER');
         }
     }
 
@@ -157,29 +161,30 @@ class Typo3Installer
         /** @var array<string, mixed> $composerJson */
         $composerJson = $decoded;
 
+        // Ensure require is an object, not an array (composer init may create [])
+        if (!isset($composerJson['require']) || $composerJson['require'] === []) {
+            $composerJson['require'] = new \stdClass();
+        }
+
         // Add TYPO3 configuration
         $composerJson['config'] = [
             'allow-plugins' => [
-                'typo3/cms-composer-installers' => true,
                 'typo3/class-alias-loader' => true,
+                'typo3/cms-composer-installers' => true,
             ],
             'sort-packages' => true,
         ];
 
         $composerJson['extra'] = [
             'typo3/cms' => [
+                // @todo: set this dynamically to the current directory name the phar file was executed in.
                 'web-dir' => 'public',
             ],
         ];
 
-        $composerJson['scripts'] = [
-            'typo3-cms-scripts' => [
-                'typo3cms install:generatepackagestate',
-            ],
-            'post-autoload-dump' => [
-                '@typo3-cms-scripts',
-            ],
-        ];
+        // @todo: Add scripts section, see whats needed.
+        //        $composerJson['scripts'] = [
+        //        ];
 
         file_put_contents(
             $composerJsonPath,
@@ -203,6 +208,8 @@ class Typo3Installer
         try {
             chdir($installDir);
             putenv('COMPOSER_HOME=' . sys_get_temp_dir() . '/composer');
+            // Set absolute path for composer.json to avoid PHAR path resolution issues
+            putenv('COMPOSER=' . $installDir . '/composer.json');
 
             // Build package list with version constraint
             $packagesWithVersion = array_map(
@@ -214,7 +221,6 @@ class Typo3Installer
                 'command' => 'require',
                 'packages' => $packagesWithVersion,
                 '--no-interaction' => true,
-                '--no-dev' => true,
                 '--prefer-dist' => true,
             ]);
 
@@ -235,6 +241,8 @@ class Typo3Installer
             if ($originalDir !== false) {
                 chdir($originalDir);
             }
+            // Clean up COMPOSER env var
+            putenv('COMPOSER');
         }
     }
 
@@ -359,8 +367,12 @@ YAML;
         $process->run();
 
         if (!$process->isSuccessful()) {
+            $errorOutput = $process->getErrorOutput();
+            $standardOutput = $process->getOutput();
+            $combinedOutput = trim($errorOutput . "\n" . $standardOutput);
+
             throw new \RuntimeException(
-                sprintf('TYPO3 command "%s" failed: %s', $command, $process->getErrorOutput())
+                sprintf('TYPO3 command "%s" failed: %s', $command, $combinedOutput ?: 'Unknown error')
             );
         }
     }

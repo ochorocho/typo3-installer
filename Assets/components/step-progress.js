@@ -368,7 +368,8 @@ export class StepProgress extends LitElement {
       return html`
         <div class="error-message">
           <h3>Installation Failed</h3>
-          <pre>${installation.error}</pre>
+          <pre>${installation.error.message}</pre>
+          <pre>${installation.error.details}</pre>
         </div>
       `;
     }
