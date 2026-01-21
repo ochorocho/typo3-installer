@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace TYPO3\Installer;
 
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use TYPO3\Installer\Api\RequirementsCheckController;
 use TYPO3\Installer\Api\DatabaseController;
+use TYPO3\Installer\Api\InfoController;
 use TYPO3\Installer\Api\InstallController;
 use TYPO3\Installer\Api\PackageController;
-use TYPO3\Installer\Api\InfoController;
+use TYPO3\Installer\Api\RequirementsCheckController;
 
 /**
  * Main application class that handles routing and request dispatching
@@ -68,7 +68,7 @@ class Application
         } catch (\Throwable $e) {
             return new JsonResponse([
                 'error' => true,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }

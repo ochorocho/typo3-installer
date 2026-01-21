@@ -18,8 +18,7 @@ class InstallationConfig
         public readonly SiteConfig $site,
         public readonly array $packages,
         public readonly string $installPath = 'typo3-test-install'
-    ) {
-    }
+    ) {}
 
     /**
      * @param array<string, mixed> $data
@@ -60,8 +59,7 @@ class DatabaseConfig
         public readonly string $name,
         public readonly string $user,
         public readonly string $password
-    ) {
-    }
+    ) {}
 
     /**
      * @param array<string, mixed> $data
@@ -69,7 +67,7 @@ class DatabaseConfig
     public static function fromArray(array $data): self
     {
         $rawPort = $data['port'] ?? 3306;
-        $port = is_int($rawPort) ? $rawPort : (is_numeric($rawPort) ? (int) $rawPort : 3306);
+        $port = is_int($rawPort) ? $rawPort : (is_numeric($rawPort) ? (int)$rawPort : 3306);
 
         return new self(
             is_string($data['driver'] ?? null) ? $data['driver'] : 'pdo_mysql',
@@ -91,8 +89,7 @@ class AdminConfig
         public readonly string $username,
         public readonly string $password,
         public readonly string $email
-    ) {
-    }
+    ) {}
 
     /**
      * @param array<string, mixed> $data
@@ -115,8 +112,7 @@ class SiteConfig
     public function __construct(
         public readonly string $name,
         public readonly string $baseUrl
-    ) {
-    }
+    ) {}
 
     /**
      * @param array<string, mixed> $data

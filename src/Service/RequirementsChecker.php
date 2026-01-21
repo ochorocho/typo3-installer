@@ -138,7 +138,7 @@ class RequirementsChecker
      */
     private function checkMemoryLimit(): array
     {
-        $memoryLimitStr = (string) (ini_get('memory_limit') ?: '128M');
+        $memoryLimitStr = (string)(ini_get('memory_limit') ?: '128M');
         $memoryLimitBytes = $this->convertToBytes($memoryLimitStr);
         $recommendedBytes = 256 * 1024 * 1024; // 256M
 
@@ -158,15 +158,17 @@ class RequirementsChecker
     {
         $value = trim($value);
         $last = strtolower($value[strlen($value) - 1]);
-        $value = (int) $value;
+        $value = (int)$value;
 
         switch ($last) {
             case 'g':
                 $value *= 1024;
                 // fall through
+                // no break
             case 'm':
                 $value *= 1024;
                 // fall through
+                // no break
             case 'k':
                 $value *= 1024;
         }

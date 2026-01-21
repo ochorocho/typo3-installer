@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace TYPO3\Installer\Service;
 
-use PDO;
-use PDOException;
-
 /**
  * Service for testing database connections
  */
@@ -28,19 +25,19 @@ class DatabaseTester
         try {
             $dsn = $this->buildDsn($driver, $host, $port, $name);
 
-            $pdo = new PDO(
+            $pdo = new \PDO(
                 $dsn,
                 $user,
                 $password,
                 [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                    \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
                 ]
             );
 
             // Test if we can actually query the database
             $pdo->query('SELECT 1');
-        } catch (PDOException $e) {
+        } catch (\PDOException $e) {
             throw new \RuntimeException(
                 sprintf('Database connection failed: %s', $e->getMessage()),
                 0,

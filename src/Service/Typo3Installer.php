@@ -295,7 +295,7 @@ class Typo3Installer
                 '--project-name=' . $config->site->name,
                 '--server-type=other',  // Use 'other' to avoid interactive server selection
                 '--no-interaction',
-                '--force'
+                '--force',
             ],
             $installDir
         );

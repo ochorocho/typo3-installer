@@ -15,8 +15,8 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
     require_once 'phar://' . __FILE__ . '/vendor/autoload.php';
 }
 
-use TYPO3\Installer\Application;
 use Symfony\Component\HttpFoundation\Request;
+use TYPO3\Installer\Application;
 
 // Create application instance
 $app = new Application();

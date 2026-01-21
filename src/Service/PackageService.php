@@ -4,12 +4,6 @@ declare(strict_types=1);
 
 namespace TYPO3\Installer\Service;
 
-use Composer\Factory;
-use Composer\IO\NullIO;
-use Composer\Package\Version\VersionParser;
-use Composer\Repository\CompositeRepository;
-use Composer\Repository\RepositoryFactory;
-use Composer\Semver\Constraint\Constraint;
 use Composer\Semver\Semver;
 
 /**
@@ -383,7 +377,7 @@ class PackageService
      */
     private function checkMemoryLimit(): array
     {
-        $memoryLimit = (string) (ini_get('memory_limit') ?: '128M');
+        $memoryLimit = (string)(ini_get('memory_limit') ?: '128M');
         $bytes = $this->convertToBytes($memoryLimit);
         $required = 256 * 1024 * 1024; // 256MB
 
@@ -414,7 +408,7 @@ class PackageService
         }
 
         $unit = strtolower(substr($value, -1));
-        $bytes = (int) $value;
+        $bytes = (int)$value;
 
         switch ($unit) {
             case 'g':

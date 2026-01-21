@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace TYPO3\Installer\Api;
 
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use TYPO3\Installer\Service\DatabaseTester;
 
 /**
@@ -29,7 +29,7 @@ class DatabaseController
         if (!is_array($data)) {
             return new JsonResponse([
                 'error' => true,
-                'message' => 'Invalid request data'
+                'message' => 'Invalid request data',
             ], 400);
         }
 
@@ -37,7 +37,7 @@ class DatabaseController
             $driver = is_string($data['driver'] ?? null) ? $data['driver'] : 'pdo_mysql';
             $host = is_string($data['host'] ?? null) ? $data['host'] : 'localhost';
             $rawPort = $data['port'] ?? 3306;
-            $port = is_int($rawPort) ? $rawPort : (is_numeric($rawPort) ? (int) $rawPort : 3306);
+            $port = is_int($rawPort) ? $rawPort : (is_numeric($rawPort) ? (int)$rawPort : 3306);
             $name = is_string($data['name'] ?? null) ? $data['name'] : '';
             $user = is_string($data['user'] ?? null) ? $data['user'] : '';
             $password = is_string($data['password'] ?? null) ? $data['password'] : '';
@@ -46,12 +46,12 @@ class DatabaseController
 
             return new JsonResponse([
                 'success' => true,
-                'message' => 'Database connection successful'
+                'message' => 'Database connection successful',
             ]);
         } catch (\Exception $e) {
             return new JsonResponse([
                 'error' => true,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }

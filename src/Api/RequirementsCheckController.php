@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace TYPO3\Installer\Api;
 
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use TYPO3\Installer\Service\RequirementsChecker;
 
 /**
@@ -26,7 +26,7 @@ class RequirementsCheckController
 
         return new JsonResponse([
             'success' => true,
-            'requirements' => $requirements
+            'requirements' => $requirements,
         ]);
     }
 }

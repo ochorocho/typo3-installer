@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace TYPO3\Installer\Api;
 
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use TYPO3\Installer\Service\Typo3Installer;
-use TYPO3\Installer\Service\InstallationInfoService;
+use Symfony\Component\HttpFoundation\Request;
 use TYPO3\Installer\Model\InstallationConfig;
+use TYPO3\Installer\Service\InstallationInfoService;
+use TYPO3\Installer\Service\Typo3Installer;
 
 /**
  * Controller for TYPO3 installation
@@ -35,7 +35,7 @@ class InstallController
         if (!is_array($data)) {
             return new JsonResponse([
                 'error' => true,
-                'message' => 'Invalid request data'
+                'message' => 'Invalid request data',
             ], 400);
         }
 
@@ -47,12 +47,12 @@ class InstallController
 
             return new JsonResponse([
                 'success' => true,
-                'message' => 'Installation started'
+                'message' => 'Installation started',
             ]);
         } catch (\Exception $e) {
             return new JsonResponse([
                 'error' => true,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 400);
         }
     }
@@ -64,7 +64,7 @@ class InstallController
                 'progress' => 0,
                 'currentTask' => 'Initializing...',
                 'completed' => false,
-                'error' => null
+                'error' => null,
             ]);
         }
 
@@ -82,7 +82,7 @@ class InstallController
             'progress' => 0,
             'currentTask' => 'Starting installation...',
             'completed' => false,
-            'error' => null
+            'error' => null,
         ]);
 
         // In a real-world scenario, this would be done via a background job/process
@@ -93,7 +93,7 @@ class InstallController
                     'progress' => $progress,
                     'currentTask' => $task,
                     'completed' => false,
-                    'error' => null
+                    'error' => null,
                 ]);
             });
 
@@ -103,7 +103,7 @@ class InstallController
                 'currentTask' => 'Installation complete',
                 'completed' => true,
                 'error' => null,
-                'backendUrl' => dirname($_SERVER['DOCUMENT_URI']) . 'typo3'
+                'backendUrl' => dirname($_SERVER['DOCUMENT_URI']) . 'typo3',
             ]);
         } catch (\Exception $e) {
             $this->updateStatus([
@@ -112,8 +112,8 @@ class InstallController
                 'completed' => false,
                 'error' => [
                     'message' => $e->getMessage(),
-                    'details' => $e->getTraceAsString()
-                ]
+                    'details' => $e->getTraceAsString(),
+                ],
             ]);
         }
     }

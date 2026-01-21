@@ -20,7 +20,8 @@
                 "Tests",
                 "tests",
                 "humbug",
-                "jetbrains"
+                "jetbrains",
+                "phpstan"
             ],
             "in": "vendor"
         }
