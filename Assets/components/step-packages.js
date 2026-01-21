@@ -7,7 +7,8 @@ export class StepPackages extends LitElement {
     loading: { type: Boolean },
     categories: { type: Object },
     requiredPackages: { type: Array },
-    selectedPackages: { type: Array }
+    selectedPackages: { type: Array },
+    installInfo: { type: Object }
   };
 
   static styles = css`
@@ -190,6 +191,66 @@ export class StepPackages extends LitElement {
       border-top-color: var(--color-primary, #ff8700);
       margin-bottom: var(--spacing-md, 16px);
     }
+
+    .install-info {
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      border: 1px solid #90caf9;
+      border-radius: var(--border-radius, 4px);
+      padding: var(--spacing-md, 16px);
+      margin-bottom: var(--spacing-lg, 24px);
+    }
+
+    .install-info-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm, 8px);
+      margin-bottom: var(--spacing-sm, 8px);
+    }
+
+    .install-info-header svg {
+      width: 20px;
+      height: 20px;
+      color: #1976d2;
+    }
+
+    .install-info-header strong {
+      color: #1976d2;
+      font-size: 14px;
+    }
+
+    .install-info-path {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs, 4px);
+    }
+
+    .install-info-path code {
+      background: rgba(255, 255, 255, 0.7);
+      padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 13px;
+      color: #333;
+      word-break: break-all;
+    }
+
+    .install-info-path small {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .install-info-warnings {
+      margin-top: var(--spacing-sm, 8px);
+      padding-top: var(--spacing-sm, 8px);
+      border-top: 1px solid rgba(144, 202, 249, 0.5);
+    }
+
+    .install-info-warnings ul {
+      margin: 0;
+      padding-left: var(--spacing-md, 16px);
+      font-size: 12px;
+      color: #e65100;
+    }
   `;
 
   constructor() {
@@ -198,21 +259,27 @@ export class StepPackages extends LitElement {
     this.categories = {};
     this.requiredPackages = [];
     this.selectedPackages = [];
+    this.installInfo = null;
   }
 
   connectedCallback() {
     super.connectedCallback();
-    this._loadPackages();
+    this._loadData();
   }
 
-  async _loadPackages() {
+  async _loadData() {
     this.loading = true;
 
     try {
-      const response = await apiClient.getPackages();
+      // Load packages and install info in parallel
+      const [packagesResponse, infoResponse] = await Promise.all([
+        apiClient.getPackages(),
+        apiClient.getInfo()
+      ]);
 
-      this.categories = response.packages || {};
-      this.requiredPackages = response.required || [];
+      // Process packages
+      this.categories = packagesResponse.packages || {};
+      this.requiredPackages = packagesResponse.required || [];
 
       // Initialize selected packages from state or use required + recommended defaults
       if (this.state?.packages?.selected?.length > 0) {
@@ -231,9 +298,12 @@ export class StepPackages extends LitElement {
         ];
       }
 
+      // Store install info
+      this.installInfo = infoResponse;
+
       this._updateState();
     } catch (error) {
-      console.error('Failed to load packages:', error);
+      console.error('Failed to load data:', error);
     } finally {
       this.loading = false;
     }
@@ -299,6 +369,28 @@ export class StepPackages extends LitElement {
     return html`
       <h2>Select Packages</h2>
       <p>Choose which TYPO3 packages to install. Core packages are required and cannot be deselected.</p>
+
+      ${this.installInfo ? html`
+        <div class="install-info">
+          <div class="install-info-header">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            </svg>
+            <strong>Installation Path</strong>
+          </div>
+          <div class="install-info-path">
+            <code>${this.installInfo.installPath}</code>
+            <small>Web directory: <code>${this.installInfo.webDir}</code></small>
+          </div>
+          ${this.installInfo.validation?.warnings?.length > 0 ? html`
+            <div class="install-info-warnings">
+              <ul>
+                ${this.installInfo.validation.warnings.map(warning => html`<li>${warning}</li>`)}
+              </ul>
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
 
       <div class="summary">
         <div class="summary-item">

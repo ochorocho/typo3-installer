@@ -17,34 +17,26 @@ use TYPO3\Installer\Model\InstallationConfig;
 class Typo3Installer
 {
     private Filesystem $filesystem;
+    private InstallationInfoService $infoService;
 
     public function __construct()
     {
         $this->filesystem = new Filesystem();
+        $this->infoService = new InstallationInfoService();
     }
 
     /**
      * Get the absolute installation directory path
+     *
+     * Uses InstallationInfoService to compute paths:
+     * - When running from PHAR: installs to parent directory of PHAR location
+     * - In development: uses configured installPath relative to project root
      */
     private function getInstallDir(InstallationConfig $config): string
     {
-        $installPath = $config->installPath;
-
-        // If it's a relative path, make it absolute from the project root
-        if (!str_starts_with($installPath, '/')) {
-            // When running from PHAR, use the actual filesystem path, not phar:// path
-            $pharPath = \Phar::running(false);
-            if ($pharPath) {
-                // Get the directory where the PHAR is located
-                $projectRoot = dirname($pharPath);
-            } else {
-                // Running in development mode
-                $projectRoot = dirname(__DIR__, 2);
-            }
-            $installPath = $projectRoot . '/' . $installPath;
-        }
-
-        return $installPath;
+        // Use the InstallationInfoService to get the correct install directory
+        // This is the parent of the PHAR directory (project root)
+        return $this->infoService->getInstallDirectory();
     }
 
     /**
@@ -86,12 +78,38 @@ class Typo3Installer
 
     private function prepareDirectory(string $installDir): void
     {
-        // If directory exists, remove it completely and recreate
-        if (file_exists($installDir)) {
-            $this->filesystem->remove($installDir);
+        // Create install directory if it doesn't exist
+        if (!file_exists($installDir)) {
+            $this->filesystem->mkdir($installDir, 0755);
+            return;
         }
 
-        $this->filesystem->mkdir($installDir, 0755);
+        // Only clean directories that TYPO3 installation will create/overwrite
+        // DO NOT remove the web-dir (e.g., public/) as it contains the PHAR file
+        $dirsToClean = [
+            $installDir . '/config',
+            $installDir . '/var',
+            $installDir . '/vendor',
+            $installDir . '/packages',
+        ];
+
+        // Also clean files in root that will be overwritten
+        $filesToClean = [
+            $installDir . '/composer.json',
+            $installDir . '/composer.lock',
+        ];
+
+        foreach ($dirsToClean as $dir) {
+            if (file_exists($dir)) {
+                $this->filesystem->remove($dir);
+            }
+        }
+
+        foreach ($filesToClean as $file) {
+            if (file_exists($file)) {
+                $this->filesystem->remove($file);
+            }
+        }
     }
 
     /**
@@ -177,8 +195,8 @@ class Typo3Installer
 
         $composerJson['extra'] = [
             'typo3/cms' => [
-                // @todo: set this dynamically to the current directory name the phar file was executed in.
-                'web-dir' => 'public',
+                // Dynamically set web-dir to the directory containing the PHAR
+                'web-dir' => $this->infoService->getWebDir(),
             ],
         ];
 

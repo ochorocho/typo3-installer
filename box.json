@@ -1,5 +1,4 @@
 {
-    "chmod": "0755",
     "compression": "GZ",
     "output": "typo3-installer.phar",
     "stub": "stub.php",
@@ -21,15 +20,12 @@
                 "Tests",
                 "tests",
                 "humbug",
-                "node_modules",
-                "test-installer-root"
+                "jetbrains"
             ],
             "in": "vendor"
         }
     ],
     "blacklist": [
         "vendor/humbug"
-    ],
-    "exclude-composer-files": true,
-    "exclude-dev-files": true
+    ]
 }

@@ -11,6 +11,7 @@ use TYPO3\Installer\Api\RequirementsCheckController;
 use TYPO3\Installer\Api\DatabaseController;
 use TYPO3\Installer\Api\InstallController;
 use TYPO3\Installer\Api\PackageController;
+use TYPO3\Installer\Api\InfoController;
 
 /**
  * Main application class that handles routing and request dispatching
@@ -21,6 +22,7 @@ class Application
     private DatabaseController $databaseController;
     private InstallController $installController;
     private PackageController $packageController;
+    private InfoController $infoController;
 
     public function __construct()
     {
@@ -28,6 +30,7 @@ class Application
         $this->databaseController = new DatabaseController();
         $this->installController = new InstallController();
         $this->packageController = new PackageController();
+        $this->infoController = new InfoController();
     }
 
     public function handle(Request $request): Response
@@ -53,6 +56,7 @@ class Application
     {
         try {
             return match ($path) {
+                '/api/info' => $this->infoController->getInfo($request),
                 '/api/packages' => $this->packageController->list($request),
                 '/api/validate-requirements' => $this->packageController->validateRequirements($request),
                 '/api/check-requirements' => $this->requirementsController->check($request),
@@ -116,15 +120,19 @@ class Application
 
     private function getDefaultHtml(): string
     {
-        return <<<'HTML'
+        // @todo: double check to see if this is a reliable way to get the path to the phar
+        $css = file_get_contents('phar://' . $_SERVER['SCRIPT_FILENAME'] . '/public/installer.css');
+        $js = file_get_contents('phar://' . $_SERVER['SCRIPT_FILENAME'] . '/public/installer.js');
+
+        return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TYPO3 Installer</title>
-    <script type="module" crossorigin src="/installer.js"></script>
-    <link rel="stylesheet" crossorigin href="/installer.css">
+    <script>{$js}</script>
+    <style>{$css}</style>
 </head>
 <body>
     <installer-app></installer-app>

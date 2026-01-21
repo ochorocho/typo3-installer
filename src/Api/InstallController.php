@@ -7,6 +7,7 @@ namespace TYPO3\Installer\Api;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use TYPO3\Installer\Service\Typo3Installer;
+use TYPO3\Installer\Service\InstallationInfoService;
 use TYPO3\Installer\Model\InstallationConfig;
 
 /**
@@ -15,11 +16,13 @@ use TYPO3\Installer\Model\InstallationConfig;
 class InstallController
 {
     private Typo3Installer $installer;
+    private InstallationInfoService $infoService;
     private string $statusFile;
 
     public function __construct()
     {
         $this->installer = new Typo3Installer();
+        $this->infoService = new InstallationInfoService();
         $this->statusFile = sys_get_temp_dir() . '/typo3-installer-status.json';
     }
 
@@ -100,7 +103,7 @@ class InstallController
                 'currentTask' => 'Installation complete',
                 'completed' => true,
                 'error' => null,
-                'backendUrl' => '/typo3-test-installation/typo3'
+                'backendUrl' => dirname($_SERVER['DOCUMENT_URI']) . 'typo3'
             ]);
         } catch (\Exception $e) {
             $this->updateStatus([
