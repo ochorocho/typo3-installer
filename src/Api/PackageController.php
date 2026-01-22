@@ -21,16 +21,38 @@ class PackageController extends AbstractController
     }
 
     /**
-     * Get available TYPO3 packages
+     * Get available TYPO3 versions
+     */
+    public function versions(Request $request): JsonResponse
+    {
+        $versions = $this->packageService->getAvailableTypo3Versions();
+
+        return $this->successResponse([
+            'versions' => $versions,
+        ]);
+    }
+
+    /**
+     * Get available TYPO3 packages for a specific version
      */
     public function list(Request $request): JsonResponse
     {
-        $packages = $this->packageService->getAvailablePackages();
+        $data = $this->parseJsonBody($request);
+
+        $typo3Version = '13.4';
+        if (is_array($data) && isset($data['typo3Version']) && is_string($data['typo3Version'])) {
+            $typo3Version = $data['typo3Version'];
+        }
+
+        $packages = $this->packageService->getAvailablePackages($typo3Version);
         $required = $this->packageService->getRequiredPackages();
+        $recommended = $this->packageService->getRecommendedPackages();
 
         return $this->successResponse([
             'packages' => $packages,
             'required' => $required,
+            'recommended' => $recommended,
+            'typo3Version' => $typo3Version,
         ]);
     }
 
@@ -55,8 +77,13 @@ class PackageController extends AbstractController
         /** @var array<string> $packages */
         $packages = $data['packages'];
 
+        $typo3Version = '13.4';
+        if (isset($data['typo3Version']) && is_string($data['typo3Version'])) {
+            $typo3Version = $data['typo3Version'];
+        }
+
         // Validate package selection first
-        $validation = $this->packageService->validatePackageSelection($packages);
+        $validation = $this->packageService->validatePackageSelection($packages, $typo3Version);
         if (!$validation['valid']) {
             return new JsonResponse([
                 'success' => false,

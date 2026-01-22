@@ -5,10 +5,13 @@ export class StepPackages extends LitElement {
   static properties = {
     state: { type: Object },
     loading: { type: Boolean },
-    categories: { type: Object },
+    loadingPackages: { type: Boolean },
+    packages: { type: Object },
     requiredPackages: { type: Array },
     selectedPackages: { type: Array },
-    installInfo: { type: Object }
+    installInfo: { type: Object },
+    versions: { type: Array },
+    selectedVersion: { type: String }
   };
 
   static styles = css`
@@ -26,28 +29,13 @@ export class StepPackages extends LitElement {
       margin-bottom: var(--spacing-lg, 24px);
     }
 
-    .categories {
-      margin-bottom: var(--spacing-lg, 24px);
-    }
-
-    .category {
+    .package-list {
       margin-bottom: var(--spacing-lg, 24px);
       border: 1px solid var(--color-border, #ddd);
       border-radius: var(--border-radius, 4px);
       overflow: hidden;
-    }
-
-    .category-header {
-      background: var(--color-bg, #f5f5f5);
-      padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
-      font-weight: 600;
-      color: var(--color-secondary, #1a1a1a);
-      border-bottom: 1px solid var(--color-border, #ddd);
-    }
-
-    .category-header.core {
-      background: linear-gradient(135deg, var(--color-primary, #ff8700) 0%, #ff9500 100%);
-      color: white;
+      max-height: 400px;
+      overflow-y: auto;
     }
 
     .packages {
@@ -251,15 +239,62 @@ export class StepPackages extends LitElement {
       font-size: 12px;
       color: #e65100;
     }
+
+    .version-selector {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md, 16px);
+      margin-bottom: var(--spacing-lg, 24px);
+      padding: var(--spacing-md, 16px);
+      background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+      border: 1px solid var(--color-primary, #ff8700);
+      border-radius: var(--border-radius, 4px);
+    }
+
+    .version-selector label {
+      font-weight: 600;
+      color: var(--color-secondary, #1a1a1a);
+      white-space: nowrap;
+    }
+
+    .version-selector select {
+      flex: 1;
+      max-width: 200px;
+      padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
+      font-size: 16px;
+      font-weight: 600;
+      border: 2px solid var(--color-primary, #ff8700);
+      border-radius: var(--border-radius, 4px);
+      background: white;
+      cursor: pointer;
+    }
+
+    .version-selector select:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(255, 135, 0, 0.2);
+    }
+
+    .version-selector .version-info {
+      font-size: 13px;
+      color: var(--color-text-light, #666);
+    }
+
+    .package-list.loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
   `;
 
   constructor() {
     super();
     this.loading = true;
-    this.categories = {};
+    this.loadingPackages = false;
+    this.packages = {};
     this.requiredPackages = [];
     this.selectedPackages = [];
     this.installInfo = null;
+    this.versions = [];
+    this.selectedVersion = '13.4';
   }
 
   connectedCallback() {
@@ -271,42 +306,64 @@ export class StepPackages extends LitElement {
     this.loading = true;
 
     try {
-      // Load packages and install info in parallel
-      const [packagesResponse, infoResponse] = await Promise.all([
-        apiClient.getPackages(),
+      // Load versions and install info first
+      const [versionsResponse, infoResponse] = await Promise.all([
+        apiClient.getVersions(),
         apiClient.getInfo()
       ]);
 
-      // Process packages
-      this.categories = packagesResponse.packages || {};
-      this.requiredPackages = packagesResponse.required || [];
-
-      // Initialize selected packages from state or use required + recommended defaults
-      if (this.state?.packages?.selected?.length > 0) {
-        this.selectedPackages = [...this.state.packages.selected];
-      } else {
-        // Start with required packages and add common content packages
-        this.selectedPackages = [
-          ...this.requiredPackages,
-          'typo3/cms-fluid',
-          'typo3/cms-fluid-styled-content',
-          'typo3/cms-extbase',
-          'typo3/cms-rte-ckeditor',
-          'typo3/cms-filelist',
-          'typo3/cms-beuser',
-          'typo3/cms-setup',
-        ];
+      // Store versions and select the first (newest) one
+      this.versions = versionsResponse.versions || [];
+      if (this.versions.length > 0) {
+        this.selectedVersion = this.state?.typo3Version || this.versions[0].version;
       }
 
       // Store install info
       this.installInfo = infoResponse;
 
-      this._updateState();
+      // Now load packages for the selected version
+      await this._loadPackages();
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
       this.loading = false;
     }
+  }
+
+  async _loadPackages() {
+    this.loadingPackages = true;
+
+    try {
+      const packagesResponse = await apiClient.getPackages(this.selectedVersion);
+
+      // Process packages (flat list keyed by package name)
+      this.packages = packagesResponse.packages || {};
+      this.requiredPackages = packagesResponse.required || [];
+      const recommendedPackages = packagesResponse.recommended || [];
+
+      // Initialize selected packages from state or use required + recommended defaults
+      if (this.state?.packages?.selected?.length > 0 && this.state?.typo3Version === this.selectedVersion) {
+        this.selectedPackages = [...this.state.packages.selected];
+      } else {
+        // Only add recommended packages that exist in available packages
+        const availableIds = Object.keys(this.packages);
+        this.selectedPackages = [
+          ...this.requiredPackages,
+          ...recommendedPackages.filter(pkg => availableIds.includes(pkg)),
+        ];
+      }
+
+      this._updateState();
+    } catch (error) {
+      console.error('Failed to load packages:', error);
+    } finally {
+      this.loadingPackages = false;
+    }
+  }
+
+  async _handleVersionChange(event) {
+    this.selectedVersion = event.target.value;
+    await this._loadPackages();
   }
 
   _isPackageSelected(packageId) {
@@ -336,8 +393,9 @@ export class StepPackages extends LitElement {
       bubbles: true,
       composed: true,
       detail: {
+        typo3Version: this.selectedVersion,
         packages: {
-          available: this.categories,
+          available: this.packages,
           selected: this.selectedPackages,
           validated: false
         }
@@ -347,10 +405,6 @@ export class StepPackages extends LitElement {
 
   _handleNext() {
     this.dispatchEvent(new CustomEvent('next-step', { bubbles: true, composed: true }));
-  }
-
-  _getCategoryClass(categoryId) {
-    return categoryId === 'core' ? 'core' : '';
   }
 
   render() {
@@ -363,12 +417,24 @@ export class StepPackages extends LitElement {
       `;
     }
 
-    const totalPackages = Object.values(this.categories)
-      .reduce((sum, cat) => sum + Object.keys(cat.packages || {}).length, 0);
+    const totalPackages = Object.keys(this.packages).length;
+    const selectedVersionInfo = this.versions.find(v => v.version === this.selectedVersion);
 
     return html`
       <h2>Select Packages</h2>
-      <p>Choose which TYPO3 packages to install. Core packages are required and cannot be deselected.</p>
+      <p>Choose the TYPO3 version and packages to install. Core packages are required and cannot be deselected.</p>
+
+      <div class="version-selector">
+        <label for="typo3-version">TYPO3 Version:</label>
+        <select id="typo3-version" @change=${this._handleVersionChange} .value=${this.selectedVersion}>
+          ${this.versions.map(v => html`
+            <option value=${v.version}>${v.version} (Latest: ${v.latest})</option>
+          `)}
+        </select>
+        ${selectedVersionInfo ? html`
+          <span class="version-info">Will install typo3/cms-core:^${this.selectedVersion}</span>
+        ` : ''}
+      </div>
 
       ${this.installInfo ? html`
         <div class="install-info">
@@ -407,33 +473,33 @@ export class StepPackages extends LitElement {
         </div>
       </div>
 
-      <div class="categories">
-        ${Object.entries(this.categories).map(([categoryId, category]) => html`
-          <div class="category">
-            <div class="category-header ${this._getCategoryClass(categoryId)}">
-              ${category.label}
-            </div>
-            <div class="packages">
-              ${Object.entries(category.packages || {}).map(([packageId, pkg]) => html`
-                <div class="package ${this._isPackageRequired(packageId) ? 'required' : ''}">
-                  <input
-                    type="checkbox"
-                    .checked=${this._isPackageSelected(packageId)}
-                    ?disabled=${this._isPackageRequired(packageId)}
-                    @change=${() => this._togglePackage(packageId)}
-                  >
-                  <div class="package-info">
-                    <div>
-                      <span class="package-name">${pkg.name}</span>
-                      <span class="package-id">${packageId}</span>
-                    </div>
-                    <div class="package-description">${pkg.description}</div>
-                  </div>
-                </div>
-              `)}
-            </div>
+      <div class="package-list ${this.loadingPackages ? 'loading' : ''}">
+        ${this.loadingPackages ? html`
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading packages for TYPO3 ${this.selectedVersion}...</p>
           </div>
-        `)}
+        ` : html`
+        <div class="packages">
+          ${Object.entries(this.packages).map(([packageId, pkg]) => html`
+            <div class="package ${this._isPackageRequired(packageId) ? 'required' : ''}">
+              <input
+                type="checkbox"
+                .checked=${this._isPackageSelected(packageId)}
+                ?disabled=${this._isPackageRequired(packageId)}
+                @change=${() => this._togglePackage(packageId)}
+              >
+              <div class="package-info">
+                <div>
+                  <span class="package-name">${pkg.name}</span>
+                  <span class="package-id">${packageId}</span>
+                </div>
+                <div class="package-description">${pkg.description}</div>
+              </div>
+            </div>
+          `)}
+        </div>
+        `}
       </div>
 
       <div class="actions">

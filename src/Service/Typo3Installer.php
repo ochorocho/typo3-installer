@@ -58,15 +58,11 @@ class Typo3Installer
 
         // Step 3: Install selected packages via Composer (40%)
         $progressCallback(20, 'Installing TYPO3 packages via Composer');
-        $this->installPackages($installDir, $config->packages);
+        $this->installPackages($installDir, $config->packages, $config->typo3Version);
 
         // Step 4: Run TYPO3 setup with database and admin config (70%)
         $progressCallback(50, 'Setting up TYPO3');
         $this->setupTypo3($config, $installDir);
-
-        // Step 5: Configure site (85%)
-        $progressCallback(85, 'Configuring site');
-        $this->configureSite($config, $installDir);
 
         // Step 6: Clear caches (95%)
         $progressCallback(95, 'Clearing caches');
@@ -215,7 +211,7 @@ class Typo3Installer
      *
      * @param array<string> $packages
      */
-    private function installPackages(string $installDir, array $packages): void
+    private function installPackages(string $installDir, array $packages, string $typo3Version): void
     {
         if (empty($packages)) {
             throw new \RuntimeException('No packages selected for installation');
@@ -229,9 +225,10 @@ class Typo3Installer
             // Set absolute path for composer.json to avoid PHAR path resolution issues
             putenv('COMPOSER=' . $installDir . '/composer.json');
 
-            // Build package list with version constraint
+            // Build package list with version constraint based on selected TYPO3 version
+            $versionConstraint = '^' . $typo3Version;
             $packagesWithVersion = array_map(
-                fn(string $pkg): string => $pkg . ':^13',
+                fn(string $pkg): string => $pkg . ':' . $versionConstraint,
                 $packages
             );
 
@@ -293,6 +290,7 @@ class Typo3Installer
                 '--admin-user-password=' . $admin->password,
                 '--admin-email=' . $admin->email,
                 '--project-name=' . $config->site->name,
+                '--create-site=' . $config->site->baseUrl,
                 '--server-type=other',  // Use 'other' to avoid interactive server selection
                 '--no-interaction',
                 '--force',
@@ -318,34 +316,6 @@ class Typo3Installer
 PHP;
 
         file_put_contents($additionalConfig, $configContent);
-    }
-
-    private function configureSite(InstallationConfig $config, string $installDir): void
-    {
-        $siteConfig = $config->site;
-        $siteConfigDir = $installDir . '/config/sites/main';
-
-        if (!file_exists($siteConfigDir)) {
-            $this->filesystem->mkdir($siteConfigDir, 0755);
-        }
-
-        $siteYaml = <<<YAML
-base: '{$siteConfig->baseUrl}/'
-rootPageId: 1
-websiteTitle: '{$siteConfig->name}'
-languages:
-  -
-    languageId: 0
-    title: English
-    enabled: true
-    base: /
-    locale: en_US.UTF-8
-    navigationTitle: English
-    flag: us
-
-YAML;
-
-        file_put_contents($siteConfigDir . '/config.yaml', $siteYaml);
     }
 
     private function clearCaches(string $installDir): void

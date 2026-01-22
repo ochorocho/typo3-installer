@@ -218,9 +218,10 @@ export class StepRequirements extends LitElement {
   async _checkRequirements() {
     this.checking = true;
     try {
-      // Use dynamic validation based on selected packages
+      // Use dynamic validation based on selected packages and TYPO3 version
       const selectedPackages = this.state?.packages?.selected || [];
-      const response = await apiClient.validateRequirements(selectedPackages);
+      const typo3Version = this.state?.typo3Version || '13.4';
+      const response = await apiClient.validateRequirements(selectedPackages, typo3Version);
       this.requirements = response.requirements || [];
 
       const passed = response.passed;

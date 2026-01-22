@@ -17,6 +17,7 @@ class InstallationConfig
         public readonly AdminConfig $admin,
         public readonly SiteConfig $site,
         public readonly array $packages,
+        public readonly string $typo3Version = '13.4',
         public readonly string $installPath = 'typo3-test-install'
     ) {}
 
@@ -42,6 +43,7 @@ class InstallationConfig
             AdminConfig::fromArray($admin),
             SiteConfig::fromArray($site),
             $packages,
+            is_string($data['typo3Version'] ?? null) ? $data['typo3Version'] : '13.4',
             is_string($data['installPath'] ?? null) ? $data['installPath'] : 'typo3-test-install'
         );
     }

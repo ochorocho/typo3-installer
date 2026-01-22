@@ -32,16 +32,23 @@ class ApiClient {
         }
     }
 
-    async getPackages() {
-        return this.request('/api/packages', {
-            method: 'GET'
+    async getVersions() {
+        return this.request('/api/versions', {
+            method: 'POST'
         });
     }
 
-    async validateRequirements(packages) {
+    async getPackages(typo3Version = '13.4') {
+        return this.request('/api/packages', {
+            method: 'POST',
+            body: JSON.stringify({ typo3Version })
+        });
+    }
+
+    async validateRequirements(packages, typo3Version = '13.4') {
         return this.request('/api/validate-requirements', {
             method: 'POST',
-            body: JSON.stringify({packages})
+            body: JSON.stringify({ packages, typo3Version })
         });
     }
 

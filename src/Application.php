@@ -57,6 +57,7 @@ class Application
         try {
             return match ($path) {
                 '/api/info' => $this->infoController->getInfo($request),
+                '/api/versions' => $this->packageController->versions($request),
                 '/api/packages' => $this->packageController->list($request),
                 '/api/validate-requirements' => $this->packageController->validateRequirements($request),
                 '/api/check-requirements' => $this->requirementsController->check($request),
@@ -120,6 +121,10 @@ class Application
 
     private function getDefaultHtml(): string
     {
+
+//        var_dump($this->getAssetPath());
+//        var_dump($this->serveAsset('installer.js'));
+
         // @todo: double check to see if this is a reliable way to get the path to the phar
         $css = file_get_contents('phar://' . $_SERVER['SCRIPT_FILENAME'] . '/public/installer.css');
         $js = file_get_contents('phar://' . $_SERVER['SCRIPT_FILENAME'] . '/public/installer.js');

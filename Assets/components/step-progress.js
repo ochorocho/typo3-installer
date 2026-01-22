@@ -241,6 +241,7 @@ export class StepProgress extends LitElement {
         try {
             const config = {
                 packages: this.state.packages.selected,
+                typo3Version: this.state.typo3Version || '13.4',
                 database: {
                     driver: this.state.database.driver,
                     host: this.state.database.host,
