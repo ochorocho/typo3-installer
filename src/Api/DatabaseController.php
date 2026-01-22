@@ -11,26 +11,21 @@ use TYPO3\Installer\Service\DatabaseTester;
 /**
  * Controller for database operations
  */
-class DatabaseController
+class DatabaseController extends AbstractController
 {
     private DatabaseTester $tester;
 
-    public function __construct()
+    public function __construct(?DatabaseTester $tester = null)
     {
-        $this->tester = new DatabaseTester();
+        $this->tester = $tester ?? new DatabaseTester();
     }
 
     public function test(Request $request): JsonResponse
     {
-        $content = $request->getContent();
-        /** @var array<string, mixed>|null $data */
-        $data = json_decode($content !== '' ? $content : '{}', true);
+        $data = $this->parseJsonBody($request);
 
-        if (!is_array($data)) {
-            return new JsonResponse([
-                'error' => true,
-                'message' => 'Invalid request data',
-            ], 400);
+        if ($data instanceof JsonResponse) {
+            return $data;
         }
 
         try {
@@ -44,15 +39,9 @@ class DatabaseController
 
             $this->tester->testConnection($driver, $host, $port, $name, $user, $password);
 
-            return new JsonResponse([
-                'success' => true,
-                'message' => 'Database connection successful',
-            ]);
+            return $this->successResponse(['message' => 'Database connection successful']);
         } catch (\Exception $e) {
-            return new JsonResponse([
-                'error' => true,
-                'message' => $e->getMessage(),
-            ], 400);
+            return $this->errorResponse($e->getMessage());
         }
     }
 }

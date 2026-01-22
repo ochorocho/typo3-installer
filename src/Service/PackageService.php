@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace TYPO3\Installer\Service;
 
 use Composer\Semver\Semver;
+use TYPO3\Installer\Utility\ByteConverter;
 
 /**
  * Service for managing TYPO3 packages and their requirements
  */
 class PackageService
 {
+    // @todo: Use 'composer search "typo3/cms-" -f json' to get the packages
     private const TYPO3_PACKAGES = [
         'core' => [
             'typo3/cms-core' => [
@@ -378,7 +380,7 @@ class PackageService
     private function checkMemoryLimit(): array
     {
         $memoryLimit = (string)(ini_get('memory_limit') ?: '128M');
-        $bytes = $this->convertToBytes($memoryLimit);
+        $bytes = ByteConverter::toBytes($memoryLimit);
         $required = 256 * 1024 * 1024; // 256MB
 
         $status = 'passed';
@@ -394,35 +396,6 @@ class PackageService
             ),
             'status' => $status,
         ];
-    }
-
-    /**
-     * Convert memory string to bytes
-     */
-    private function convertToBytes(string $value): int
-    {
-        $value = trim($value);
-
-        if ($value === '-1') {
-            return -1;
-        }
-
-        $unit = strtolower(substr($value, -1));
-        $bytes = (int)$value;
-
-        switch ($unit) {
-            case 'g':
-                $bytes *= 1024 * 1024 * 1024;
-                break;
-            case 'm':
-                $bytes *= 1024 * 1024;
-                break;
-            case 'k':
-                $bytes *= 1024;
-                break;
-        }
-
-        return $bytes;
     }
 
     /**

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace TYPO3\Installer\Service;
 
+use TYPO3\Installer\Utility\ByteConverter;
+
 /**
  * Service for checking TYPO3 system requirements
  */
@@ -11,6 +13,7 @@ class RequirementsChecker
 {
     private const REQUIRED_PHP_VERSION = '8.2.0';
 
+    // @todo: Get required extensions dynamically
     private const REQUIRED_EXTENSIONS = [
         'pdo',
         'json',
@@ -26,6 +29,7 @@ class RequirementsChecker
         'zip',
     ];
 
+    // @todo: get dynamically
     private const RECOMMENDED_EXTENSIONS = [
         'curl',
         'zlib',
@@ -139,7 +143,7 @@ class RequirementsChecker
     private function checkMemoryLimit(): array
     {
         $memoryLimitStr = (string)(ini_get('memory_limit') ?: '128M');
-        $memoryLimitBytes = $this->convertToBytes($memoryLimitStr);
+        $memoryLimitBytes = ByteConverter::toBytes($memoryLimitStr);
         $recommendedBytes = 256 * 1024 * 1024; // 256M
 
         $passed = $memoryLimitBytes === -1 || $memoryLimitBytes >= $recommendedBytes;
@@ -152,27 +156,5 @@ class RequirementsChecker
             ),
             'status' => $passed ? 'passed' : 'warning',
         ];
-    }
-
-    private function convertToBytes(string $value): int
-    {
-        $value = trim($value);
-        $last = strtolower($value[strlen($value) - 1]);
-        $value = (int)$value;
-
-        switch ($last) {
-            case 'g':
-                $value *= 1024;
-                // fall through
-                // no break
-            case 'm':
-                $value *= 1024;
-                // fall through
-                // no break
-            case 'k':
-                $value *= 1024;
-        }
-
-        return $value;
     }
 }

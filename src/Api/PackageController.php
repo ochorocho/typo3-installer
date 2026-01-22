@@ -11,13 +11,13 @@ use TYPO3\Installer\Service\PackageService;
 /**
  * API Controller for package management
  */
-class PackageController
+class PackageController extends AbstractController
 {
     private PackageService $packageService;
 
-    public function __construct()
+    public function __construct(?PackageService $packageService = null)
     {
-        $this->packageService = new PackageService();
+        $this->packageService = $packageService ?? new PackageService();
     }
 
     /**
@@ -28,8 +28,7 @@ class PackageController
         $packages = $this->packageService->getAvailablePackages();
         $required = $this->packageService->getRequiredPackages();
 
-        return new JsonResponse([
-            'success' => true,
+        return $this->successResponse([
             'packages' => $packages,
             'required' => $required,
         ]);
@@ -40,11 +39,13 @@ class PackageController
      */
     public function validateRequirements(Request $request): JsonResponse
     {
-        $content = $request->getContent();
-        /** @var array<string, mixed>|null $data */
-        $data = json_decode($content !== '' ? $content : '{}', true);
+        $data = $this->parseJsonBody($request);
 
-        if (!is_array($data) || !isset($data['packages']) || !is_array($data['packages'])) {
+        if ($data instanceof JsonResponse) {
+            return $data;
+        }
+
+        if (!isset($data['packages']) || !is_array($data['packages'])) {
             return new JsonResponse([
                 'success' => false,
                 'message' => 'Missing or invalid "packages" field',
@@ -67,8 +68,7 @@ class PackageController
         // Validate platform requirements
         $requirements = $this->packageService->validateRequirements($packages);
 
-        return new JsonResponse([
-            'success' => true,
+        return $this->successResponse([
             'passed' => $requirements['passed'],
             'requirements' => $requirements['requirements'],
         ]);

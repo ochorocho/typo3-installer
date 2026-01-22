@@ -11,22 +11,19 @@ use TYPO3\Installer\Service\RequirementsChecker;
 /**
  * Controller for checking system requirements
  */
-class RequirementsCheckController
+class RequirementsCheckController extends AbstractController
 {
     private RequirementsChecker $checker;
 
-    public function __construct()
+    public function __construct(?RequirementsChecker $checker = null)
     {
-        $this->checker = new RequirementsChecker();
+        $this->checker = $checker ?? new RequirementsChecker();
     }
 
     public function check(Request $request): JsonResponse
     {
         $requirements = $this->checker->check();
 
-        return new JsonResponse([
-            'success' => true,
-            'requirements' => $requirements,
-        ]);
+        return $this->successResponse(['requirements' => $requirements]);
     }
 }

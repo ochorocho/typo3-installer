@@ -11,21 +11,20 @@ use TYPO3\Installer\Service\InstallationInfoService;
 /**
  * Controller for installation info endpoint
  */
-class InfoController
+class InfoController extends AbstractController
 {
     private InstallationInfoService $infoService;
 
-    public function __construct()
+    public function __construct(?InstallationInfoService $infoService = null)
     {
-        $this->infoService = new InstallationInfoService();
+        $this->infoService = $infoService ?? new InstallationInfoService();
     }
 
     public function getInfo(Request $request): JsonResponse
     {
         $info = $this->infoService->getInfo();
 
-        return new JsonResponse([
-            'success' => true,
+        return $this->successResponse([
             'installPath' => $info['installPath'],
             'webDir' => $info['webDir'],
             'pharPath' => $info['pharPath'],

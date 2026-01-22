@@ -1,6 +1,10 @@
 class ApiClient {
     constructor(baseUrl = '') {
-        this.baseUrl = window.location.href;
+        // @todo: verify this statement, not sure if still needed.
+        // Use URL API to properly parse and reconstruct base URL
+        // Handles both PHAR mode and development mode
+        const url = new URL(window.location.href);
+        this.baseUrl = url.origin + url.pathname.replace(/\/$/, '');
     }
 
     async request(endpoint, options = {}) {

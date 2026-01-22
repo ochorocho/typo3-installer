@@ -7,36 +7,30 @@ namespace TYPO3\Installer\Api;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use TYPO3\Installer\Model\InstallationConfig;
-use TYPO3\Installer\Service\InstallationInfoService;
 use TYPO3\Installer\Service\Typo3Installer;
 
 /**
  * Controller for TYPO3 installation
  */
-class InstallController
+class InstallController extends AbstractController
 {
     private Typo3Installer $installer;
-    private InstallationInfoService $infoService;
     private string $statusFile;
 
-    public function __construct()
-    {
-        $this->installer = new Typo3Installer();
-        $this->infoService = new InstallationInfoService();
-        $this->statusFile = sys_get_temp_dir() . '/typo3-installer-status.json';
+    public function __construct(
+        ?Typo3Installer $installer = null,
+        ?string $statusFile = null
+    ) {
+        $this->installer = $installer ?? new Typo3Installer();
+        $this->statusFile = $statusFile ?? sys_get_temp_dir() . '/typo3-installer-status.json';
     }
 
     public function install(Request $request): JsonResponse
     {
-        $content = $request->getContent();
-        /** @var array<string, mixed>|null $data */
-        $data = json_decode($content !== '' ? $content : '{}', true);
+        $data = $this->parseJsonBody($request);
 
-        if (!is_array($data)) {
-            return new JsonResponse([
-                'error' => true,
-                'message' => 'Invalid request data',
-            ], 400);
+        if ($data instanceof JsonResponse) {
+            return $data;
         }
 
         try {
@@ -45,15 +39,9 @@ class InstallController
             // Start installation in background
             $this->startInstallation($config);
 
-            return new JsonResponse([
-                'success' => true,
-                'message' => 'Installation started',
-            ]);
+            return $this->successResponse(['message' => 'Installation started']);
         } catch (\Exception $e) {
-            return new JsonResponse([
-                'error' => true,
-                'message' => $e->getMessage(),
-            ], 400);
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -97,13 +85,15 @@ class InstallController
                 ]);
             });
 
+            $basePath = dirname(explode('.phar', $_SERVER['DOCUMENT_URI'])[0] ?? '/');
+
             // Installation complete
             $this->updateStatus([
                 'progress' => 100,
                 'currentTask' => 'Installation complete',
                 'completed' => true,
                 'error' => null,
-                'backendUrl' => dirname($_SERVER['DOCUMENT_URI']) . 'typo3',
+                'backendUrl' => $basePath . 'typo3/',
             ]);
         } catch (\Exception $e) {
             $this->updateStatus([
