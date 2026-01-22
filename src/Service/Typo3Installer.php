@@ -40,6 +40,26 @@ class Typo3Installer
     }
 
     /**
+     * Detect the web server type from SERVER_SOFTWARE
+     *
+     * @return string One of: apache, iis, other
+     */
+    private function detectServerType(): string
+    {
+        $serverSoftware = $_SERVER['SERVER_SOFTWARE'] ?? '';
+
+        if (stripos($serverSoftware, 'apache') !== false) {
+            return 'apache';
+        }
+
+        if (stripos($serverSoftware, 'microsoft-iis') !== false || stripos($serverSoftware, 'iis') !== false) {
+            return 'iis';
+        }
+
+        return 'other';
+    }
+
+    /**
      * Install TYPO3
      *
      * @param callable(int, string): void $progressCallback
@@ -291,7 +311,7 @@ class Typo3Installer
                 '--admin-email=' . $admin->email,
                 '--project-name=' . $config->site->name,
                 '--create-site=' . $config->site->baseUrl,
-                '--server-type=other',  // Use 'other' to avoid interactive server selection
+                '--server-type=' . $this->detectServerType(),
                 '--no-interaction',
                 '--force',
             ],
