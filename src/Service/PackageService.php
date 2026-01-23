@@ -344,6 +344,143 @@ class PackageService
     }
 
     /**
+     * Fetch platform requirements for a package compatible with given TYPO3 version
+     *
+     * @return array{php: string|null, required: array<string>, suggested: array<string>}
+     */
+    private function fetchPackageRequirements(string $packageName, string $typo3Version): array
+    {
+        $emptyResult = ['php' => null, 'required' => [], 'suggested' => []];
+
+        try {
+            $apiUrl = sprintf('https://packagist.org/packages/%s.json', $packageName);
+            $response = $this->fetchFromPackagist($apiUrl);
+
+            if ($response === null) {
+                return $emptyResult;
+            }
+
+            $data = json_decode($response, true);
+
+            if (!is_array($data) || !isset($data['package']['versions'])) {
+                return $emptyResult;
+            }
+
+            $versions = $data['package']['versions'];
+
+            // Find version compatible with TYPO3 version
+            foreach ($versions as $versionString => $versionData) {
+                if (!is_array($versionData)) {
+                    continue;
+                }
+
+                // Skip dev versions
+                if (str_contains((string)$versionString, 'dev')) {
+                    continue;
+                }
+
+                $require = $versionData['require'] ?? [];
+                if (!is_array($require)) {
+                    continue;
+                }
+
+                $coreConstraint = $require['typo3/cms-core'] ?? null;
+
+                // For TYPO3 packages, check core compatibility
+                if ($coreConstraint !== null) {
+                    $testVersion = $typo3Version . '.0';
+                    if (!Semver::satisfies($testVersion, (string)$coreConstraint)) {
+                        continue;
+                    }
+                }
+
+                // Extract requirements
+                $phpConstraint = isset($require['php']) ? (string)$require['php'] : null;
+                $requiredExt = [];
+                $suggestedExt = [];
+
+                foreach ($require as $key => $constraint) {
+                    if (str_starts_with((string)$key, 'ext-')) {
+                        $requiredExt[] = substr((string)$key, 4); // Remove 'ext-' prefix
+                    }
+                }
+
+                $suggest = $versionData['suggest'] ?? [];
+                if (is_array($suggest)) {
+                    foreach ($suggest as $key => $description) {
+                        if (str_starts_with((string)$key, 'ext-')) {
+                            $suggestedExt[] = substr((string)$key, 4);
+                        }
+                    }
+                }
+
+                return [
+                    'php' => $phpConstraint,
+                    'required' => $requiredExt,
+                    'suggested' => $suggestedExt,
+                ];
+            }
+
+            return $emptyResult;
+        } catch (\Throwable $e) {
+            return $emptyResult;
+        }
+    }
+
+    /**
+     * Aggregate platform requirements from all selected packages
+     *
+     * @param array<string> $packages
+     * @return array{php: string, required: array<string, array<string>>, suggested: array<string, array<string>>}
+     */
+    private function aggregatePackageRequirements(array $packages, string $typo3Version): array
+    {
+        $phpConstraints = [];
+        /** @var array<string, array<string>> $requiredExtensions */
+        $requiredExtensions = [];  // ext => [packages that need it]
+        /** @var array<string, array<string>> $suggestedExtensions */
+        $suggestedExtensions = []; // ext => [packages that suggest it]
+
+        foreach ($packages as $packageName) {
+            $requirements = $this->fetchPackageRequirements($packageName, $typo3Version);
+
+            if ($requirements['php'] !== null) {
+                $phpConstraints[] = $requirements['php'];
+            }
+
+            foreach ($requirements['required'] as $ext) {
+                if (!isset($requiredExtensions[$ext])) {
+                    $requiredExtensions[$ext] = [];
+                }
+                $requiredExtensions[$ext][] = $packageName;
+            }
+
+            foreach ($requirements['suggested'] as $ext) {
+                // Only suggest if not already required
+                if (!isset($requiredExtensions[$ext])) {
+                    if (!isset($suggestedExtensions[$ext])) {
+                        $suggestedExtensions[$ext] = [];
+                    }
+                    $suggestedExtensions[$ext][] = $packageName;
+                }
+            }
+        }
+
+        // Merge PHP constraints - use most restrictive
+        // All TYPO3 13+ packages require ^8.2, so this is the safe default
+        $mergedPhp = '^8.2';
+        if (!empty($phpConstraints)) {
+            $mergedPhp = $phpConstraints[0];
+        }
+
+        return [
+            'php' => $mergedPhp,
+            'required' => $requiredExtensions,
+            'suggested' => $suggestedExtensions,
+        ];
+    }
+
+    /**
      * Fetch data from Packagist API with caching
      */
     private function fetchFromPackagist(string $url): ?string
@@ -418,63 +555,54 @@ class PackageService
     /**
      * Validate platform requirements for selected packages
      *
+     * Dynamically fetches requirements from Packagist based on the selected packages.
+     *
      * @param array<string> $packages List of package names to validate
-     * @return array{passed: bool, requirements: array<array{title: string, description: string, status: string, package?: string}>}
+     * @return array{passed: bool, requirements: array<array{title: string, description: string, status: string}>}
      */
-    public function validateRequirements(array $packages): array
+    public function validateRequirements(array $packages, string $typo3Version = '13.4'): array
     {
         $platform = $this->getPlatformInfo();
         $requirements = [];
         $allPassed = true;
 
-        // Always check PHP version for TYPO3 13+
-        $phpRequirement = $this->checkPhpVersion($platform['php'], '^8.2');
+        // Aggregate requirements from all selected packages
+        $aggregated = $this->aggregatePackageRequirements($packages, $typo3Version);
+
+        // Check PHP version against aggregated constraint
+        $phpRequirement = $this->checkPhpVersion($platform['php'], $aggregated['php']);
         $requirements[] = $phpRequirement;
         if ($phpRequirement['status'] === 'failed') {
             $allPassed = false;
         }
 
-        // Check common required extensions for TYPO3
-        $requiredExtensions = [
-            'pdo' => 'Database connectivity',
-            'json' => 'JSON processing',
-            'pcre' => 'Regular expressions',
-            'session' => 'Session handling',
-            'xml' => 'XML processing',
-            'filter' => 'Data filtering',
-            'hash' => 'Hashing functions',
-            'mbstring' => 'Multibyte string support',
-            'intl' => 'Internationalization',
-            'gd' => 'Image processing',
-            'zip' => 'ZIP archive support',
-            'openssl' => 'SSL/TLS encryption',
-            'fileinfo' => 'File type detection',
-            'tokenizer' => 'PHP token parsing',
-        ];
-
-        foreach ($requiredExtensions as $ext => $purpose) {
-            $extRequirement = $this->checkExtension($ext, $purpose, $platform['extensions']);
+        // Check required extensions (from packages)
+        foreach ($aggregated['required'] as $ext => $sourcePackages) {
+            $extRequirement = $this->checkExtensionDynamic(
+                $ext,
+                $sourcePackages,
+                $platform['extensions'],
+                true
+            );
             $requirements[] = $extRequirement;
             if ($extRequirement['status'] === 'failed') {
                 $allPassed = false;
             }
         }
 
-        // Check recommended extensions
-        $recommendedExtensions = [
-            'curl' => 'HTTP requests',
-            'zlib' => 'Compression',
-            'opcache' => 'Opcode caching for performance',
-            'apcu' => 'User data caching',
-        ];
-
-        foreach ($recommendedExtensions as $ext => $purpose) {
-            $extRequirement = $this->checkExtension($ext, $purpose, $platform['extensions'], false);
+        // Check suggested extensions (from packages)
+        foreach ($aggregated['suggested'] as $ext => $sourcePackages) {
+            $extRequirement = $this->checkExtensionDynamic(
+                $ext,
+                $sourcePackages,
+                $platform['extensions'],
+                false
+            );
             $requirements[] = $extRequirement;
             // Warnings don't fail the check
         }
 
-        // Check memory limit
+        // Check memory limit (static, not package-dependent)
         $memoryRequirement = $this->checkMemoryLimit();
         $requirements[] = $memoryRequirement;
         if ($memoryRequirement['status'] === 'failed') {
@@ -508,16 +636,17 @@ class PackageService
     }
 
     /**
-     * Check if a PHP extension is available
+     * Check extension with dynamic source information from packages
      *
+     * @param array<string> $sourcePackages Packages that require/suggest this extension
      * @param array<string, string> $loadedExtensions
      * @return array{title: string, description: string, status: string}
      */
-    private function checkExtension(
+    private function checkExtensionDynamic(
         string $extension,
-        string $purpose,
+        array $sourcePackages,
         array $loadedExtensions,
-        bool $required = true
+        bool $required
     ): array {
         $isLoaded = isset($loadedExtensions[$extension]) || extension_loaded($extension);
 
@@ -526,12 +655,21 @@ class PackageService
             $status = $required ? 'failed' : 'warning';
         }
 
+        // Format package list for display
+        $packageList = implode(', ', array_map(
+            fn(string $p): string => str_replace(['typo3/cms-', 'typo3/'], '', $p),
+            array_slice($sourcePackages, 0, 3)
+        ));
+        if (count($sourcePackages) > 3) {
+            $packageList .= ' +' . (count($sourcePackages) - 3) . ' more';
+        }
+
         return [
             'title' => sprintf('PHP Extension: %s', $extension),
             'description' => sprintf(
-                '%s - %s',
-                $purpose,
-                $isLoaded ? 'Available' : ($required ? 'Missing (required)' : 'Missing (recommended)')
+                '%s by %s',
+                $required ? 'Required' : 'Recommended',
+                $packageList
             ),
             'status' => $status,
         ];
