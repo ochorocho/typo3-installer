@@ -88,7 +88,7 @@ wait_for_ui() {
 
 # Install dependencies
 echo "Installing Playwright dependencies..."
-if ! ddev exec "cd tests/e2e/ && npm install && sudo npx playwright install-deps && npx playwright install"; then
+if ! ddev exec "unset npm_config_prefix && cd tests/e2e/ && npm install && sudo npx playwright install-deps && npx playwright install"; then
     echo "Error: Failed to install Playwright dependencies"
     exit 1
 fi
@@ -101,11 +101,11 @@ if [[ "${1:-}" == "browser" ]]; then
 
     # Run playwright UI (this blocks until user exits or error)
     echo "Starting Playwright UI..."
-    ddev exec "cd tests/e2e/ && npx playwright test --ui --ui-port=${container_port} --ui-host=0.0.0.0" || true
+    ddev exec "unset npm_config_prefix && cd tests/e2e/ && npx playwright test --ui --ui-port=${container_port} --ui-host=0.0.0.0" || true
 else
     # Pass all arguments through to playwright test
     echo "Running Playwright tests..."
-    ddev exec "cd tests/e2e/ && npx playwright test $*"
+    ddev exec "unset npm_config_prefix && cd tests/e2e/ && npx playwright test $*"
 fi
 
 # cleanup will be called via EXIT trap
