@@ -169,6 +169,26 @@ export class StepDatabase extends LitElement {
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    .test-result.error .error-help {
+      margin-top: var(--spacing-md, 16px);
+      padding-top: var(--spacing-md, 16px);
+      border-top: 1px solid rgba(200, 60, 60, 0.3);
+    }
+
+    .test-result.error .error-help-title {
+      font-weight: 600;
+      margin-bottom: var(--spacing-sm, 8px);
+    }
+
+    .test-result.error .error-help ul {
+      margin: 0;
+      padding-left: var(--spacing-lg, 24px);
+    }
+
+    .test-result.error .error-help li {
+      margin-bottom: var(--spacing-xs, 4px);
+    }
   `;
 
   constructor() {
@@ -213,7 +233,12 @@ export class StepDatabase extends LitElement {
         }
       }));
     } catch (error) {
-      this.testResult = { success: false, message: error.message || 'Connection failed' };
+      this.testResult = {
+        success: false,
+        message: error.getUserMessage?.() || error.message || 'Connection failed',
+        details: error.details || null,
+        help: this._getConnectionErrorHelp(error)
+      };
 
       this.dispatchEvent(new CustomEvent('state-update', {
         bubbles: true,
@@ -237,6 +262,43 @@ export class StepDatabase extends LitElement {
 
   _handleNext() {
     this.dispatchEvent(new CustomEvent('next-step', { bubbles: true, composed: true }));
+  }
+
+  _getConnectionErrorHelp(error) {
+    const help = [];
+    const message = (error.message || '').toLowerCase();
+
+    // Check for common error patterns
+    if (message.includes('access denied') || message.includes('authentication')) {
+      help.push('Verify the username and password are correct');
+      help.push('Check that the user has permission to access the database');
+    }
+
+    if (message.includes('unknown database') || message.includes('does not exist')) {
+      help.push('The database must already exist - create it first');
+      help.push('Check the database name for typos');
+    }
+
+    if (message.includes('connection refused') || message.includes('could not connect')) {
+      help.push('Verify the database server is running');
+      help.push('Check the host and port are correct');
+      help.push('Ensure no firewall is blocking the connection');
+    }
+
+    if (message.includes('timeout') || error.details?.isTimeout) {
+      help.push('The database server may be slow or unreachable');
+      help.push('Try again or check the server status');
+    }
+
+    // Default suggestions if no specific match
+    if (help.length === 0) {
+      help.push('Verify all connection details are correct');
+      help.push('Ensure the database server is running and accessible');
+      help.push('Check that the database exists');
+      help.push('Verify the user has sufficient permissions');
+    }
+
+    return help;
   }
 
   render() {
@@ -288,6 +350,14 @@ export class StepDatabase extends LitElement {
         <div class="test-result ${this.testResult.success ? 'success' : 'error'}" role="alert" aria-live="polite">
           <span class="sr-only">${this.testResult.success ? 'Success:' : 'Error:'}</span>
           ${this.testResult.message}
+          ${!this.testResult.success && this.testResult.help?.length > 0 ? html`
+            <div class="error-help">
+              <div class="error-help-title">What you can try:</div>
+              <ul>
+                ${this.testResult.help.map(tip => html`<li>${tip}</li>`)}
+              </ul>
+            </div>
+          ` : ''}
         </div>
       ` : ''}
 

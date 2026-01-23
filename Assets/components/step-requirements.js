@@ -5,7 +5,8 @@ export class StepRequirements extends LitElement {
   static properties = {
     state: { type: Object },
     checking: { type: Boolean },
-    requirements: { type: Array }
+    requirements: { type: Array },
+    error: { type: Object }
   };
 
   static styles = css`
@@ -214,12 +215,82 @@ export class StepRequirements extends LitElement {
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    .error-container {
+      background: #ffebee;
+      border: 1px solid var(--color-error, #c83c3c);
+      border-radius: var(--border-radius, 4px);
+      padding: var(--spacing-lg, 24px);
+      margin-bottom: var(--spacing-lg, 24px);
+    }
+
+    .error-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm, 8px);
+      margin-bottom: var(--spacing-md, 16px);
+    }
+
+    .error-icon {
+      width: 24px;
+      height: 24px;
+      color: var(--color-error, #c83c3c);
+    }
+
+    .error-title {
+      font-weight: 600;
+      color: var(--color-error, #c83c3c);
+      font-size: 16px;
+    }
+
+    .error-message {
+      color: #333;
+      margin-bottom: var(--spacing-md, 16px);
+    }
+
+    .error-help {
+      background: rgba(255, 255, 255, 0.7);
+      padding: var(--spacing-md, 16px);
+      border-radius: var(--border-radius, 4px);
+      margin-bottom: var(--spacing-md, 16px);
+    }
+
+    .error-help-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: var(--spacing-sm, 8px);
+    }
+
+    .error-help ul {
+      margin: 0;
+      padding-left: var(--spacing-lg, 24px);
+      color: #555;
+    }
+
+    .error-help li {
+      margin-bottom: var(--spacing-xs, 4px);
+    }
+
+    .error-actions {
+      display: flex;
+      gap: var(--spacing-md, 16px);
+    }
+
+    .btn-error {
+      background: var(--color-error, #c83c3c);
+      color: white;
+    }
+
+    .btn-error:hover:not(:disabled) {
+      background: #a33232;
+    }
   `;
 
   constructor() {
     super();
     this.checking = false;
     this.requirements = [];
+    this.error = null;
   }
 
   connectedCallback() {
@@ -233,6 +304,7 @@ export class StepRequirements extends LitElement {
 
   async _checkRequirements() {
     this.checking = true;
+    this.error = null;
     try {
       // Use dynamic validation based on selected packages and TYPO3 version
       const selectedPackages = this.state?.packages?.selected || [];
@@ -259,9 +331,32 @@ export class StepRequirements extends LitElement {
       }));
     } catch (error) {
       console.error('Failed to check requirements:', error);
+      this.error = {
+        message: error.getUserMessage?.() || error.message || 'Failed to check requirements',
+        details: error.details || null
+      };
     } finally {
       this.checking = false;
     }
+  }
+
+  _getErrorHelp() {
+    const help = [
+      'Check your internet connection',
+      'Try refreshing the page and starting again',
+      'The server may be temporarily unavailable',
+      'Check the browser console for more details'
+    ];
+
+    if (this.error?.details?.isTimeout) {
+      help.unshift('The request took too long - the server might be busy');
+    }
+
+    if (this.error?.details?.statusCode === 500) {
+      help.unshift('Check the PHP error logs on the server');
+    }
+
+    return help;
   }
 
   _handlePrevious() {
@@ -305,7 +400,28 @@ export class StepRequirements extends LitElement {
         Requirements are validated based on your package selection.
       </div>
 
-      ${this.checking ? html`
+      ${this.error ? html`
+        <div class="error-container" role="alert">
+          <div class="error-header">
+            <svg class="error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <span class="error-title">Requirements Check Failed</span>
+          </div>
+          <p class="error-message">${this.error.message}</p>
+          <div class="error-help">
+            <div class="error-help-title">What you can try:</div>
+            <ul>
+              ${this._getErrorHelp().map(tip => html`<li>${tip}</li>`)}
+            </ul>
+          </div>
+          <div class="error-actions">
+            <button class="btn-error" @click=${this._checkRequirements}>
+              Try Again
+            </button>
+          </div>
+        </div>
+      ` : this.checking ? html`
         <div class="requirements-list">
           <p><span class="spinner"></span> Checking requirements...</p>
         </div>

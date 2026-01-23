@@ -11,7 +11,8 @@ export class StepPackages extends LitElement {
     selectedPackages: { type: Array },
     installInfo: { type: Object },
     versions: { type: Array },
-    selectedVersion: { type: String }
+    selectedVersion: { type: String },
+    error: { type: Object }
   };
 
   static styles = css`
@@ -302,6 +303,75 @@ export class StepPackages extends LitElement {
       opacity: 0.6;
       pointer-events: none;
     }
+
+    .error-container {
+      background: #ffebee;
+      border: 1px solid var(--color-error, #c83c3c);
+      border-radius: var(--border-radius, 4px);
+      padding: var(--spacing-lg, 24px);
+      margin-bottom: var(--spacing-lg, 24px);
+    }
+
+    .error-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm, 8px);
+      margin-bottom: var(--spacing-md, 16px);
+    }
+
+    .error-icon {
+      width: 24px;
+      height: 24px;
+      color: var(--color-error, #c83c3c);
+    }
+
+    .error-title {
+      font-weight: 600;
+      color: var(--color-error, #c83c3c);
+      font-size: 16px;
+    }
+
+    .error-message {
+      color: #333;
+      margin-bottom: var(--spacing-md, 16px);
+    }
+
+    .error-help {
+      background: rgba(255, 255, 255, 0.7);
+      padding: var(--spacing-md, 16px);
+      border-radius: var(--border-radius, 4px);
+      margin-bottom: var(--spacing-md, 16px);
+    }
+
+    .error-help-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: var(--spacing-sm, 8px);
+    }
+
+    .error-help ul {
+      margin: 0;
+      padding-left: var(--spacing-lg, 24px);
+      color: #555;
+    }
+
+    .error-help li {
+      margin-bottom: var(--spacing-xs, 4px);
+    }
+
+    .error-actions {
+      display: flex;
+      gap: var(--spacing-md, 16px);
+    }
+
+    .btn-error {
+      background: var(--color-error, #c83c3c);
+      color: white;
+    }
+
+    .btn-error:hover:not(:disabled) {
+      background: #a33232;
+    }
   `;
 
   constructor() {
@@ -314,6 +384,7 @@ export class StepPackages extends LitElement {
     this.installInfo = null;
     this.versions = [];
     this.selectedVersion = '13.4';
+    this.error = null;
   }
 
   connectedCallback() {
@@ -323,6 +394,7 @@ export class StepPackages extends LitElement {
 
   async _loadData() {
     this.loading = true;
+    this.error = null;
 
     try {
       // Load versions and install info first
@@ -344,6 +416,11 @@ export class StepPackages extends LitElement {
       await this._loadPackages();
     } catch (error) {
       console.error('Failed to load data:', error);
+      this.error = {
+        message: error.getUserMessage?.() || error.message || 'Failed to load package data',
+        details: error.details || null,
+        type: 'load'
+      };
     } finally {
       this.loading = false;
     }
@@ -351,6 +428,7 @@ export class StepPackages extends LitElement {
 
   async _loadPackages() {
     this.loadingPackages = true;
+    this.error = null;
 
     try {
       const packagesResponse = await apiClient.getPackages(this.selectedVersion);
@@ -375,6 +453,11 @@ export class StepPackages extends LitElement {
       this._updateState();
     } catch (error) {
       console.error('Failed to load packages:', error);
+      this.error = {
+        message: error.getUserMessage?.() || error.message || 'Failed to load packages',
+        details: error.details || null,
+        type: 'packages'
+      };
     } finally {
       this.loadingPackages = false;
     }
@@ -426,12 +509,65 @@ export class StepPackages extends LitElement {
     this.dispatchEvent(new CustomEvent('next-step', { bubbles: true, composed: true }));
   }
 
+  _handleRetry() {
+    if (this.error?.type === 'packages') {
+      this._loadPackages();
+    } else {
+      this._loadData();
+    }
+  }
+
+  _getErrorHelp() {
+    const help = [
+      'Check your internet connection',
+      'The server may be temporarily unavailable - try again',
+      'If using a firewall or proxy, ensure packagist.org is accessible',
+      'Check the browser console for more details'
+    ];
+
+    if (this.error?.details?.isTimeout) {
+      help.unshift('The request took too long - the server might be busy');
+    }
+
+    if (this.error?.details?.statusCode === 500) {
+      help.unshift('Check the PHP error logs on the server');
+    }
+
+    return help;
+  }
+
   render() {
     if (this.loading) {
       return html`
         <div class="loading">
           <div class="spinner"></div>
           <p>Loading available packages...</p>
+        </div>
+      `;
+    }
+
+    if (this.error && this.error.type === 'load') {
+      return html`
+        <h2>Select Packages</h2>
+        <div class="error-container" role="alert">
+          <div class="error-header">
+            <svg class="error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <span class="error-title">Failed to Load Data</span>
+          </div>
+          <p class="error-message">${this.error.message}</p>
+          <div class="error-help">
+            <div class="error-help-title">What you can try:</div>
+            <ul>
+              ${this._getErrorHelp().map(tip => html`<li>${tip}</li>`)}
+            </ul>
+          </div>
+          <div class="error-actions">
+            <button class="btn-error" @click=${this._handleRetry}>
+              Try Again
+            </button>
+          </div>
         </div>
       `;
     }
@@ -492,36 +628,59 @@ export class StepPackages extends LitElement {
         </div>
       </div>
 
-      <div class="package-list ${this.loadingPackages ? 'loading' : ''}">
-        ${this.loadingPackages ? html`
-          <div class="loading">
-            <div class="spinner"></div>
-            <p>Loading packages for TYPO3 ${this.selectedVersion}...</p>
+      ${this.error && this.error.type === 'packages' ? html`
+        <div class="error-container" role="alert">
+          <div class="error-header">
+            <svg class="error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <span class="error-title">Failed to Load Packages</span>
           </div>
-        ` : html`
-        <div class="packages" role="group" aria-label="Available TYPO3 packages">
-          ${Object.entries(this.packages).map(([packageId, pkg]) => html`
-            <div class="package ${this._isPackageRequired(packageId) ? 'required' : ''}">
-              <input
-                type="checkbox"
-                id="pkg-${packageId.replace('/', '-')}"
-                .checked=${this._isPackageSelected(packageId)}
-                ?disabled=${this._isPackageRequired(packageId)}
-                @change=${() => this._togglePackage(packageId)}
-                aria-describedby="desc-${packageId.replace('/', '-')}"
-              >
-              <label for="pkg-${packageId.replace('/', '-')}" class="package-info">
-                <div>
-                  <span class="package-name">${pkg.name}</span>
-                  <span class="package-id">${packageId}</span>
-                </div>
-                <div id="desc-${packageId.replace('/', '-')}" class="package-description">${pkg.description}</div>
-              </label>
-            </div>
-          `)}
+          <p class="error-message">${this.error.message}</p>
+          <div class="error-help">
+            <div class="error-help-title">What you can try:</div>
+            <ul>
+              ${this._getErrorHelp().map(tip => html`<li>${tip}</li>`)}
+            </ul>
+          </div>
+          <div class="error-actions">
+            <button class="btn-error" @click=${this._handleRetry}>
+              Try Again
+            </button>
+          </div>
         </div>
-        `}
-      </div>
+      ` : html`
+        <div class="package-list ${this.loadingPackages ? 'loading' : ''}">
+          ${this.loadingPackages ? html`
+            <div class="loading">
+              <div class="spinner"></div>
+              <p>Loading packages for TYPO3 ${this.selectedVersion}...</p>
+            </div>
+          ` : html`
+          <div class="packages" role="group" aria-label="Available TYPO3 packages">
+            ${Object.entries(this.packages).map(([packageId, pkg]) => html`
+              <div class="package ${this._isPackageRequired(packageId) ? 'required' : ''}">
+                <input
+                  type="checkbox"
+                  id="pkg-${packageId.replace('/', '-')}"
+                  .checked=${this._isPackageSelected(packageId)}
+                  ?disabled=${this._isPackageRequired(packageId)}
+                  @change=${() => this._togglePackage(packageId)}
+                  aria-describedby="desc-${packageId.replace('/', '-')}"
+                >
+                <label for="pkg-${packageId.replace('/', '-')}" class="package-info">
+                  <div>
+                    <span class="package-name">${pkg.name}</span>
+                    <span class="package-id">${packageId}</span>
+                  </div>
+                  <div id="desc-${packageId.replace('/', '-')}" class="package-description">${pkg.description}</div>
+                </label>
+              </div>
+            `)}
+          </div>
+          `}
+        </div>
+      `}
 
       <div class="actions">
         <button class="btn-primary" @click=${this._handleNext}>
