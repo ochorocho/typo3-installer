@@ -36,10 +36,46 @@ class InstallController extends AbstractController
         try {
             $config = InstallationConfig::fromArray($data);
 
-            // Start installation in background
-            $this->startInstallation($config);
+            // Initialize status immediately
+            $this->updateStatus([
+                'progress' => 0,
+                'currentTask' => 'Starting installation...',
+                'completed' => false,
+                'error' => null,
+            ]);
 
-            return $this->successResponse(['message' => 'Installation started']);
+            // Create response first
+            $response = $this->successResponse(['message' => 'Installation started']);
+
+            // Send response immediately if possible (FPM)
+            if (function_exists('fastcgi_finish_request')) {
+                // Send headers and body
+                $response->send();
+                // Flush output and close connection to client
+                fastcgi_finish_request();
+                // Now run the installation (client won't wait)
+                $this->runInstallation($config);
+            } else {
+                // Fallback: Use ignore_user_abort and output buffering
+                ignore_user_abort(true);
+                set_time_limit(0);
+
+                // Send response with Connection: close to hint client to stop waiting
+                $response->headers->set('Connection', 'close');
+                $response->headers->set('Content-Length', (string)strlen($response->getContent() ?: ''));
+                $response->send();
+
+                // Flush all output buffers
+                if (ob_get_level() > 0) {
+                    ob_end_flush();
+                }
+                flush();
+
+                // Run installation after response is sent
+                $this->runInstallation($config);
+            }
+
+            return $response;
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage());
         }
@@ -63,18 +99,11 @@ class InstallController extends AbstractController
         return new JsonResponse($status);
     }
 
-    private function startInstallation(InstallationConfig $config): void
+    /**
+     * Run the installation process (called after response is sent to client)
+     */
+    private function runInstallation(InstallationConfig $config): void
     {
-        // Initialize status
-        $this->updateStatus([
-            'progress' => 0,
-            'currentTask' => 'Starting installation...',
-            'completed' => false,
-            'error' => null,
-        ]);
-
-        // In a real-world scenario, this would be done via a background job/process
-        // For simplicity, we'll do it synchronously but update status as we go
         try {
             $this->installer->install($config, function (int $progress, string $task) {
                 $this->updateStatus([

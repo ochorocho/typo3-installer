@@ -299,6 +299,9 @@ export class StepProgress extends LitElement {
                     }
                 }));
 
+                // Force re-render to update task list UI
+                this.requestUpdate();
+
                 if (status.completed || status.error) {
                     this._stopPolling();
                 }
