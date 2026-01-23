@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-## Description: Open PhpStorm with the current project
+## Description: Reset TYPO3 installation to re-run the Composer GUI installer
 ## Usage: typo3:reset
 ## Example: "ddev typo3:reset"
 

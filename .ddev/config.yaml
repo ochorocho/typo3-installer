@@ -16,6 +16,13 @@ composer_version: "2"
 web_environment: []
 corepack_enable: false
 
+web_extra_exposed_ports:
+  - name: playwright
+    container_port: 43837
+    http_port: 8880
+    https_port: 8884
+
+
 # Key features of DDEV's config.yaml:
 
 # name: <projectname> # Name of the project, automatically provides
