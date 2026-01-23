@@ -511,7 +511,8 @@ class PackageService
         ]);
 
         try {
-            $response = file_get_contents($url, false, $context);
+            // Suppress warnings (e.g., connection timeout) - we handle errors via return value
+            $response = @file_get_contents($url, false, $context);
 
             if ($response === false) {
                 return null;

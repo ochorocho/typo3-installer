@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'html',
   timeout: 30000,
-  globalSetup: './global-setup.ts',
+  globalSetup: './global-setup.js',
 
   use: {
     baseURL: 'https://typo3-installer.ddev.site',
@@ -29,7 +29,7 @@ export default defineConfig({
 
   webServer: {
     // command: 'cd ../.. && ddev start',
-    // url: 'https://typo3-installer.ddev.site',
+    url: 'https://typo3-installer.ddev.site',
     reuseExistingServer: true,
     ignoreHTTPSErrors: true,
   },
