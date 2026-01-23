@@ -16,6 +16,21 @@ use TYPO3\Installer\Model\InstallationConfig;
  */
 class Typo3Installer
 {
+    /**
+     * Default file permissions for created directories
+     */
+    private const DEFAULT_DIR_PERMISSIONS = 0755;
+
+    /**
+     * Process timeout for CLI commands in seconds
+     */
+    private const PROCESS_TIMEOUT_SECONDS = 300;
+
+    /**
+     * Maximum length for database/admin input values
+     */
+    private const MAX_INPUT_LENGTH = 255;
+
     private Filesystem $filesystem;
     private InstallationInfoService $infoService;
 
@@ -92,11 +107,43 @@ class Typo3Installer
         $progressCallback(100, 'Installation complete!');
     }
 
+    /**
+     * Validate and sanitize a string input value
+     *
+     * @throws \InvalidArgumentException if validation fails
+     */
+    private function validateInput(string $value, string $fieldName, bool $allowEmpty = false): string
+    {
+        $trimmed = trim($value);
+
+        if (!$allowEmpty && $trimmed === '') {
+            throw new \InvalidArgumentException(
+                sprintf('Field "%s" cannot be empty', $fieldName)
+            );
+        }
+
+        if (strlen($trimmed) > self::MAX_INPUT_LENGTH) {
+            throw new \InvalidArgumentException(
+                sprintf('Field "%s" exceeds maximum length of %d characters', $fieldName, self::MAX_INPUT_LENGTH)
+            );
+        }
+
+        // Prevent shell metacharacter injection in CLI arguments
+        // Note: Symfony Process handles arguments safely, but we sanitize for defense in depth
+        if (preg_match('/[\x00-\x1f]/', $trimmed)) {
+            throw new \InvalidArgumentException(
+                sprintf('Field "%s" contains invalid control characters', $fieldName)
+            );
+        }
+
+        return $trimmed;
+    }
+
     private function prepareDirectory(string $installDir): void
     {
         // Create install directory if it doesn't exist
         if (!file_exists($installDir)) {
-            $this->filesystem->mkdir($installDir, 0755);
+            $this->filesystem->mkdir($installDir, self::DEFAULT_DIR_PERMISSIONS);
             return;
         }
 
@@ -283,11 +330,24 @@ class Typo3Installer
 
     /**
      * Run TYPO3 setup command with database and admin configuration
+     *
+     * @throws \InvalidArgumentException if input validation fails
      */
     private function setupTypo3(InstallationConfig $config, string $installDir): void
     {
         $dbConfig = $config->database;
         $admin = $config->admin;
+
+        // Validate all user inputs before passing to CLI
+        $host = $this->validateInput($dbConfig->host, 'database.host');
+        $dbName = $this->validateInput($dbConfig->name, 'database.name');
+        $dbUser = $this->validateInput($dbConfig->user, 'database.user');
+        $dbPassword = $this->validateInput($dbConfig->password, 'database.password', true);
+        $adminUsername = $this->validateInput($admin->username, 'admin.username');
+        $adminPassword = $this->validateInput($admin->password, 'admin.password');
+        $adminEmail = $this->validateInput($admin->email, 'admin.email');
+        $siteName = $this->validateInput($config->site->name, 'site.name');
+        $baseUrl = $this->validateInput($config->site->baseUrl, 'site.baseUrl');
 
         // Map driver names: pdo_mysql -> mysqli for TYPO3
         $driver = match ($dbConfig->driver) {
@@ -301,16 +361,16 @@ class Typo3Installer
             'setup',
             [
                 '--driver=' . $driver,
-                '--host=' . $dbConfig->host,
+                '--host=' . $host,
                 '--port=' . $dbConfig->port,
-                '--dbname=' . $dbConfig->name,
-                '--username=' . $dbConfig->user,
-                '--password=' . $dbConfig->password,
-                '--admin-username=' . $admin->username,
-                '--admin-user-password=' . $admin->password,
-                '--admin-email=' . $admin->email,
-                '--project-name=' . $config->site->name,
-                '--create-site=' . $config->site->baseUrl,
+                '--dbname=' . $dbName,
+                '--username=' . $dbUser,
+                '--password=' . $dbPassword,
+                '--admin-username=' . $adminUsername,
+                '--admin-user-password=' . $adminPassword,
+                '--admin-email=' . $adminEmail,
+                '--project-name=' . $siteName,
+                '--create-site=' . $baseUrl,
                 '--server-type=' . $this->detectServerType(),
                 '--no-interaction',
                 '--force',
@@ -323,7 +383,7 @@ class Typo3Installer
         $configDir = dirname($additionalConfig);
 
         if (!file_exists($configDir)) {
-            $this->filesystem->mkdir($configDir, 0755);
+            $this->filesystem->mkdir($configDir, self::DEFAULT_DIR_PERMISSIONS);
         }
 
         $configContent = <<<PHP
@@ -369,7 +429,7 @@ PHP;
             $installDir,
             null,
             null,
-            300
+            self::PROCESS_TIMEOUT_SECONDS
         );
 
         $process->run();

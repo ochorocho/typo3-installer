@@ -121,13 +121,13 @@ class Application
 
     private function getDefaultHtml(): string
     {
+        $assetPath = $this->getAssetPath();
+        $css = file_get_contents($assetPath . '/installer.css');
+        $js = file_get_contents($assetPath . '/installer.js');
 
-//        var_dump($this->getAssetPath());
-//        var_dump($this->serveAsset('installer.js'));
-
-        // @todo: double check to see if this is a reliable way to get the path to the phar
-        $css = file_get_contents('phar://' . $_SERVER['SCRIPT_FILENAME'] . '/public/installer.css');
-        $js = file_get_contents('phar://' . $_SERVER['SCRIPT_FILENAME'] . '/public/installer.js');
+        if ($css === false || $js === false) {
+            throw new \RuntimeException('Failed to load frontend assets');
+        }
 
         return <<<HTML
 <!DOCTYPE html>

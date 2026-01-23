@@ -36,19 +36,8 @@ export class StepProgress extends LitElement {
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--color-primary, #ff8700), #ff9800);
+            background: var(--color-primary, #ff8700);
             border-radius: 4px;
-            transition: width 0.5s ease;
-            animation: shimmer 2s infinite linear;
-        }
-
-        @keyframes shimmer {
-            0% {
-                background-position: -200% 0;
-            }
-            100% {
-                background-position: 200% 0;
-            }
         }
 
         .progress-text {
@@ -59,18 +48,32 @@ export class StepProgress extends LitElement {
         }
 
         .task-list {
-            margin-bottom: var(--spacing-lg, 24px);
+            margin: 0 0 var(--spacing-lg, 24px) 0;
+            padding: 0;
+            list-style: none;
         }
 
         .task {
             display: flex;
             align-items: center;
             padding: var(--spacing-sm, 8px) 0;
-            border-bottom: 1px solid var(--color-border, #ddd);
+            border-bottom: 1px solid var(--color-border, #bbb);
         }
 
         .task:last-child {
             border-bottom: none;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
 
         .task-icon {
@@ -89,24 +92,14 @@ export class StepProgress extends LitElement {
 
         .task.running .task-icon {
             color: var(--color-primary, #ff8700);
-            animation: pulse 1s infinite;
         }
 
         .task.completed .task-icon {
-            color: var(--color-success, #4caf50);
+            color: var(--color-success, #1cb841);
         }
 
         .task.error .task-icon {
-            color: var(--color-error, #f44336);
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
+            color: var(--color-error, #c83c3c);
         }
 
         .task-label {
@@ -135,7 +128,7 @@ export class StepProgress extends LitElement {
         }
 
         .success-message h3 {
-            color: var(--color-success, #4caf50);
+            color: var(--color-success, #1cb841);
             margin: 0 0 var(--spacing-md, 16px) 0;
             font-size: 1.5rem;
         }
@@ -154,13 +147,13 @@ export class StepProgress extends LitElement {
         .error-message {
             padding: var(--spacing-lg, 24px);
             background: #ffebee;
-            border: 1px solid var(--color-error, #f44336);
+            border: 1px solid var(--color-error, #c83c3c);
             border-radius: var(--border-radius, 4px);
             margin-bottom: var(--spacing-lg, 24px);
         }
 
         .error-message h3 {
-            color: var(--color-error, #f44336);
+            color: var(--color-error, #c83c3c);
             margin: 0 0 var(--spacing-sm, 8px) 0;
         }
 
@@ -173,24 +166,28 @@ export class StepProgress extends LitElement {
             margin: 0;
         }
 
-        button {
+        button, .btn-success {
             padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
             border: none;
             border-radius: var(--border-radius, 4px);
-            font-weight: 600;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
             text-decoration: none;
             display: inline-block;
         }
 
+        button:focus-visible, .btn-success:focus-visible {
+            outline: 2px solid var(--color-primary, #ff8700);
+            outline-offset: 2px;
+        }
+
         .btn-success {
-            background: var(--color-success, #4caf50);
+            background: var(--color-success, #1cb841);
             color: white;
         }
 
         .btn-success:hover {
-            background: #43a047;
+            background: #179e38;
         }
     `;
 
@@ -404,14 +401,17 @@ export class StepProgress extends LitElement {
                 </div>
             </div>
 
-            <div class="task-list">
+            <ol class="task-list" aria-label="Installation tasks">
                 ${this.tasks.map(task => html`
-                    <div class="task ${task.status}">
-                        <div class="task-icon">${this._getTaskIcon(task.status)}</div>
-                        <div class="task-label">${task.label}</div>
-                    </div>
+                    <li class="task ${task.status}">
+                        <span class="task-icon" aria-hidden="true">${this._getTaskIcon(task.status)}</span>
+                        <span class="task-label">
+                            ${task.label}
+                            <span class="sr-only">- ${task.status === 'completed' ? 'Completed' : task.status === 'running' ? 'In progress' : 'Pending'}</span>
+                        </span>
+                    </li>
                 `)}
-            </div>
+            </ol>
         `;
     }
 }

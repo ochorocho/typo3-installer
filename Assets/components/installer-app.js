@@ -23,9 +23,9 @@ export class InstallerApp extends LitElement {
     .header {
       text-align: center;
       padding: var(--spacing-xl, 32px) 0;
-      background: linear-gradient(135deg, var(--color-primary, #ff8700) 0%, #ff6b00 100%);
+      background: var(--color-primary, #ff8700);
       color: white;
-      border-radius: var(--border-radius, 4px) var(--border-radius, 4px) 0 0;
+      border-radius: var(--border-radius-lg, 8px) var(--border-radius-lg, 8px) 0 0;
       margin-bottom: 0;
     }
 
@@ -80,10 +80,9 @@ export class InstallerApp extends LitElement {
       justify-content: center;
       font-weight: 600;
       font-size: 14px;
-      border: 2px solid var(--color-border, #ddd);
+      border: 2px solid var(--color-border, #bbb);
       background: white;
-      color: var(--color-text-light, #666);
-      transition: all 0.3s ease;
+      color: var(--color-text-light, #333);
     }
 
     .step-indicator.active .step-number {
@@ -118,14 +117,8 @@ export class InstallerApp extends LitElement {
     .content {
       background: white;
       padding: var(--spacing-xl, 32px);
-      border-radius: 0 0 var(--border-radius, 4px) var(--border-radius, 4px);
+      border-radius: 0 0 var(--border-radius-lg, 8px) var(--border-radius-lg, 8px);
       box-shadow: var(--shadow, 0 2px 8px rgba(0,0,0,0.1));
-      animation: fadeIn 0.3s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
     }
   `;
 

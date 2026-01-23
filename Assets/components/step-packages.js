@@ -47,11 +47,15 @@ export class StepPackages extends LitElement {
       align-items: flex-start;
       padding: var(--spacing-sm, 8px);
       border-radius: var(--border-radius, 4px);
-      transition: background 0.2s ease;
     }
 
     .package:hover {
-      background: var(--color-bg, #f5f5f5);
+      background: var(--color-bg, #f4f4f4);
+    }
+
+    .package:focus-within {
+      outline: 2px solid var(--color-primary, #ff8700);
+      outline-offset: 2px;
     }
 
     .package input[type="checkbox"] {
@@ -60,6 +64,12 @@ export class StepPackages extends LitElement {
       width: 18px;
       height: 18px;
       cursor: pointer;
+      accent-color: var(--color-primary, #ff8700);
+    }
+
+    .package input[type="checkbox"]:focus-visible {
+      outline: 2px solid var(--color-primary, #ff8700);
+      outline-offset: 2px;
     }
 
     .package input[type="checkbox"]:disabled {
@@ -68,6 +78,11 @@ export class StepPackages extends LitElement {
 
     .package-info {
       flex: 1;
+      cursor: pointer;
+    }
+
+    .package.required .package-info {
+      cursor: default;
     }
 
     .package-name {
@@ -134,9 +149,13 @@ export class StepPackages extends LitElement {
       padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
       border: none;
       border-radius: var(--border-radius, 4px);
-      font-weight: 600;
+      font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s ease;
+    }
+
+    button:focus-visible {
+      outline: 2px solid var(--color-primary, #ff8700);
+      outline-offset: 2px;
     }
 
     button:disabled {
@@ -480,22 +499,24 @@ export class StepPackages extends LitElement {
             <p>Loading packages for TYPO3 ${this.selectedVersion}...</p>
           </div>
         ` : html`
-        <div class="packages">
+        <div class="packages" role="group" aria-label="Available TYPO3 packages">
           ${Object.entries(this.packages).map(([packageId, pkg]) => html`
             <div class="package ${this._isPackageRequired(packageId) ? 'required' : ''}">
               <input
                 type="checkbox"
+                id="pkg-${packageId.replace('/', '-')}"
                 .checked=${this._isPackageSelected(packageId)}
                 ?disabled=${this._isPackageRequired(packageId)}
                 @change=${() => this._togglePackage(packageId)}
+                aria-describedby="desc-${packageId.replace('/', '-')}"
               >
-              <div class="package-info">
+              <label for="pkg-${packageId.replace('/', '-')}" class="package-info">
                 <div>
                   <span class="package-name">${pkg.name}</span>
                   <span class="package-id">${packageId}</span>
                 </div>
-                <div class="package-description">${pkg.description}</div>
-              </div>
+                <div id="desc-${packageId.replace('/', '-')}" class="package-description">${pkg.description}</div>
+              </label>
             </div>
           `)}
         </div>

@@ -13,6 +13,21 @@ use TYPO3\Installer\Utility\ByteConverter;
 class PackageService
 {
     /**
+     * HTTP request timeout in seconds for Packagist API calls
+     */
+    private const HTTP_TIMEOUT_SECONDS = 10;
+
+    /**
+     * Minimum required memory in bytes (256MB)
+     */
+    private const MIN_MEMORY_BYTES = 256 * 1024 * 1024;
+
+    /**
+     * User agent string for API requests
+     */
+    private const USER_AGENT = 'TYPO3-Installer/1.0';
+
+    /**
      * Required core packages that must always be installed
      */
     private const REQUIRED_PACKAGES = [
@@ -481,20 +496,45 @@ class PackageService
     }
 
     /**
-     * Fetch data from Packagist API with caching
+     * Fetch data from Packagist API
+     *
+     * @throws \RuntimeException on network errors (caught internally by callers)
      */
     private function fetchFromPackagist(string $url): ?string
     {
         $context = stream_context_create([
             'http' => [
-                'timeout' => 10,
-                'user_agent' => 'TYPO3-Installer/1.0',
+                'timeout' => self::HTTP_TIMEOUT_SECONDS,
+                'user_agent' => self::USER_AGENT,
+                'ignore_errors' => true,
             ],
         ]);
 
-        $response = @file_get_contents($url, false, $context);
+        try {
+            $response = file_get_contents($url, false, $context);
 
-        return $response !== false ? $response : null;
+            if ($response === false) {
+                return null;
+            }
+
+            // Check for HTTP error status codes
+            // $http_response_header is a special variable set by file_get_contents when using HTTP wrapper
+            $httpHeaders = $http_response_header;
+            if (is_array($httpHeaders) && count($httpHeaders) > 0) {
+                $statusLine = $httpHeaders[0];
+                if (preg_match('/HTTP\/\d+\.\d+\s+(\d+)/', $statusLine, $matches)) {
+                    $statusCode = (int)$matches[1];
+                    if ($statusCode >= 400) {
+                        return null;
+                    }
+                }
+            }
+
+            return $response;
+        } catch (\Throwable $e) {
+            // Log or handle the error as needed
+            return null;
+        }
     }
 
     /**
@@ -684,10 +724,9 @@ class PackageService
     {
         $memoryLimit = (string)(ini_get('memory_limit') ?: '128M');
         $bytes = ByteConverter::toBytes($memoryLimit);
-        $required = 256 * 1024 * 1024; // 256MB
 
         $status = 'passed';
-        if ($bytes !== -1 && $bytes < $required) {
+        if ($bytes !== -1 && $bytes < self::MIN_MEMORY_BYTES) {
             $status = 'warning';
         }
 

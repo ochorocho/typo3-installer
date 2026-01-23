@@ -35,31 +35,41 @@ export class StepAdmin extends LitElement {
 
     input {
       width: 100%;
-      padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
-      border: 1px solid var(--color-border, #ddd);
+      padding: 6px 8px;
+      border: 1px solid var(--color-border, #bbb);
       border-radius: var(--border-radius, 4px);
-      font-size: 16px;
-      transition: border-color 0.2s ease;
+      font-size: 14px;
+      background: var(--color-bg-white, #fff);
     }
 
     input:focus {
       outline: none;
       border-color: var(--color-primary, #ff8700);
+      box-shadow: 0 0 0 3px rgba(255, 135, 0, 0.15);
+    }
+
+    input:focus-visible {
+      outline: 2px solid var(--color-primary, #ff8700);
+      outline-offset: 2px;
     }
 
     input.error {
-      border-color: var(--color-error, #f44336);
+      border-color: var(--color-error, #c83c3c);
+    }
+
+    input[aria-invalid="true"] {
+      border-color: var(--color-error, #c83c3c);
     }
 
     .help-text {
       font-size: 12px;
-      color: var(--color-text-light, #666);
+      color: var(--color-text-light, #333);
       margin-top: var(--spacing-xs, 4px);
     }
 
     .error-text {
       font-size: 12px;
-      color: var(--color-error, #f44336);
+      color: var(--color-error, #c83c3c);
       margin-top: var(--spacing-xs, 4px);
     }
 
@@ -76,22 +86,21 @@ export class StepAdmin extends LitElement {
 
     .password-strength-fill {
       height: 100%;
-      transition: width 0.3s ease, background-color 0.3s ease;
     }
 
     .password-strength-fill.weak {
       width: 33%;
-      background: var(--color-error, #f44336);
+      background: var(--color-error, #c83c3c);
     }
 
     .password-strength-fill.medium {
       width: 66%;
-      background: var(--color-warning, #ff9800);
+      background: var(--color-warning, #f76707);
     }
 
     .password-strength-fill.strong {
       width: 100%;
-      background: var(--color-success, #4caf50);
+      background: var(--color-success, #1cb841);
     }
 
     .password-strength-label {
@@ -100,15 +109,15 @@ export class StepAdmin extends LitElement {
     }
 
     .password-strength-label.weak {
-      color: var(--color-error, #f44336);
+      color: var(--color-error, #c83c3c);
     }
 
     .password-strength-label.medium {
-      color: var(--color-warning, #ff9800);
+      color: var(--color-warning, #f76707);
     }
 
     .password-strength-label.strong {
-      color: var(--color-success, #4caf50);
+      color: var(--color-success, #1cb841);
     }
 
     .actions {
@@ -123,9 +132,13 @@ export class StepAdmin extends LitElement {
       padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
       border: none;
       border-radius: var(--border-radius, 4px);
-      font-weight: 600;
+      font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s ease;
+    }
+
+    button:focus-visible {
+      outline: 2px solid var(--color-primary, #ff8700);
+      outline-offset: 2px;
     }
 
     button:disabled {
@@ -268,15 +281,18 @@ export class StepAdmin extends LitElement {
           type="text"
           id="username"
           class="${this.touched.username && this.errors.username ? 'error' : ''}"
+          aria-invalid="${this.touched.username && this.errors.username ? 'true' : 'false'}"
+          aria-describedby="${this.errors.username ? 'error-username' : 'help-username'}"
           .value=${admin.username || ''}
           @input=${(e) => this._handleInput('username', e.target.value)}
           @blur=${() => this._handleBlur('username')}
           placeholder="admin"
+          autocomplete="username"
         >
         ${this.touched.username && this.errors.username ? html`
-          <div class="error-text">${this.errors.username}</div>
+          <div id="error-username" class="error-text" role="alert">${this.errors.username}</div>
         ` : html`
-          <div class="help-text">Minimum 3 characters</div>
+          <div id="help-username" class="help-text">Minimum 3 characters</div>
         `}
       </div>
 
@@ -286,13 +302,16 @@ export class StepAdmin extends LitElement {
           type="password"
           id="password"
           class="${this.touched.password && this.errors.password ? 'error' : ''}"
+          aria-invalid="${this.touched.password && this.errors.password ? 'true' : 'false'}"
+          aria-describedby="${this.errors.password ? 'error-password' : 'help-password'}"
           .value=${admin.password || ''}
           @input=${(e) => this._handleInput('password', e.target.value)}
           @blur=${() => this._handleBlur('password')}
+          autocomplete="new-password"
         >
         ${admin.password ? html`
-          <div class="password-strength">
-            <div class="password-strength-bar">
+          <div class="password-strength" aria-live="polite">
+            <div class="password-strength-bar" role="meter" aria-valuenow="${passwordStrength.level === 'weak' ? '33' : passwordStrength.level === 'medium' ? '66' : '100'}" aria-valuemin="0" aria-valuemax="100" aria-label="Password strength">
               <div class="password-strength-fill ${passwordStrength.level}"></div>
             </div>
             <div class="password-strength-label ${passwordStrength.level}">
@@ -301,9 +320,9 @@ export class StepAdmin extends LitElement {
           </div>
         ` : ''}
         ${this.touched.password && this.errors.password ? html`
-          <div class="error-text">${this.errors.password}</div>
+          <div id="error-password" class="error-text" role="alert">${this.errors.password}</div>
         ` : html`
-          <div class="help-text">Minimum 8 characters with uppercase, lowercase, and number</div>
+          <div id="help-password" class="help-text">Minimum 8 characters with uppercase, lowercase, and number</div>
         `}
       </div>
 
@@ -313,15 +332,18 @@ export class StepAdmin extends LitElement {
           type="email"
           id="email"
           class="${this.touched.email && this.errors.email ? 'error' : ''}"
+          aria-invalid="${this.touched.email && this.errors.email ? 'true' : 'false'}"
+          aria-describedby="${this.errors.email ? 'error-email' : 'help-email'}"
           .value=${admin.email || ''}
           @input=${(e) => this._handleInput('email', e.target.value)}
           @blur=${() => this._handleBlur('email')}
           placeholder="admin@example.com"
+          autocomplete="email"
         >
         ${this.touched.email && this.errors.email ? html`
-          <div class="error-text">${this.errors.email}</div>
+          <div id="error-email" class="error-text" role="alert">${this.errors.email}</div>
         ` : html`
-          <div class="help-text">Used for password recovery and notifications</div>
+          <div id="help-email" class="help-text">Used for password recovery and notifications</div>
         `}
       </div>
 

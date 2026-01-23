@@ -57,7 +57,7 @@ class RequirementsChecker
         // If it's a relative path, make it absolute from the project root
         if (!str_starts_with($installPath, '/')) {
             // When running from PHAR, use the actual filesystem path, not phar:// path
-            $pharPath = Phar::running(false);
+            $pharPath = \Phar::running(false);
             if ($pharPath) {
                 // Get the directory where the PHAR is located
                 $projectRoot = dirname($pharPath);

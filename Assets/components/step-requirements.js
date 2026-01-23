@@ -60,15 +60,15 @@ export class StepRequirements extends LitElement {
     }
 
     .requirement.passed .requirement-icon {
-      color: var(--color-success, #4caf50);
+      color: var(--color-success, #1cb841);
     }
 
     .requirement.failed .requirement-icon {
-      color: var(--color-error, #f44336);
+      color: var(--color-error, #c83c3c);
     }
 
     .requirement.warning .requirement-icon {
-      color: var(--color-warning, #ff9800);
+      color: var(--color-warning, #f76707);
     }
 
     .requirement-content {
@@ -106,15 +106,15 @@ export class StepRequirements extends LitElement {
     }
 
     .summary-count.passed {
-      color: var(--color-success, #4caf50);
+      color: var(--color-success, #1cb841);
     }
 
     .summary-count.failed {
-      color: var(--color-error, #f44336);
+      color: var(--color-error, #c83c3c);
     }
 
     .summary-count.warning {
-      color: var(--color-warning, #ff9800);
+      color: var(--color-warning, #f76707);
     }
 
     .packages-info {
@@ -156,9 +156,25 @@ export class StepRequirements extends LitElement {
       padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
       border: none;
       border-radius: var(--border-radius, 4px);
-      font-weight: 600;
+      font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s ease;
+    }
+
+    button:focus-visible {
+      outline: 2px solid var(--color-primary, #ff8700);
+      outline-offset: 2px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     button:disabled {
@@ -309,12 +325,15 @@ export class StepRequirements extends LitElement {
           </div>
         </div>
 
-        <div class="requirements-list">
+        <div class="requirements-list" role="list" aria-label="System requirements">
           ${this.requirements.map(req => html`
-            <div class="requirement ${req.status}">
-              <div class="requirement-icon">${this._getStatusIcon(req.status)}</div>
+            <div class="requirement ${req.status}" role="listitem">
+              <div class="requirement-icon" aria-hidden="true">${this._getStatusIcon(req.status)}</div>
               <div class="requirement-content">
-                <div class="requirement-title">${req.title}</div>
+                <div class="requirement-title">
+                  ${req.title}
+                  <span class="sr-only">- ${req.status === 'passed' ? 'Passed' : req.status === 'failed' ? 'Failed' : 'Warning'}</span>
+                </div>
                 <div class="requirement-description">${req.description}</div>
               </div>
             </div>
