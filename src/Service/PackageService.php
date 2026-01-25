@@ -34,6 +34,7 @@ class PackageService
         'typo3/cms-composer-installers',
         'typo3/cms-styleguide',
         'typo3/cms-cli',
+        // No v14.1 version as of today, leads to stability issues with composer
         'typo3/cms-base-distribution',
     ];
 

@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { apiClient } from '../api/client.js';
-import { stepBaseStyles, formStyles, buttonStyles, spinnerStyles, srOnlyStyles, alertStyles } from './ui/shared-styles.js';
+import { stepBaseStyles, formStyles, buttonStyles, spinnerStyles, srOnlyStyles, alertStyles, emit } from './ui/shared-styles.js';
 import './ui/error-help.js';
 import './ui/step-actions.js';
 
@@ -12,7 +12,10 @@ export class StepDatabase extends LitElement {
   static properties = {
     state: { type: Object },
     testing: { type: Boolean },
-    testResult: { type: Object }
+    testResult: { type: Object },
+    availableDrivers: { type: Array },
+    driversLoading: { type: Boolean },
+    driversError: { type: Object }
   };
 
   static styles = [
@@ -21,29 +24,67 @@ export class StepDatabase extends LitElement {
     buttonStyles,
     spinnerStyles,
     srOnlyStyles,
-    alertStyles,
-    css`
-      .actions-left {
-        display: flex;
-        gap: var(--spacing-md, 16px);
-      }
-    `
+    alertStyles
   ];
 
   constructor() {
     super();
     this.testing = false;
     this.testResult = null;
+    this.availableDrivers = [];
+    this.driversLoading = true;
+    this.driversError = null;
   }
 
-  _handleInput(field, value) {
-    const database = { ...this.state.database, [field]: value, tested: false, valid: false };
+  connectedCallback() {
+    super.connectedCallback();
+    this._loadDrivers();
+  }
+
+  async _loadDrivers() {
+    this.driversLoading = true;
+    this.driversError = null;
+    try {
+      const response = await apiClient.getDatabaseDrivers();
+      this.availableDrivers = response.drivers || [];
+
+      // Set default driver if current driver is not available
+      if (this.availableDrivers.length > 0) {
+        const currentDriver = this.state?.database?.driver;
+        const isCurrentDriverAvailable = this.availableDrivers.some(d => d.value === currentDriver);
+        if (!isCurrentDriverAvailable) {
+          const defaultDriver = this.availableDrivers[0];
+          emit(this, 'state-update', {
+            database: {
+              ...this.state.database,
+              driver: defaultDriver.value,
+              port: String(defaultDriver.defaultPort || 3306)
+            }
+          });
+        }
+      }
+    } catch (error) {
+      this.driversError = {
+        message: error.getUserMessage?.() || error.message || 'Failed to detect database drivers'
+      };
+    } finally {
+      this.driversLoading = false;
+    }
+  }
+
+  _update(field, value) {
     this.testResult = null;
-    this.dispatchEvent(new CustomEvent('state-update', {
-      bubbles: true,
-      composed: true,
-      detail: { database }
-    }));
+    const updates = { [field]: value, tested: false, valid: false };
+
+    // Update default port when driver changes
+    if (field === 'driver') {
+      const driver = this.availableDrivers.find(d => d.value === value);
+      if (driver?.defaultPort) {
+        updates.port = String(driver.defaultPort);
+      }
+    }
+
+    emit(this, 'state-update', { database: { ...this.state.database, ...updates } });
   }
 
   async _testConnection() {
@@ -52,42 +93,28 @@ export class StepDatabase extends LitElement {
 
     try {
       const db = this.state.database;
-      const config = {
-        driver: db.driver,
-        host: db.host,
-        port: parseInt(db.port, 10),
-        name: db.name,
-        user: db.user,
-        password: db.password
-      };
-
-      const response = await apiClient.testDatabase(config);
+      const response = await apiClient.testDatabase({
+        driver: db.driver, host: db.host, port: parseInt(db.port, 10),
+        name: db.name, user: db.user, password: db.password
+      });
       this.testResult = { success: true, message: response.message || 'Connection successful!' };
-
-      this.dispatchEvent(new CustomEvent('state-update', {
-        bubbles: true,
-        composed: true,
-        detail: { database: { ...this.state.database, tested: true, valid: true } }
-      }));
+      emit(this, 'state-update', { database: { ...this.state.database, tested: true, valid: true } });
     } catch (error) {
       this.testResult = {
         success: false,
         message: error.getUserMessage?.() || error.message || 'Connection failed',
         error: { message: error.message, details: error.details }
       };
-
-      this.dispatchEvent(new CustomEvent('state-update', {
-        bubbles: true,
-        composed: true,
-        detail: { database: { ...this.state.database, tested: true, valid: false } }
-      }));
+      emit(this, 'state-update', { database: { ...this.state.database, tested: true, valid: false } });
     } finally {
       this.testing = false;
     }
   }
 
-  _canProceed() {
-    return this.state?.database?.tested && this.state?.database?.valid;
+  _getPortHelpText() {
+    const driver = this.availableDrivers.find(d => d.value === this.state?.database?.driver);
+    if (!driver?.defaultPort) return 'Database server port';
+    return `Default: ${driver.defaultPort}`;
   }
 
   render() {
@@ -99,39 +126,56 @@ export class StepDatabase extends LitElement {
 
       <div class="form-group">
         <label for="driver">Database Type</label>
-        <select id="driver" .value=${db.driver} @change=${(e) => this._handleInput('driver', e.target.value)}>
-          <option value="pdo_mysql">MySQL / MariaDB</option>
-          <option value="pdo_pgsql">PostgreSQL</option>
-        </select>
+        ${this.driversLoading ? html`
+          <select id="driver" disabled>
+            <option>Loading available drivers...</option>
+          </select>
+        ` : this.driversError ? html`
+          <select id="driver" disabled>
+            <option>Failed to load drivers</option>
+          </select>
+          <span class="help-text" style="color: var(--color-error, #c83c3c);">${this.driversError.message}</span>
+        ` : this.availableDrivers.length === 0 ? html`
+          <select id="driver" disabled>
+            <option>No database drivers available</option>
+          </select>
+          <span class="help-text" style="color: var(--color-error, #c83c3c);">No supported database extensions found. Install mysqli, pdo_mysql, or pdo_pgsql.</span>
+        ` : html`
+          <select id="driver" .value=${db.driver} @change=${e => this._update('driver', e.target.value)}>
+            ${this.availableDrivers.map(driver => html`
+              <option value=${driver.value} ?selected=${db.driver === driver.value}>${driver.label}</option>
+            `)}
+          </select>
+        `}
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label for="host">Host</label>
-          <input type="text" id="host" .value=${db.host} @input=${(e) => this._handleInput('host', e.target.value)} placeholder="localhost">
+          <input type="text" id="host" .value=${db.host} @input=${e => this._update('host', e.target.value)} placeholder="localhost">
           <span class="help-text">Database server hostname or IP</span>
         </div>
         <div class="form-group">
           <label for="port">Port</label>
-          <input type="text" id="port" .value=${db.port} @input=${(e) => this._handleInput('port', e.target.value)} placeholder="3306">
-          <span class="help-text">Default: 3306 (MySQL) or 5432 (PostgreSQL)</span>
+          <input type="text" id="port" .value=${db.port} @input=${e => this._update('port', e.target.value)} placeholder=${this.availableDrivers.find(d => d.value === db.driver)?.defaultPort || '3306'}>
+          <span class="help-text">${this._getPortHelpText()}</span>
         </div>
       </div>
 
       <div class="form-group">
         <label for="name">Database Name</label>
-        <input type="text" id="name" .value=${db.name} @input=${(e) => this._handleInput('name', e.target.value)} placeholder="typo3">
+        <input type="text" id="name" .value=${db.name} @input=${e => this._update('name', e.target.value)} placeholder="typo3">
         <span class="help-text">The database must already exist</span>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label for="user">Username</label>
-          <input type="text" id="user" .value=${db.user} @input=${(e) => this._handleInput('user', e.target.value)} placeholder="root">
+          <input type="text" id="user" .value=${db.user} @input=${e => this._update('user', e.target.value)} placeholder="root">
         </div>
         <div class="form-group">
           <label for="password">Password</label>
-          <input type="password" id="password" .value=${db.password} @input=${(e) => this._handleInput('password', e.target.value)}>
+          <input type="password" id="password" .value=${db.password} @input=${e => this._update('password', e.target.value)}>
         </div>
       </div>
 
@@ -145,7 +189,7 @@ export class StepDatabase extends LitElement {
         </div>
       ` : ''}
 
-      <t3-step-actions ?can-continue=${this._canProceed()}>
+      <t3-step-actions ?can-continue=${this.state?.database?.tested && this.state?.database?.valid}>
         <button slot="left" class="btn-secondary" @click=${this._testConnection} ?disabled=${this.testing}>
           ${this.testing ? html`<span class="spinner"></span>` : ''} Test Connection
         </button>

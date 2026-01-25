@@ -60,6 +60,8 @@ class Application
         try {
             return match ($path) {
                 '/api/info' => $this->infoController->getInfo($request),
+                '/api/phpinfo' => $this->infoController->getPhpInfo($request),
+                '/api/database-drivers' => $this->infoController->getDatabaseDrivers($request),
                 '/api/versions' => $this->packageController->versions($request),
                 '/api/packages' => $this->packageController->list($request),
                 '/api/validate-requirements' => $this->packageController->validateRequirements($request),

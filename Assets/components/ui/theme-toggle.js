@@ -1,4 +1,5 @@
 import { LitElement, html, css } from 'lit';
+import './t3-icon.js';
 
 /**
  * Theme toggle component for switching between light, dark, and auto modes.
@@ -33,7 +34,6 @@ export class ThemeToggle extends LitElement {
       font-weight: 500;
       border-radius: 3px;
       cursor: pointer;
-      transition: background 0.15s, color 0.15s;
       display: flex;
       align-items: center;
       gap: 4px;
@@ -55,8 +55,9 @@ export class ThemeToggle extends LitElement {
       outline-offset: 1px;
     }
 
-    .theme-icon {
-      font-size: 14px;
+    .theme-btn t3-icon {
+      width: 14px;
+      height: 14px;
     }
   `;
 
@@ -103,7 +104,7 @@ export class ThemeToggle extends LitElement {
           aria-pressed=${this.theme === 'light'}
           title="Light mode"
         >
-          <span class="theme-icon">\u2600</span>
+          <t3-icon identifier="actions-brightness-high"></t3-icon>
           Light
         </button>
         <button
@@ -112,7 +113,7 @@ export class ThemeToggle extends LitElement {
           aria-pressed=${this.theme === 'dark'}
           title="Dark mode"
         >
-          <span class="theme-icon">\u263D</span>
+          <t3-icon identifier="actions-moon"></t3-icon>
           Dark
         </button>
         <button
@@ -121,7 +122,7 @@ export class ThemeToggle extends LitElement {
           aria-pressed=${this.theme === 'auto'}
           title="Auto-detect based on system settings"
         >
-          <span class="theme-icon">\u2699</span>
+          <t3-icon identifier="actions-cog"></t3-icon>
           Auto
         </button>
       </div>

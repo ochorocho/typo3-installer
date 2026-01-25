@@ -4,6 +4,7 @@ import { stepBaseStyles, buttonStyles, spinnerStyles, srOnlyStyles } from './ui/
 import './ui/error-help.js';
 import './ui/php-version-warning.js';
 import './ui/step-actions.js';
+import './ui/t3-icon.js';
 
 /**
  * System requirements check step.
@@ -36,7 +37,8 @@ export class StepRequirements extends LitElement {
         border: 1px solid var(--color-border, #ddd);
         border-radius: var(--border-radius, 4px);
         margin-bottom: var(--spacing-sm, 8px);
-        background: white;
+        background: var(--color-bg-white, white);
+        color: var(--color-text, #1a1a1a);
       }
 
       .requirement.passed { border-left: 4px solid var(--color-success, #4caf50); }
@@ -47,10 +49,15 @@ export class StepRequirements extends LitElement {
         width: 24px;
         height: 24px;
         margin-right: var(--spacing-md, 16px);
-        font-size: 18px;
         display: flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .requirement-icon t3-icon {
+        width: 20px;
+        height: 20px;
       }
 
       .requirement.passed .requirement-icon { color: var(--color-success, #1cb841); }
@@ -102,9 +109,9 @@ export class StepRequirements extends LitElement {
         margin-bottom: var(--spacing-md, 16px);
       }
 
-      .error-icon { width: 24px; height: 24px; color: var(--color-error, #c83c3c); }
+      .error-icon { color: var(--color-error, #c83c3c); }
       .error-title { font-weight: 600; color: var(--color-error, #c83c3c); font-size: 16px; }
-      .error-message { color: #333; margin-bottom: var(--spacing-md, 16px); }
+      .error-message { color: var(--color-text, #333); margin-bottom: var(--spacing-md, 16px); }
     `
   ];
 
@@ -219,8 +226,16 @@ export class StepRequirements extends LitElement {
   }
 
   _getStatusIcon(status) {
-    const icons = { passed: '\u2713', failed: '\u2717', warning: '\u26A0' };
-    return icons[status] || '?';
+    switch (status) {
+      case 'passed':
+        return html`<t3-icon identifier="actions-check"></t3-icon>`;
+      case 'failed':
+        return html`<t3-icon identifier="actions-close"></t3-icon>`;
+      case 'warning':
+        return html`<t3-icon identifier="actions-exclamation-triangle"></t3-icon>`;
+      default:
+        return html`<t3-icon identifier="actions-circle"></t3-icon>`;
+    }
   }
 
   _getSummary() {
@@ -252,9 +267,7 @@ export class StepRequirements extends LitElement {
       ${this.error ? html`
         <div class="error-container" role="alert">
           <div class="error-header">
-            <svg class="error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-            </svg>
+            <t3-icon class="error-icon" identifier="actions-exclamation-circle" size="medium"></t3-icon>
             <span class="error-title">Requirements Check Failed</span>
           </div>
           <p class="error-message">${this.error.message}</p>

@@ -189,6 +189,21 @@ class ApiClient {
         });
     }
 
+    async getPhpInfo() {
+        const url = `${this.baseUrl}/api/phpinfo`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new ApiError('Failed to load PHP info', { statusCode: response.status });
+        }
+        return response.text();
+    }
+
+    async getDatabaseDrivers() {
+        return this.request('/api/database-drivers', {
+            method: 'GET'
+        });
+    }
+
     async detectPhp() {
         return this.request('/api/detect-php', {
             method: 'POST'

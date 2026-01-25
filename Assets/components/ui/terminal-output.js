@@ -98,7 +98,7 @@ export class TerminalOutput extends LitElement {
       padding-top: 0;
     }
 
-    .output-line .timestamp { color: #666; margin-right: 8px; }
+    .output-line .timestamp { color: #888; margin-right: 8px; }
     .output-line.error { color: #f14c4c; }
     .output-line.success { color: #4ec9b0; }
     .output-line.info { color: #3794ff; }
@@ -127,10 +127,6 @@ export class TerminalOutput extends LitElement {
     this.dispatchEvent(new CustomEvent('toggle-autoscroll', { bubbles: true, composed: true }));
   }
 
-  _clearOutput() {
-    this.dispatchEvent(new CustomEvent('clear-output', { bubbles: true, composed: true }));
-  }
-
   render() {
     return html`
       <div class="terminal-container">
@@ -140,7 +136,6 @@ export class TerminalOutput extends LitElement {
             <button class="${this.autoScroll ? 'active' : ''}" @click=${this._toggleAutoScroll}>
               Auto-scroll
             </button>
-            <button @click=${this._clearOutput}>Clear</button>
           </div>
         </div>
         <div class="terminal-output">

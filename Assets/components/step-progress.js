@@ -37,7 +37,6 @@ export class StepProgress extends LitElement {
         height: 100%;
         background: var(--color-primary, #ff8700);
         border-radius: 4px;
-        transition: width 0.3s ease;
       }
 
       .progress-text {
@@ -45,14 +44,6 @@ export class StepProgress extends LitElement {
         justify-content: space-between;
         font-size: 14px;
         color: var(--color-text-light, #333);
-      }
-
-      .success-message {
-        text-align: center;
-        padding: var(--spacing-xl, 32px);
-        background: var(--color-success-bg, #e8f5e9);
-        border-radius: var(--border-radius, 4px);
-        margin-bottom: var(--spacing-lg, 24px);
       }
 
       .success-message h3 {
@@ -63,6 +54,14 @@ export class StepProgress extends LitElement {
 
       .success-message p { margin: 0 0 var(--spacing-md, 16px) 0; color: var(--color-text, #333); }
       .success-message .admin-info { font-size: 14px; margin-bottom: var(--spacing-lg, 24px); }
+
+      button {
+        padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
+        border: none;
+        border-radius: var(--border-radius, 4px);
+        font-weight: 500;
+        cursor: pointer;
+      }
 
       .success-buttons {
         display: flex;
@@ -91,11 +90,12 @@ export class StepProgress extends LitElement {
       .error-message .error-description { margin-bottom: var(--spacing-md, 16px); color: var(--color-text, #333); }
 
       .error-message .error-details {
-        background: #fff;
+        background: var(--color-bg-white, #fff);
         padding: var(--spacing-md, 16px);
         border-radius: var(--border-radius, 4px);
         font-size: 12px;
         font-family: monospace;
+        color: var(--color-text, #333);
         margin-bottom: var(--spacing-md, 16px);
         max-height: 200px;
         overflow-y: auto;

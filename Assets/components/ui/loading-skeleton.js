@@ -1,40 +1,31 @@
 import { LitElement, html, css } from 'lit';
+import { hostStyles } from './shared-styles.js';
 
 /**
- * Reusable loading skeleton component with shimmer animation.
- *
+ * Loading skeleton placeholder.
  * @element t3-loading-skeleton
- * @slot - Text content to display inside the skeleton
- *
- * @prop {String} height - CSS height value (e.g., "80px", "200px")
+ * @slot - Text content to display
+ * @prop {String} height - CSS height value (e.g., "80px")
  */
 export class LoadingSkeleton extends LitElement {
   static properties = {
     height: { type: String }
   };
 
-  static styles = css`
-    :host {
-      display: block;
-    }
-
-    .loading-skeleton {
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: var(--border-radius, 4px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #999;
-      font-size: 14px;
-    }
-
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-  `;
+  static styles = [
+    hostStyles,
+    css`
+      .skeleton {
+        background: var(--color-bg-light, #f0f0f0);
+        border-radius: var(--border-radius, 4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-text-muted, #666);
+        font-size: 14px;
+      }
+    `
+  ];
 
   constructor() {
     super();
@@ -42,11 +33,7 @@ export class LoadingSkeleton extends LitElement {
   }
 
   render() {
-    return html`
-      <div class="loading-skeleton" style="min-height: ${this.height}">
-        <slot>Loading...</slot>
-      </div>
-    `;
+    return html`<div class="skeleton" style="min-height:${this.height}"><slot>Loading...</slot></div>`;
   }
 }
 

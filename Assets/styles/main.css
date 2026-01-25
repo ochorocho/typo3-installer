@@ -37,8 +37,16 @@
   /* Alert/message background colors */
   --color-success-bg: #e8f5e9;
   --color-error-bg: #ffebee;
-  --color-warning-bg: #fff9e6;
+  --color-warning-bg: #fff3e0;
   --color-info-bg: #e3f2fd;
+
+  /* Info box colors (for install-info component) */
+  --color-info-box-bg: #e3f2fd;
+  --color-info-box-border: #90caf9;
+  --color-info-box-accent: #1565c0;
+  --color-info-box-label: #424242;
+  --color-info-box-value: #212121;
+  --color-info-box-value-bg: rgba(255, 255, 255, 0.85);
 
   /* Typography sizes */
   --font-size-sm: 12px;
@@ -67,8 +75,8 @@
   --color-bg-white: #2a2a2a;
   --color-bg-light: #333333;
   --color-text: #f0f0f0;
-  --color-text-light: #cccccc;
-  --color-text-muted: #999999;
+  --color-text-light: #d4d4d4;
+  --color-text-muted: #b0b0b0;
   --color-border: #444444;
   --color-border-light: #555555;
   --color-secondary: #f0f0f0;
@@ -77,8 +85,16 @@
   /* Dark mode alert backgrounds */
   --color-success-bg: #1a3d1a;
   --color-error-bg: #3d1a1a;
-  --color-warning-bg: #3d3a1a;
+  --color-warning-bg: #3d2a1a;
   --color-info-bg: #1a2a3d;
+
+  /* Dark mode info box colors */
+  --color-info-box-bg: #1a2a3d;
+  --color-info-box-border: #3d5a7a;
+  --color-info-box-accent: #64b5f6;
+  --color-info-box-label: #b0b0b0;
+  --color-info-box-value: #e0e0e0;
+  --color-info-box-value-bg: rgba(0, 0, 0, 0.3);
 }
 
 /* Auto mode - follows system preference */
@@ -88,8 +104,8 @@
     --color-bg-white: #2a2a2a;
     --color-bg-light: #333333;
     --color-text: #f0f0f0;
-    --color-text-light: #cccccc;
-    --color-text-muted: #999999;
+    --color-text-light: #d4d4d4;
+    --color-text-muted: #b0b0b0;
     --color-border: #444444;
     --color-border-light: #555555;
     --color-secondary: #f0f0f0;
@@ -98,8 +114,16 @@
     /* Dark mode alert backgrounds */
     --color-success-bg: #1a3d1a;
     --color-error-bg: #3d1a1a;
-    --color-warning-bg: #3d3a1a;
+    --color-warning-bg: #3d2a1a;
     --color-info-bg: #1a2a3d;
+
+    /* Dark mode info box colors */
+    --color-info-box-bg: #1a2a3d;
+    --color-info-box-border: #3d5a7a;
+    --color-info-box-accent: #64b5f6;
+    --color-info-box-label: #b0b0b0;
+    --color-info-box-value: #e0e0e0;
+    --color-info-box-value-bg: rgba(0, 0, 0, 0.3);
   }
 }
 

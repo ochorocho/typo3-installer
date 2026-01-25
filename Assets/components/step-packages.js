@@ -65,7 +65,7 @@ export class StepPackages extends LitElement {
     }
 
     .btn-primary:hover:not(:disabled) {
-      background: #e67a00;
+      background: var(--color-primary-dark, #e67a00);
     }
   `;
 
@@ -227,15 +227,15 @@ export class StepPackages extends LitElement {
     const versionsReady = !this.loadingVersions && !this.versionsError && this.versions.length > 0;
 
     return html`
-      <t3-heading level="2">Select Packages</t3-heading>
-      <p>Choose the TYPO3 version and packages to install. Core packages are required and cannot be deselected.</p>
-
       <t3-install-info
         .info=${this.installInfo}
         .loading=${this.loadingInfo}
         .error=${this.infoError}
         @retry=${this._handleRetryInfo}
       ></t3-install-info>
+
+      <t3-heading level="2">Select Packages</t3-heading>
+      <p>Choose the TYPO3 version and packages to install. Core packages are required and cannot be deselected.</p>
 
       <t3-version-selector
         .versions=${this.versions}

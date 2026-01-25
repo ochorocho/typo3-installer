@@ -1,10 +1,10 @@
 import { LitElement, html, css } from 'lit';
-import { srOnlyStyles } from './shared-styles.js';
+import { hostStyles, srOnlyStyles } from './shared-styles.js';
+import './t3-icon.js';
 
 /**
- * Task list component showing installation progress.
+ * Task list showing installation progress.
  * @element t3-task-list
- *
  * @prop {Array} tasks - Array of { id, label, status } objects
  *       status: 'pending' | 'running' | 'completed' | 'error'
  */
@@ -14,48 +14,37 @@ export class TaskList extends LitElement {
   };
 
   static styles = [
+    hostStyles,
     srOnlyStyles,
     css`
-      :host { display: block; }
-
       .task-list {
-        margin: 0 0 var(--spacing-md, 16px) 0;
+        margin: 0 0 var(--spacing-md, 16px);
         padding: 0;
         list-style: none;
       }
-
       .task {
         display: flex;
         align-items: center;
         padding: var(--spacing-xs, 4px) 0;
         font-size: 14px;
       }
-
       .task-icon {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         margin-right: var(--spacing-sm, 8px);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 12px;
+        flex-shrink: 0;
       }
-
       .task.pending .task-icon { color: var(--color-text-light, #666); }
-      .task.running .task-icon { color: var(--color-primary, #ff8700); animation: pulse 1s infinite; }
+      .task.running .task-icon { color: var(--color-primary, #ff8700); }
       .task.completed .task-icon { color: var(--color-success, #1cb841); }
       .task.error .task-icon { color: var(--color-error, #c83c3c); }
-
-      .task-label { flex: 1; }
-      .task.pending .task-label { color: var(--color-text-light, #666); }
-      .task.running .task-label { font-weight: 600; }
-      .task.completed .task-label { color: var(--color-success, #1cb841); }
-      .task.error .task-label { color: var(--color-error, #c83c3c); }
-
-      @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-      }
+      .task.pending { color: var(--color-text-light, #666); }
+      .task.running { font-weight: 600; }
+      .task.completed { color: var(--color-success, #1cb841); }
+      .task.error { color: var(--color-error, #c83c3c); }
     `
   ];
 
@@ -64,26 +53,29 @@ export class TaskList extends LitElement {
     this.tasks = [];
   }
 
-  _getTaskIcon(status) {
-    const icons = { pending: '\u25CB', running: '\u25CF', completed: '\u2713', error: '\u2717' };
-    return icons[status] || '\u25CB';
-  }
-
-  _getStatusLabel(status) {
-    const labels = { pending: 'Pending', running: 'In progress', completed: 'Completed', error: 'Error' };
-    return labels[status] || 'Pending';
+  _getStatusIcon(status) {
+    switch (status) {
+      case 'running':
+        return html`<t3-icon identifier="spinner-circle" spin></t3-icon>`;
+      case 'completed':
+        return html`<t3-icon identifier="actions-check"></t3-icon>`;
+      case 'error':
+        return html`<t3-icon identifier="actions-close"></t3-icon>`;
+      case 'pending':
+      default:
+        return html`<t3-icon identifier="actions-circle"></t3-icon>`;
+    }
   }
 
   render() {
+    const labels = { pending: 'Pending', running: 'In progress', completed: 'Completed', error: 'Error' };
+
     return html`
       <ol class="task-list" aria-label="Installation tasks">
-        ${this.tasks.map(task => html`
-          <li class="task ${task.status}">
-            <span class="task-icon" aria-hidden="true">${this._getTaskIcon(task.status)}</span>
-            <span class="task-label">
-              ${task.label}
-              <span class="sr-only">- ${this._getStatusLabel(task.status)}</span>
-            </span>
+        ${this.tasks.map(t => html`
+          <li class="task ${t.status}">
+            <span class="task-icon" aria-hidden="true">${this._getStatusIcon(t.status)}</span>
+            <span>${t.label}<span class="sr-only"> - ${labels[t.status] || 'Pending'}</span></span>
           </li>
         `)}
       </ol>

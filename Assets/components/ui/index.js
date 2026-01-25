@@ -1,12 +1,12 @@
 /**
  * Reusable UI Components
- *
- * This folder contains atomic, reusable UI building blocks that can be
- * composed into larger step components.
  */
 
 // Shared style exports
 export * from './shared-styles.js';
+
+// Icon component
+export { T3Icon } from './t3-icon.js';
 
 // Form components
 export { FormField } from './form-field.js';

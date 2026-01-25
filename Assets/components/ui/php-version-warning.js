@@ -28,7 +28,7 @@ export class PhpVersionWarning extends LitElement {
     }
 
     .php-version-warning {
-      background: #fff3e0;
+      background: var(--color-warning-bg, #fff3e0);
       border: 1px solid var(--color-warning, #f76707);
       border-radius: var(--border-radius, 4px);
       padding: var(--spacing-lg, 24px);
@@ -103,7 +103,7 @@ export class PhpVersionWarning extends LitElement {
 
     .custom-binary-toggle {
       font-size: 13px;
-      color: var(--color-info, #2196f3);
+      color: var(--color-info, #0078d4);
       background: none;
       border: none;
       cursor: pointer;
@@ -113,7 +113,7 @@ export class PhpVersionWarning extends LitElement {
     }
 
     .custom-binary-toggle:hover {
-      color: #1976d2;
+      color: var(--color-primary, #ff8700);
     }
 
     .validation-result {
@@ -124,17 +124,17 @@ export class PhpVersionWarning extends LitElement {
     }
 
     .validation-result.success {
-      background: #e8f5e9;
+      background: var(--color-success-bg, #e8f5e9);
       color: var(--color-success, #1cb841);
     }
 
     .validation-result.error {
-      background: #ffebee;
+      background: var(--color-error-bg, #ffebee);
       color: var(--color-error, #c83c3c);
     }
 
     .btn-secondary {
-      background: var(--color-info, #2196f3);
+      background: var(--color-info, #0078d4);
       color: white;
       padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
       border: none;
@@ -144,7 +144,7 @@ export class PhpVersionWarning extends LitElement {
     }
 
     .btn-secondary:hover:not(:disabled) {
-      background: #1976d2;
+      background: #005a9e;
     }
 
     .btn-secondary:focus-visible {

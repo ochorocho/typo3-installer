@@ -8,11 +8,14 @@
     "test:api": "playwright test api.spec.js",
     "test:ui": "playwright test installer.spec.js --ui",
     "test:ui-only": "playwright test installer.spec.js",
+    "test:workflow": "playwright test workflow-accessibility.spec.js",
+    "test:a11y": "playwright test workflow-accessibility.spec.js",
     "test:headed": "playwright test --headed",
     "test:all": "playwright test --reporter=html",
     "test:debug": "playwright test --debug"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.8.0",
     "@playwright/test": "^1.58.0"
   }
 }

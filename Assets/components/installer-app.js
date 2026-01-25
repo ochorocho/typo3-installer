@@ -3,6 +3,8 @@ import { ContextProvider } from '@lit/context';
 import { installerContext, initialState, STEPS } from '../context/installer-context.js';
 import './ui/theme-toggle.js';
 
+const STORAGE_KEY = 'typo3-installer-state';
+
 export class InstallerApp extends LitElement {
   static properties = {
     state: { type: Object }
@@ -160,8 +162,54 @@ export class InstallerApp extends LitElement {
 
   constructor() {
     super();
-    this.state = { ...initialState };
+    this.state = this._loadState();
     new ContextProvider(this, { context: installerContext, initialValue: this.state });
+  }
+
+  _loadState() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Don't restore if installation was completed
+        if (parsed.installation?.completed) {
+          localStorage.removeItem(STORAGE_KEY);
+          return { ...initialState };
+        }
+        return { ...initialState, ...parsed };
+      }
+    } catch {
+      // Ignore storage errors
+    }
+    return { ...initialState };
+  }
+
+  _saveState(state) {
+    try {
+      // Filter out sensitive data (passwords)
+      const safeState = {
+        ...state,
+        admin: state.admin ? {
+          ...state.admin,
+          password: undefined
+        } : undefined,
+        database: state.database ? {
+          ...state.database,
+          password: undefined
+        } : undefined
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(safeState));
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  _clearState() {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Ignore storage errors
+    }
   }
 
   connectedCallback() {
@@ -180,6 +228,14 @@ export class InstallerApp extends LitElement {
 
   _handleStateUpdate = (e) => {
     this.state = { ...this.state, ...e.detail };
+
+    // Clear storage on installation completion, otherwise persist state
+    if (this.state.installation?.completed) {
+      this._clearState();
+    } else {
+      this._saveState(this.state);
+    }
+
     this.requestUpdate();
   };
 
