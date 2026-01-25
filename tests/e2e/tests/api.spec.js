@@ -192,6 +192,7 @@ test.describe('API: Installation', () => {
   test('POST /api/install - should accept valid installation config', async ({ request }) => {
     const response = await request.post('/typo3-installer.phar/api/install', {
       data: {
+        typo3Version: '14.1',
         database: {
           driver: 'pdo_mysql',
           host: 'db',

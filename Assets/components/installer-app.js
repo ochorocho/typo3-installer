@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { ContextProvider } from '@lit/context';
 import { installerContext, initialState, STEPS } from '../context/installer-context.js';
+import './ui/theme-toggle.js';
 
 export class InstallerApp extends LitElement {
   static properties = {
@@ -21,6 +22,7 @@ export class InstallerApp extends LitElement {
     }
 
     .header {
+      position: relative;
       text-align: center;
       padding: var(--spacing-xl, 32px) 0;
       background: var(--color-primary, #ff8700);
@@ -40,11 +42,17 @@ export class InstallerApp extends LitElement {
       opacity: 0.9;
     }
 
+    .header-controls {
+      position: absolute;
+      top: var(--spacing-sm, 8px);
+      right: var(--spacing-md, 16px);
+    }
+
     .progress-bar {
       display: flex;
       justify-content: space-between;
       padding: var(--spacing-lg, 24px);
-      background: white;
+      background: var(--color-bg-white, white);
       border-bottom: 1px solid var(--color-border, #ddd);
       position: relative;
     }
@@ -67,7 +75,7 @@ export class InstallerApp extends LitElement {
       align-items: center;
       position: relative;
       z-index: 1;
-      background: white;
+      background: var(--color-bg-white, white);
       padding: 0 var(--spacing-sm, 8px);
     }
 
@@ -81,7 +89,7 @@ export class InstallerApp extends LitElement {
       font-weight: 600;
       font-size: 14px;
       border: 2px solid var(--color-border, #bbb);
-      background: white;
+      background: var(--color-bg-white, white);
       color: var(--color-text-light, #333);
     }
 
@@ -114,8 +122,36 @@ export class InstallerApp extends LitElement {
       font-weight: 600;
     }
 
+    .step-indicator.completed {
+      cursor: pointer;
+    }
+
+    .step-indicator.completed:hover {
+      transform: scale(1.05);
+    }
+
+    .step-indicator.completed:hover .step-number {
+      box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+    }
+
+    .step-indicator:not(.completed):not(.active) {
+      cursor: not-allowed;
+    }
+
+    .progress-bar.nav-disabled .step-indicator.completed {
+      cursor: default;
+    }
+
+    .progress-bar.nav-disabled .step-indicator.completed:hover {
+      transform: none;
+    }
+
+    .progress-bar.nav-disabled .step-indicator.completed:hover .step-number {
+      box-shadow: none;
+    }
+
     .content {
-      background: white;
+      background: var(--color-bg-white, white);
       padding: var(--spacing-xl, 32px);
       border-radius: 0 0 var(--border-radius-lg, 8px) var(--border-radius-lg, 8px);
       box-shadow: var(--shadow, 0 2px 8px rgba(0,0,0,0.1));
@@ -161,6 +197,22 @@ export class InstallerApp extends LitElement {
     }
   };
 
+  _isOnProgressStep() {
+    return this.state.currentStep === STEPS.length - 1;
+  }
+
+  _handleStepClick(index) {
+    // Disable navigation when on the progress/install step
+    if (this._isOnProgressStep()) {
+      return;
+    }
+    // Only allow navigation to completed steps (going back)
+    if (index < this.state.currentStep) {
+      this.state = { ...this.state, currentStep: index };
+      this.requestUpdate();
+    }
+  }
+
   _renderStepContent() {
     const step = STEPS[this.state.currentStep];
     switch (step.component) {
@@ -185,13 +237,23 @@ export class InstallerApp extends LitElement {
     return html`
       <div class="installer">
         <div class="header">
+          <div class="header-controls">
+            <t3-theme-toggle></t3-theme-toggle>
+          </div>
           <h1>TYPO3 Installer</h1>
           <p>Install TYPO3 CMS on your server</p>
         </div>
 
-        <div class="progress-bar">
+        <div class="progress-bar ${this._isOnProgressStep() ? 'nav-disabled' : ''}">
           ${STEPS.map((step, index) => html`
-            <div class="step-indicator ${index === this.state.currentStep ? 'active' : ''} ${index < this.state.currentStep ? 'completed' : ''}">
+            <div
+              class="step-indicator ${index === this.state.currentStep ? 'active' : ''} ${index < this.state.currentStep ? 'completed' : ''}"
+              @click=${() => this._handleStepClick(index)}
+              @keydown=${(e) => e.key === 'Enter' && this._handleStepClick(index)}
+              role="button"
+              tabindex="${index < this.state.currentStep && !this._isOnProgressStep() ? '0' : '-1'}"
+              aria-label="${step.title}${index < this.state.currentStep && !this._isOnProgressStep() ? ' - click to go back' : ''}"
+            >
               <div class="step-number">${index < this.state.currentStep ? '' : index + 1}</div>
               <div class="step-title">${step.title}</div>
             </div>

@@ -18,7 +18,8 @@ class InstallationConfig
         public readonly SiteConfig $site,
         public readonly array $packages,
         public readonly string $typo3Version = '13.4',
-        public readonly string $installPath = 'typo3-test-install'
+        public readonly string $installPath = 'typo3-test-install',
+        public readonly ?string $phpBinary = null
     ) {}
 
     /**
@@ -38,13 +39,37 @@ class InstallationConfig
         /** @var array<string, mixed> $site */
         $site = $data['site'] ?? [];
 
+        // Extract typo3Version with proper type checking
+        $typo3Version = '13.4';
+        if (isset($data['typo3Version'])) {
+            $rawVersion = $data['typo3Version'];
+            if (is_string($rawVersion) && $rawVersion !== '') {
+                $typo3Version = $rawVersion;
+            } elseif (is_numeric($rawVersion)) {
+                $typo3Version = (string)$rawVersion;
+            }
+        }
+
+        // Extract installPath with proper type checking
+        $installPath = 'typo3-test-install';
+        if (isset($data['installPath']) && is_string($data['installPath']) && $data['installPath'] !== '') {
+            $installPath = $data['installPath'];
+        }
+
+        // Extract phpBinary if provided
+        $phpBinary = null;
+        if (isset($data['phpBinary']) && is_string($data['phpBinary']) && $data['phpBinary'] !== '') {
+            $phpBinary = $data['phpBinary'];
+        }
+
         return new self(
             DatabaseConfig::fromArray($database),
             AdminConfig::fromArray($admin),
             SiteConfig::fromArray($site),
             $packages,
-            is_string($data['typo3Version'] ?? null) ? $data['typo3Version'] : '13.4',
-            is_string($data['installPath'] ?? null) ? $data['installPath'] : 'typo3-test-install'
+            $typo3Version,
+            $installPath,
+            $phpBinary
         );
     }
 }

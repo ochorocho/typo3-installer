@@ -234,7 +234,7 @@ test.describe('Database Configuration', () => {
     await testButton.click();
 
     // Wait for error message
-    await expect(page.locator('.alert-danger, .alert-error, .error-message, [class*="error"]')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Error: Database connection')).toBeVisible({ timeout: 15000 });
   });
 
   test('should enable Continue button after successful connection test', async ({ page }) => {

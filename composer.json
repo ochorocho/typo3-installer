@@ -9,17 +9,17 @@
         }
     ],
     "require": {
-        "php": "^8.3",
+        "php": "^8.2",
+        "ext-fileinfo": "*",
         "ext-json": "*",
         "ext-pdo": "*",
-        "ext-fileinfo": "*",
-        "composer/composer": "^2.7",
+        "guzzlehttp/guzzle": "^7.10",
+        "monolog/monolog": "^3.0",
+        "psr/log": "^3.0",
         "symfony/console": "^7.0",
         "symfony/filesystem": "^7.0",
-        "symfony/process": "^7.0",
         "symfony/http-foundation": "^7.0",
-        "psr/log": "^3.0",
-        "monolog/monolog": "^3.0"
+        "symfony/process": "^7.0"
     },
     "require-dev": {
         "humbug/box": "^4.6",
@@ -54,6 +54,7 @@
     "config": {
         "optimize-autoloader": true,
         "sort-packages": true,
+        "platform-check": false,
         "allow-plugins": {
             "php-http/discovery": true
         }

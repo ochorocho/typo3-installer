@@ -29,7 +29,7 @@ class RequirementsChecker
      * @param array<string> $packages Optional list of packages (defaults to required + recommended)
      * @return array<int, array<string, mixed>>
      */
-    public function check(string $installPath = 'typo3-test-install', array $packages = [], string $typo3Version = '13.4'): array
+    public function check(string $installPath = '../', array $packages = [], string $typo3Version = '13.4'): array
     {
         // Use default packages if none provided
         if (empty($packages)) {
@@ -70,11 +70,14 @@ class RequirementsChecker
             $targetDir = $installPath;
         }
 
-        if (!file_exists($targetDir)) {
-            @mkdir($targetDir, 0755, true);
+        if (file_exists($targetDir)) {
+            // If folder exists, check if it's writable
+            $writable = is_writable($targetDir);
+        } else {
+            // If folder doesn't exist, check if parent directory is writable
+            $parentDir = dirname($targetDir);
+            $writable = is_writable($parentDir);
         }
-
-        $writable = is_writable($targetDir);
 
         return [
             'title' => 'File Permissions',

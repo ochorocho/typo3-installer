@@ -1,146 +1,61 @@
 import { LitElement, html, css } from 'lit';
+import { stepBaseStyles, formStyles } from './ui/shared-styles.js';
+import './ui/step-actions.js';
 
+/**
+ * Site configuration step with installation summary.
+ * @element step-site
+ */
 export class StepSite extends LitElement {
   static properties = {
     state: { type: Object }
   };
 
-  static styles = css`
-    :host {
-      display: block;
-    }
+  static styles = [
+    stepBaseStyles,
+    formStyles,
+    css`
+      .summary {
+        border-radius: var(--border-radius, 4px);
+        padding: var(--spacing-lg, 24px);
+        margin-top: var(--spacing-xl, 32px);
+      }
 
-    h2 {
-      margin: 0 0 var(--spacing-md, 16px) 0;
-      color: var(--color-secondary, #1a1a1a);
-    }
+      .summary h3 { margin: 0 0 var(--spacing-md, 16px) 0; }
 
-    p {
-      color: var(--color-text-light, #666);
-      margin-bottom: var(--spacing-lg, 24px);
-    }
+      .summary-item {
+        display: flex;
+        padding: var(--spacing-sm, 8px) 0;
+        border-bottom: 1px solid var(--color-border, #ddd);
+      }
 
-    .form-group {
-      margin-bottom: var(--spacing-md, 16px);
-    }
+      .summary-item:last-child { border-bottom: none; }
 
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: var(--spacing-xs, 4px);
-      color: var(--color-secondary, #1a1a1a);
-    }
+      .summary-label {
+        width: 150px;
+        font-weight: 600;
+        color: var(--color-text-light, #666);
+      }
 
-    input {
-      width: 100%;
-      padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
-      border: 1px solid var(--color-border, #ddd);
-      border-radius: var(--border-radius, 4px);
-      font-size: 16px;
-      transition: border-color 0.2s ease;
-    }
-
-    input:focus {
-      outline: none;
-      border-color: var(--color-primary, #ff8700);
-    }
-
-    .help-text {
-      font-size: 12px;
-      color: var(--color-text-light, #666);
-      margin-top: var(--spacing-xs, 4px);
-    }
-
-    .summary {
-      background: var(--color-bg, #f5f5f5);
-      border-radius: var(--border-radius, 4px);
-      padding: var(--spacing-lg, 24px);
-      margin-top: var(--spacing-xl, 32px);
-    }
-
-    .summary h3 {
-      margin: 0 0 var(--spacing-md, 16px) 0;
-      color: var(--color-secondary, #1a1a1a);
-    }
-
-    .summary-item {
-      display: flex;
-      padding: var(--spacing-sm, 8px) 0;
-      border-bottom: 1px solid var(--color-border, #ddd);
-    }
-
-    .summary-item:last-child {
-      border-bottom: none;
-    }
-
-    .summary-label {
-      width: 150px;
-      font-weight: 600;
-      color: var(--color-text-light, #666);
-    }
-
-    .summary-value {
-      flex: 1;
-      color: var(--color-secondary, #1a1a1a);
-    }
-
-    .actions {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: var(--spacing-md, 16px);
-      margin-top: var(--spacing-lg, 24px);
-    }
-
-    button {
-      padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
-      border: none;
-      border-radius: var(--border-radius, 4px);
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .btn-success {
-      background: var(--color-success, #4caf50);
-      color: white;
-    }
-
-    .btn-success:hover:not(:disabled) {
-      background: #43a047;
-    }
-
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--color-border, #ddd);
-      color: var(--color-text, #333);
-    }
-
-    .btn-outline:hover:not(:disabled) {
-      background: var(--color-bg, #f5f5f5);
-    }
-  `;
+      .summary-value {
+        flex: 1;
+        color: var(--color-secondary, #1a1a1a);
+      }
+    `
+  ];
 
   connectedCallback() {
     super.connectedCallback();
-    // Auto-detect base URL if not set
     if (!this.state?.site?.baseUrl) {
-      const baseUrl = window.location.origin;
-      this._handleInput('baseUrl', baseUrl);
+      this._handleInput('baseUrl', window.location.origin);
     }
   }
 
   _handleInput(field, value) {
-    const site = { ...this.state.site, [field]: value };
     this.dispatchEvent(new CustomEvent('state-update', {
       bubbles: true,
       composed: true,
-      detail: { site }
+      detail: { site: { ...this.state.site, [field]: value } }
     }));
   }
 
@@ -149,20 +64,9 @@ export class StepSite extends LitElement {
     return site.name?.length > 0 && site.baseUrl?.length > 0;
   }
 
-  _handlePrevious() {
-    this.dispatchEvent(new CustomEvent('previous-step', { bubbles: true, composed: true }));
-  }
-
-  _handleNext() {
-    this.dispatchEvent(new CustomEvent('next-step', { bubbles: true, composed: true }));
-  }
-
   _getDriverLabel(driver) {
-    switch (driver) {
-      case 'pdo_mysql': return 'MySQL / MariaDB';
-      case 'pdo_pgsql': return 'PostgreSQL';
-      default: return driver;
-    }
+    const labels = { pdo_mysql: 'MySQL / MariaDB', pdo_pgsql: 'PostgreSQL' };
+    return labels[driver] || driver;
   }
 
   render() {
@@ -201,49 +105,41 @@ export class StepSite extends LitElement {
 
       <div class="summary">
         <h3>Installation Summary</h3>
-
         <div class="summary-item">
           <div class="summary-label">Packages</div>
           <div class="summary-value">${packages.length} packages selected</div>
         </div>
-
         <div class="summary-item">
           <div class="summary-label">Database Type</div>
           <div class="summary-value">${this._getDriverLabel(db.driver)}</div>
         </div>
-
         <div class="summary-item">
           <div class="summary-label">Database</div>
           <div class="summary-value">${db.user}@${db.host}:${db.port}/${db.name}</div>
         </div>
-
         <div class="summary-item">
           <div class="summary-label">Admin User</div>
           <div class="summary-value">${admin.username}</div>
         </div>
-
         <div class="summary-item">
           <div class="summary-label">Admin Email</div>
           <div class="summary-value">${admin.email}</div>
         </div>
-
         <div class="summary-item">
           <div class="summary-label">Site Name</div>
           <div class="summary-value">${site.name || '-'}</div>
         </div>
-
         <div class="summary-item">
           <div class="summary-label">Base URL</div>
           <div class="summary-value">${site.baseUrl || '-'}</div>
         </div>
       </div>
 
-      <div class="actions">
-        <button class="btn-outline" @click=${this._handlePrevious}>Back</button>
-        <button class="btn-success" @click=${this._handleNext} ?disabled=${!this._canProceed()}>
-          Start Installation
-        </button>
-      </div>
+      <t3-step-actions
+        ?can-continue=${this._canProceed()}
+        continue-text="Start Installation"
+        continue-variant="success"
+      ></t3-step-actions>
     `;
   }
 }

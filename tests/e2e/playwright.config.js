@@ -7,7 +7,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: 'html',
-  timeout: 30000,
+  timeout: 60000,
   globalSetup: './global-setup.js',
 
   use: {

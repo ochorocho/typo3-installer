@@ -1,296 +1,122 @@
 import { LitElement, html, css } from 'lit';
 import { apiClient } from '../api/client.js';
+import { stepBaseStyles, buttonStyles, spinnerStyles, srOnlyStyles } from './ui/shared-styles.js';
+import './ui/error-help.js';
+import './ui/php-version-warning.js';
+import './ui/step-actions.js';
 
+/**
+ * System requirements check step.
+ * @element step-requirements
+ */
 export class StepRequirements extends LitElement {
   static properties = {
     state: { type: Object },
     checking: { type: Boolean },
     requirements: { type: Array },
-    error: { type: Object }
+    error: { type: Object },
+    phpDetection: { type: Object },
+    customBinaryPath: { type: String },
+    validatingBinary: { type: Boolean },
+    _showCustomBinaryInput: { type: Boolean, state: true }
   };
 
-  static styles = css`
-    :host {
-      display: block;
-    }
+  static styles = [
+    stepBaseStyles,
+    buttonStyles,
+    spinnerStyles,
+    srOnlyStyles,
+    css`
+      .requirements-list { margin-bottom: var(--spacing-lg, 24px); }
 
-    h2 {
-      margin: 0 0 var(--spacing-md, 16px) 0;
-      color: var(--color-secondary, #1a1a1a);
-    }
+      .requirement {
+        display: flex;
+        align-items: flex-start;
+        padding: var(--spacing-md, 16px);
+        border: 1px solid var(--color-border, #ddd);
+        border-radius: var(--border-radius, 4px);
+        margin-bottom: var(--spacing-sm, 8px);
+        background: white;
+      }
 
-    p {
-      color: var(--color-text-light, #666);
-      margin-bottom: var(--spacing-lg, 24px);
-    }
+      .requirement.passed { border-left: 4px solid var(--color-success, #4caf50); }
+      .requirement.failed { border-left: 4px solid var(--color-error, #f44336); }
+      .requirement.warning { border-left: 4px solid var(--color-warning, #ff9800); }
 
-    .requirements-list {
-      margin-bottom: var(--spacing-lg, 24px);
-    }
+      .requirement-icon {
+        width: 24px;
+        height: 24px;
+        margin-right: var(--spacing-md, 16px);
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
 
-    .requirement {
-      display: flex;
-      align-items: flex-start;
-      padding: var(--spacing-md, 16px);
-      border: 1px solid var(--color-border, #ddd);
-      border-radius: var(--border-radius, 4px);
-      margin-bottom: var(--spacing-sm, 8px);
-      background: white;
-    }
+      .requirement.passed .requirement-icon { color: var(--color-success, #1cb841); }
+      .requirement.failed .requirement-icon { color: var(--color-error, #c83c3c); }
+      .requirement.warning .requirement-icon { color: var(--color-warning, #f76707); }
 
-    .requirement.passed {
-      border-left: 4px solid var(--color-success, #4caf50);
-    }
+      .requirement-content { flex: 1; }
+      .requirement-title { font-weight: 600; margin-bottom: var(--spacing-xs, 4px); }
+      .requirement-description { font-size: 14px; color: var(--color-text-light, #666); }
 
-    .requirement.failed {
-      border-left: 4px solid var(--color-error, #f44336);
-    }
+      .summary {
+        display: flex;
+        gap: var(--spacing-lg, 24px);
+        padding: var(--spacing-md, 16px);
+        background: var(--color-bg, #f5f5f5);
+        border-radius: var(--border-radius, 4px);
+        margin-bottom: var(--spacing-lg, 24px);
+      }
 
-    .requirement.warning {
-      border-left: 4px solid var(--color-warning, #ff9800);
-    }
+      .summary-item { display: flex; align-items: center; gap: var(--spacing-sm, 8px); }
+      .summary-count { font-weight: 600; font-size: 1.25rem; }
+      .summary-count.passed { color: var(--color-success, #1cb841); }
+      .summary-count.failed { color: var(--color-error, #c83c3c); }
+      .summary-count.warning { color: var(--color-warning, #f76707); }
 
-    .requirement-icon {
-      width: 24px;
-      height: 24px;
-      margin-right: var(--spacing-md, 16px);
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+      .packages-info {
+        font-size: 14px;
+        color: var(--color-text-light, #666);
+        background: var(--color-bg, #f5f5f5);
+        padding: var(--spacing-md, 16px);
+        border-radius: var(--border-radius, 4px);
+        margin-bottom: var(--spacing-lg, 24px);
+      }
 
-    .requirement.passed .requirement-icon {
-      color: var(--color-success, #1cb841);
-    }
+      .packages-info strong { color: var(--color-secondary, #1a1a1a); }
 
-    .requirement.failed .requirement-icon {
-      color: var(--color-error, #c83c3c);
-    }
+      .error-container {
+        background: var(--color-error-bg, #ffebee);
+        border: 1px solid var(--color-error, #c83c3c);
+        border-radius: var(--border-radius, 4px);
+        padding: var(--spacing-lg, 24px);
+        margin-bottom: var(--spacing-lg, 24px);
+      }
 
-    .requirement.warning .requirement-icon {
-      color: var(--color-warning, #f76707);
-    }
+      .error-header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm, 8px);
+        margin-bottom: var(--spacing-md, 16px);
+      }
 
-    .requirement-content {
-      flex: 1;
-    }
-
-    .requirement-title {
-      font-weight: 600;
-      margin-bottom: var(--spacing-xs, 4px);
-    }
-
-    .requirement-description {
-      font-size: 14px;
-      color: var(--color-text-light, #666);
-    }
-
-    .summary {
-      display: flex;
-      gap: var(--spacing-lg, 24px);
-      padding: var(--spacing-md, 16px);
-      background: var(--color-bg, #f5f5f5);
-      border-radius: var(--border-radius, 4px);
-      margin-bottom: var(--spacing-lg, 24px);
-    }
-
-    .summary-item {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm, 8px);
-    }
-
-    .summary-count {
-      font-weight: 600;
-      font-size: 1.25rem;
-    }
-
-    .summary-count.passed {
-      color: var(--color-success, #1cb841);
-    }
-
-    .summary-count.failed {
-      color: var(--color-error, #c83c3c);
-    }
-
-    .summary-count.warning {
-      color: var(--color-warning, #f76707);
-    }
-
-    .packages-info {
-      font-size: 14px;
-      color: var(--color-text-light, #666);
-      background: var(--color-bg, #f5f5f5);
-      padding: var(--spacing-md, 16px);
-      border-radius: var(--border-radius, 4px);
-      margin-bottom: var(--spacing-lg, 24px);
-    }
-
-    .packages-info strong {
-      color: var(--color-secondary, #1a1a1a);
-    }
-
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--color-border, #ddd);
-      color: var(--color-text, #333);
-    }
-
-    .btn-outline:hover:not(:disabled) {
-      background: var(--color-bg, #f5f5f5);
-    }
-
-    .actions-left {
-      display: flex;
-      gap: var(--spacing-md, 16px);
-    }
-
-    .actions {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: var(--spacing-md, 16px);
-    }
-
-    button {
-      padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
-      border: none;
-      border-radius: var(--border-radius, 4px);
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    button:focus-visible {
-      outline: 2px solid var(--color-primary, #ff8700);
-      outline-offset: 2px;
-    }
-
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background: var(--color-primary, #ff8700);
-      color: white;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background: #e67a00;
-    }
-
-    .btn-secondary {
-      background: var(--color-info, #2196f3);
-      color: white;
-    }
-
-    .btn-secondary:hover:not(:disabled) {
-      background: #1976d2;
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      border-top-color: white;
-      animation: spin 1s linear infinite;
-      margin-right: var(--spacing-sm, 8px);
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .error-container {
-      background: #ffebee;
-      border: 1px solid var(--color-error, #c83c3c);
-      border-radius: var(--border-radius, 4px);
-      padding: var(--spacing-lg, 24px);
-      margin-bottom: var(--spacing-lg, 24px);
-    }
-
-    .error-header {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm, 8px);
-      margin-bottom: var(--spacing-md, 16px);
-    }
-
-    .error-icon {
-      width: 24px;
-      height: 24px;
-      color: var(--color-error, #c83c3c);
-    }
-
-    .error-title {
-      font-weight: 600;
-      color: var(--color-error, #c83c3c);
-      font-size: 16px;
-    }
-
-    .error-message {
-      color: #333;
-      margin-bottom: var(--spacing-md, 16px);
-    }
-
-    .error-help {
-      background: rgba(255, 255, 255, 0.7);
-      padding: var(--spacing-md, 16px);
-      border-radius: var(--border-radius, 4px);
-      margin-bottom: var(--spacing-md, 16px);
-    }
-
-    .error-help-title {
-      font-weight: 600;
-      color: #333;
-      margin-bottom: var(--spacing-sm, 8px);
-    }
-
-    .error-help ul {
-      margin: 0;
-      padding-left: var(--spacing-lg, 24px);
-      color: #555;
-    }
-
-    .error-help li {
-      margin-bottom: var(--spacing-xs, 4px);
-    }
-
-    .error-actions {
-      display: flex;
-      gap: var(--spacing-md, 16px);
-    }
-
-    .btn-error {
-      background: var(--color-error, #c83c3c);
-      color: white;
-    }
-
-    .btn-error:hover:not(:disabled) {
-      background: #a33232;
-    }
-  `;
+      .error-icon { width: 24px; height: 24px; color: var(--color-error, #c83c3c); }
+      .error-title { font-weight: 600; color: var(--color-error, #c83c3c); font-size: 16px; }
+      .error-message { color: #333; margin-bottom: var(--spacing-md, 16px); }
+    `
+  ];
 
   constructor() {
     super();
     this.checking = false;
     this.requirements = [];
     this.error = null;
+    this.phpDetection = null;
+    this.customBinaryPath = '';
+    this.validatingBinary = false;
+    this._showCustomBinaryInput = false;
   }
 
   connectedCallback() {
@@ -299,6 +125,9 @@ export class StepRequirements extends LitElement {
       this._checkRequirements();
     } else {
       this.requirements = this.state.requirements.results;
+      if (this.state?.phpDetection?.checked) {
+        this.phpDetection = this.state.phpDetection;
+      }
     }
   }
 
@@ -306,31 +135,33 @@ export class StepRequirements extends LitElement {
     this.checking = true;
     this.error = null;
     try {
-      // Use dynamic validation based on selected packages and TYPO3 version
-      const selectedPackages = this.state?.packages?.selected || [];
-      const typo3Version = this.state?.typo3Version || '13.4';
-      const response = await apiClient.validateRequirements(selectedPackages, typo3Version);
-      this.requirements = response.requirements || [];
+      const [requirementsResponse, phpResponse] = await Promise.all([
+        apiClient.validateRequirements(this.state?.packages?.selected || [], this.state?.typo3Version || '13.4'),
+        apiClient.detectPhp()
+      ]);
 
-      const passed = response.passed;
+      this.requirements = requirementsResponse.requirements || [];
+
+      this.phpDetection = {
+        checked: true,
+        fpmVersion: phpResponse.fpmVersion,
+        cliBinary: phpResponse.cliBinary,
+        cliVersion: phpResponse.cliVersion,
+        mismatch: phpResponse.mismatch,
+        availableVersions: phpResponse.availableVersions || [],
+        selectedBinary: phpResponse.mismatch ? null : phpResponse.cliBinary
+      };
 
       this.dispatchEvent(new CustomEvent('state-update', {
         bubbles: true,
         composed: true,
         detail: {
-          requirements: {
-            checked: true,
-            passed,
-            results: this.requirements
-          },
-          packages: {
-            ...this.state.packages,
-            validated: true
-          }
+          requirements: { checked: true, passed: requirementsResponse.passed, results: this.requirements },
+          packages: { ...this.state.packages, validated: true },
+          phpDetection: this.phpDetection
         }
       }));
     } catch (error) {
-      console.error('Failed to check requirements:', error);
       this.error = {
         message: error.getUserMessage?.() || error.message || 'Failed to check requirements',
         details: error.details || null
@@ -340,51 +171,70 @@ export class StepRequirements extends LitElement {
     }
   }
 
-  _getErrorHelp() {
-    const help = [
-      'Check your internet connection',
-      'Try refreshing the page and starting again',
-      'The server may be temporarily unavailable',
-      'Check the browser console for more details'
-    ];
-
-    if (this.error?.details?.isTimeout) {
-      help.unshift('The request took too long - the server might be busy');
-    }
-
-    if (this.error?.details?.statusCode === 500) {
-      help.unshift('Check the PHP error logs on the server');
-    }
-
-    return help;
+  _handlePhpBinaryChange(e) {
+    this.phpDetection = { ...this.phpDetection, selectedBinary: e.detail.path };
+    this._updatePhpDetectionState();
   }
 
-  _handlePrevious() {
-    this.dispatchEvent(new CustomEvent('previous-step', { bubbles: true, composed: true }));
+  _handleCustomPathChange(e) {
+    this.customBinaryPath = e.detail.path;
+  }
+
+  async _validateCustomBinary() {
+    if (!this.customBinaryPath.trim()) return;
+
+    this.validatingBinary = true;
+    try {
+      const response = await apiClient.validatePhpBinary(this.customBinaryPath.trim());
+
+      if (response.valid) {
+        this.phpDetection = {
+          ...this.phpDetection,
+          selectedBinary: this.customBinaryPath.trim(),
+          customBinaryValid: true,
+          customBinaryVersion: response.version,
+          customBinaryMatchesFpm: response.matchesFpm
+        };
+        this._updatePhpDetectionState();
+      } else {
+        this.phpDetection = { ...this.phpDetection, customBinaryValid: false, customBinaryError: response.error || 'Invalid PHP binary' };
+      }
+    } catch (error) {
+      this.phpDetection = { ...this.phpDetection, customBinaryValid: false, customBinaryError: error.message || 'Failed to validate binary' };
+    } finally {
+      this.validatingBinary = false;
+    }
+  }
+
+  _toggleCustomBinaryInput() {
+    this._showCustomBinaryInput = !this._showCustomBinaryInput;
+  }
+
+  _updatePhpDetectionState() {
+    this.dispatchEvent(new CustomEvent('state-update', {
+      bubbles: true,
+      composed: true,
+      detail: { phpDetection: this.phpDetection }
+    }));
   }
 
   _getStatusIcon(status) {
-    switch (status) {
-      case 'passed': return '\u2713';
-      case 'failed': return '\u2717';
-      case 'warning': return '\u26A0';
-      default: return '?';
-    }
+    const icons = { passed: '\u2713', failed: '\u2717', warning: '\u26A0' };
+    return icons[status] || '?';
   }
 
   _getSummary() {
-    const passed = this.requirements.filter(r => r.status === 'passed').length;
-    const failed = this.requirements.filter(r => r.status === 'failed').length;
-    const warning = this.requirements.filter(r => r.status === 'warning').length;
-    return { passed, failed, warning };
+    return {
+      passed: this.requirements.filter(r => r.status === 'passed').length,
+      failed: this.requirements.filter(r => r.status === 'failed').length,
+      warning: this.requirements.filter(r => r.status === 'warning').length
+    };
   }
 
   _canProceed() {
-    return this.state?.requirements?.passed && !this.checking;
-  }
-
-  _handleNext() {
-    this.dispatchEvent(new CustomEvent('next-step', { bubbles: true, composed: true }));
+    if (!this.state?.requirements?.passed || this.checking) return false;
+    if (this.phpDetection?.mismatch) return this.phpDetection.selectedBinary !== null;
+    return true;
   }
 
   render() {
@@ -397,7 +247,6 @@ export class StepRequirements extends LitElement {
 
       <div class="packages-info">
         <strong>${selectedPackages.length}</strong> packages selected for installation.
-        Requirements are validated based on your package selection.
       </div>
 
       ${this.error ? html`
@@ -409,17 +258,8 @@ export class StepRequirements extends LitElement {
             <span class="error-title">Requirements Check Failed</span>
           </div>
           <p class="error-message">${this.error.message}</p>
-          <div class="error-help">
-            <div class="error-help-title">What you can try:</div>
-            <ul>
-              ${this._getErrorHelp().map(tip => html`<li>${tip}</li>`)}
-            </ul>
-          </div>
-          <div class="error-actions">
-            <button class="btn-error" @click=${this._checkRequirements}>
-              Try Again
-            </button>
-          </div>
+          <t3-error-help .error=${this.error} context="requirements"></t3-error-help>
+          <button class="btn-error" @click=${this._checkRequirements}>Try Again</button>
         </div>
       ` : this.checking ? html`
         <div class="requirements-list">
@@ -428,18 +268,26 @@ export class StepRequirements extends LitElement {
       ` : html`
         <div class="summary">
           <div class="summary-item">
-            <span class="summary-count passed">${summary.passed}</span>
-            <span>Passed</span>
+            <span class="summary-count passed">${summary.passed}</span><span>Passed</span>
           </div>
           <div class="summary-item">
-            <span class="summary-count failed">${summary.failed}</span>
-            <span>Failed</span>
+            <span class="summary-count failed">${summary.failed}</span><span>Failed</span>
           </div>
           <div class="summary-item">
-            <span class="summary-count warning">${summary.warning}</span>
-            <span>Warnings</span>
+            <span class="summary-count warning">${summary.warning}</span><span>Warnings</span>
           </div>
         </div>
+
+        <t3-php-version-warning
+          .phpDetection=${this.phpDetection}
+          .customBinaryPath=${this.customBinaryPath}
+          .validatingBinary=${this.validatingBinary}
+          .showCustomInput=${this._showCustomBinaryInput}
+          @binary-change=${this._handlePhpBinaryChange}
+          @custom-path-change=${this._handleCustomPathChange}
+          @validate-binary=${this._validateCustomBinary}
+          @toggle-custom-input=${this._toggleCustomBinaryInput}
+        ></t3-php-version-warning>
 
         <div class="requirements-list" role="list" aria-label="System requirements">
           ${this.requirements.map(req => html`
@@ -457,17 +305,11 @@ export class StepRequirements extends LitElement {
         </div>
       `}
 
-      <div class="actions">
-        <div class="actions-left">
-          <button class="btn-outline" @click=${this._handlePrevious}>Back</button>
-          <button class="btn-secondary" @click=${this._checkRequirements} ?disabled=${this.checking}>
-            ${this.checking ? html`<span class="spinner"></span>` : ''} Recheck
-          </button>
-        </div>
-        <button class="btn-primary" @click=${this._handleNext} ?disabled=${!this._canProceed()}>
-          Continue
+      <t3-step-actions ?can-continue=${this._canProceed()}>
+        <button slot="left" class="btn-secondary" @click=${this._checkRequirements} ?disabled=${this.checking}>
+          ${this.checking ? html`<span class="spinner"></span>` : ''} Recheck
         </button>
-      </div>
+      </t3-step-actions>
     `;
   }
 }

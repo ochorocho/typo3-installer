@@ -1,6 +1,7 @@
 {
     "compression": "GZ",
     "output": "typo3-installer.phar",
+    "check-requirements": false,
     "stub": "stub.php",
     "main": "src/bootstrap.php",
     "directories": [
@@ -11,7 +12,8 @@
         "vendor/composer/spdx-licenses/res"
     ],
     "files": [
-        "vendor/composer/composer/LICENSE"
+        "vendor/composer/composer/LICENSE",
+        "resources/composer.phar"
     ],
     "finder": [
         {
@@ -23,10 +25,14 @@
                 "jetbrains",
                 "phpstan"
             ],
+            "notPath": [
+                "vendor/humbug"
+            ],
             "in": "vendor"
         }
     ],
     "blacklist": [
         "vendor/humbug"
-    ]
+    ],
+    "dump-autoload": true
 }

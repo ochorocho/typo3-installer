@@ -188,6 +188,135 @@ class ApiClient {
             method: 'GET'
         });
     }
+
+    async detectPhp() {
+        return this.request('/api/detect-php', {
+            method: 'POST'
+        });
+    }
+
+    async validatePhpBinary(binaryPath) {
+        return this.request('/api/validate-php-binary', {
+            method: 'POST',
+            body: JSON.stringify({ binaryPath })
+        });
+    }
+
+    /**
+     * Start installation with SSE streaming
+     * Returns an object with EventSource and control methods
+     *
+     * @param {Object} config Installation configuration
+     * @param {Object} callbacks Event callbacks: onOutput, onProgress, onStep, onComplete, onError
+     * @returns {Object} Control object with close() method
+     */
+    installWithStreaming(config, callbacks = {}) {
+        const url = `${this.baseUrl}/api/install-stream`;
+
+        // Use fetch with POST to send config, then read as stream
+        const controller = new AbortController();
+
+        const streamPromise = fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'text/event-stream'
+            },
+            body: JSON.stringify(config),
+            signal: controller.signal
+        }).then(async response => {
+            if (!response.ok) {
+                throw new ApiError(`Failed to start streaming: ${response.status}`, {
+                    statusCode: response.status
+                });
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+
+                    // Parse SSE events from buffer
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+                    let currentEvent = null;
+                    for (const line of lines) {
+                        if (line.startsWith('event: ')) {
+                            currentEvent = line.substring(7).trim();
+                        } else if (line.startsWith('data: ') && currentEvent) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                this._handleSseEvent(currentEvent, data, callbacks);
+                            } catch (parseError) {
+                                console.warn('Failed to parse SSE data:', line);
+                            }
+                            currentEvent = null;
+                        }
+                    }
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    if (callbacks.onError) {
+                        callbacks.onError(new ApiError('Stream connection lost', {
+                            isNetworkError: true,
+                            originalError: error.message
+                        }));
+                    }
+                }
+            }
+        }).catch(error => {
+            if (error.name !== 'AbortError' && callbacks.onError) {
+                callbacks.onError(error instanceof ApiError ? error : new ApiError(error.message, {
+                    isNetworkError: true
+                }));
+            }
+        });
+
+        return {
+            close: () => controller.abort(),
+            promise: streamPromise
+        };
+    }
+
+    /**
+     * Handle SSE events
+     * @private
+     */
+    _handleSseEvent(event, data, callbacks) {
+        switch (event) {
+            case 'start':
+                if (callbacks.onStart) callbacks.onStart(data);
+                break;
+            case 'step':
+                if (callbacks.onStep) callbacks.onStep(data);
+                break;
+            case 'progress':
+                if (callbacks.onProgress) callbacks.onProgress(data);
+                break;
+            case 'output':
+                if (callbacks.onOutput) callbacks.onOutput(data);
+                break;
+            case 'complete':
+                if (callbacks.onComplete) callbacks.onComplete(data);
+                break;
+            case 'error':
+                if (callbacks.onError) {
+                    callbacks.onError(new ApiError(data.message, {
+                        details: data.details
+                    }));
+                }
+                break;
+            default:
+                console.log('Unknown SSE event:', event, data);
+        }
+    }
 }
 
 export const apiClient = new ApiClient();

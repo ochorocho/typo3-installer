@@ -23,6 +23,15 @@ export const initialState = {
     passed: false,
     results: []
   },
+  phpDetection: {
+    checked: false,
+    fpmVersion: null,
+    cliBinary: null,
+    cliVersion: null,
+    mismatch: false,
+    availableVersions: [],
+    selectedBinary: null
+  },
   database: {
     driver: 'pdo_mysql',
     host: 'localhost',

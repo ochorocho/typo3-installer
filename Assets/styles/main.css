@@ -1,6 +1,7 @@
 /**
  * TYPO3 Installer - Main Styles
  * Based on TYPO3 v14.1 Backend Design System
+ * Supports light/dark mode with manual override
  */
 
 :root {
@@ -15,22 +16,34 @@
   --color-warning: #f76707;
   --color-info: #0078d4;
 
-  /* Background Colors */
+  /* Light mode defaults */
   --color-bg: #f4f4f4;
   --color-bg-white: #ffffff;
   --color-bg-light: #fafafa;
-
-  /* Text Colors - Improved contrast for WCAG AA */
   --color-text: #1a1a1a;
   --color-text-light: #333333;
   --color-text-muted: #555555;
-
-  /* Border Colors - Darker for better visibility */
   --color-border: #bbbbbb;
   --color-border-light: #dddddd;
 
+  /* Input colors - always black on white for clarity */
+  --color-input-bg: #ffffff;
+  --color-input-text: #1a1a1a;
+  --color-input-border: #bbbbbb;
+
   /* Focus indicator color */
   --color-focus: rgba(255, 135, 0, 0.4);
+
+  /* Alert/message background colors */
+  --color-success-bg: #e8f5e9;
+  --color-error-bg: #ffebee;
+  --color-warning-bg: #fff9e6;
+  --color-info-bg: #e3f2fd;
+
+  /* Typography sizes */
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
 
   /* Spacing - 8px grid system */
   --spacing-xs: 4px;
@@ -48,21 +61,29 @@
   --shadow-focus: 0 0 0 3px var(--color-focus);
 }
 
-/* Reduce motion for users who prefer it */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+/* Dark mode variables */
+[data-theme="dark"] {
+  --color-bg: #1a1a1a;
+  --color-bg-white: #2a2a2a;
+  --color-bg-light: #333333;
+  --color-text: #f0f0f0;
+  --color-text-light: #cccccc;
+  --color-text-muted: #999999;
+  --color-border: #444444;
+  --color-border-light: #555555;
+  --color-secondary: #f0f0f0;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  /* Dark mode alert backgrounds */
+  --color-success-bg: #1a3d1a;
+  --color-error-bg: #3d1a1a;
+  --color-warning-bg: #3d3a1a;
+  --color-info-bg: #1a2a3d;
 }
 
-/* Dark mode support */
+/* Auto mode - follows system preference */
 @media (prefers-color-scheme: dark) {
-  :root {
+  [data-theme="auto"] {
     --color-bg: #1a1a1a;
     --color-bg-white: #2a2a2a;
     --color-bg-light: #333333;
@@ -72,6 +93,25 @@
     --color-border: #444444;
     --color-border-light: #555555;
     --color-secondary: #f0f0f0;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+    /* Dark mode alert backgrounds */
+    --color-success-bg: #1a3d1a;
+    --color-error-bg: #3d1a1a;
+    --color-warning-bg: #3d3a1a;
+    --color-info-bg: #1a2a3d;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -137,6 +177,92 @@ textarea {
 /* Remove default focus for mouse users */
 :focus:not(:focus-visible) {
   outline: none;
+}
+
+/* =================================
+   Base Element Styles
+   ================================= */
+
+/* Headings - consistent margin and line-height */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0 0 var(--spacing-md) 0;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.125rem; }
+h5 { font-size: 1rem; }
+h6 { font-size: 0.875rem; }
+
+/* Paragraphs in content areas */
+p {
+  color: var(--color-text-light);
+  margin: 0 0 var(--spacing-lg) 0;
+}
+
+/* Labels */
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text);
+}
+
+/* Form inputs */
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--border-radius);
+  background: var(--color-input-bg);
+  color: var(--color-input-text);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(255, 135, 0, 0.15);
+}
+
+/* =================================
+   Alert Utility Classes
+   ================================= */
+
+.alert {
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-lg);
+}
+
+.alert-success {
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success);
+  color: var(--color-success);
+}
+
+.alert-error {
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+}
+
+.alert-warning {
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
+  color: var(--color-warning);
+}
+
+.alert-info {
+  background: var(--color-info-bg);
+  border: 1px solid var(--color-info);
+  color: var(--color-info);
 }
 
 /* Responsive breakpoint */

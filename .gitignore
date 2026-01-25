@@ -10,6 +10,7 @@
 /frontend/package-lock.json
 /tests/e2e/package-lock.json
 /public/assets/
+/typo3-installer.php
 /typo3-installer.phar
 /.env
 /.env.local
@@ -25,3 +26,4 @@
 /test-results/
 /playwright-report/
 /public
+/.php-cs-fixer.cache

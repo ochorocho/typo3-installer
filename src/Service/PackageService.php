@@ -13,19 +13,9 @@ use TYPO3\Installer\Utility\ByteConverter;
 class PackageService
 {
     /**
-     * HTTP request timeout in seconds for Packagist API calls
-     */
-    private const HTTP_TIMEOUT_SECONDS = 10;
-
-    /**
      * Minimum required memory in bytes (256MB)
      */
     private const MIN_MEMORY_BYTES = 256 * 1024 * 1024;
-
-    /**
-     * User agent string for API requests
-     */
-    private const USER_AGENT = 'TYPO3-Installer/1.0';
 
     /**
      * Required core packages that must always be installed
@@ -44,6 +34,7 @@ class PackageService
         'typo3/cms-composer-installers',
         'typo3/cms-styleguide',
         'typo3/cms-cli',
+        'typo3/cms-base-distribution',
     ];
 
     /**
@@ -73,6 +64,16 @@ class PackageService
     private const MIN_TYPO3_VERSION = '13.4';
 
     /**
+     * Packagist API base URL
+     */
+    private const PACKAGIST_API_URL = 'https://packagist.org';
+
+    /**
+     * HTTP client for API requests
+     */
+    private HttpClient $httpClient;
+
+    /**
      * Cached packages list (keyed by version)
      *
      * @var array<string, array<string, array{name: string, description: string, required: bool}>>
@@ -85,6 +86,18 @@ class PackageService
      * @var array<array{version: string, latest: string}>|null
      */
     private ?array $cachedVersions = null;
+
+    /**
+     * Cached package metadata from Packagist
+     *
+     * @var array<string, array{versions?: mixed}>
+     */
+    private array $packageMetadataCache = [];
+
+    public function __construct(?HttpClient $httpClient = null)
+    {
+        $this->httpClient = $httpClient ?? new HttpClient();
+    }
 
     /**
      * Get available TYPO3 versions (13.4 and above)
@@ -100,29 +113,33 @@ class PackageService
         $versions = [];
 
         try {
-            $apiUrl = 'https://packagist.org/packages/typo3/cms-core.json';
-            $response = $this->fetchFromPackagist($apiUrl);
+            $apiUrl = self::PACKAGIST_API_URL . '/packages/typo3/cms-core.json';
+            $data = $this->httpClient->getJson($apiUrl);
 
-            if ($response === null) {
+            if ($data === null
+                || !isset($data['package'])
+                || !is_array($data['package'])
+                || !isset($data['package']['versions'])
+                || !is_array($data['package']['versions'])
+            ) {
                 throw new \RuntimeException('Failed to fetch TYPO3 versions');
             }
 
-            $data = json_decode($response, true);
-
-            if (!is_array($data) || !isset($data['package']['versions'])) {
-                throw new \RuntimeException('Invalid response from Packagist');
-            }
+            /** @var array<string, mixed> $packageVersions */
+            $packageVersions = $data['package']['versions'];
 
             // Group versions by major.minor and find latest patch for each
+            /** @var array<string, array{patch: int, full: string}> $versionGroups */
             $versionGroups = [];
-            foreach ($data['package']['versions'] as $versionString => $versionData) {
+            foreach ($packageVersions as $versionString => $versionData) {
+                $versionStr = (string)$versionString;
                 // Skip dev versions
-                if (str_contains($versionString, 'dev')) {
+                if (str_contains($versionStr, 'dev')) {
                     continue;
                 }
 
                 // Parse version (e.g., "v13.4.0", "v13.4.10", "13.4.0")
-                if (!preg_match('/^v?(\d+)\.(\d+)\.(\d+)$/', $versionString, $matches)) {
+                if (!preg_match('/^v?(\d+)\.(\d+)\.(\d+)$/', $versionStr, $matches)) {
                     continue;
                 }
 
@@ -140,7 +157,7 @@ class PackageService
                 if (!isset($versionGroups[$majorMinor]) || $patch > $versionGroups[$majorMinor]['patch']) {
                     $versionGroups[$majorMinor] = [
                         'patch' => $patch,
-                        'full' => $versionString,
+                        'full' => $versionStr,
                     ];
                 }
             }
@@ -205,6 +222,8 @@ class PackageService
                 $allResults = array_merge($allResults, $additionalResults);
             }
 
+            // Filter and collect package names for batch metadata fetching
+            $packageNames = [];
             foreach ($allResults as $package) {
                 if (!is_array($package) || !isset($package['name'], $package['description'])) {
                     continue;
@@ -222,6 +241,14 @@ class PackageService
                     continue;
                 }
 
+                $packageNames[$packageName] = $package['description'];
+            }
+
+            // Pre-warm cache with all package metadata URLs to minimize API calls
+            $this->preWarmPackageMetadataCache(array_keys($packageNames));
+
+            // Now check compatibility using cached metadata
+            foreach ($packageNames as $packageName => $description) {
                 // Check if package is compatible with selected TYPO3 version
                 if (!$this->isPackageCompatibleWithVersion($packageName, $typo3Version)) {
                     continue;
@@ -231,7 +258,7 @@ class PackageService
 
                 $packages[$packageName] = [
                     'name' => $this->formatPackageName($packageName),
-                    'description' => $package['description'],
+                    'description' => $description,
                     'required' => $isRequired,
                 ];
             }
@@ -269,26 +296,85 @@ class PackageService
     }
 
     /**
+     * Pre-warm the package metadata cache with concurrent requests
+     *
+     * This significantly reduces API calls by fetching all package metadata in parallel.
+     *
+     * @param array<string> $packageNames
+     */
+    private function preWarmPackageMetadataCache(array $packageNames): void
+    {
+        $urls = [];
+        foreach ($packageNames as $packageName) {
+            if (!isset($this->packageMetadataCache[$packageName])) {
+                $urls[] = sprintf('%s/packages/%s.json', self::PACKAGIST_API_URL, $packageName);
+            }
+        }
+
+        if (empty($urls)) {
+            return;
+        }
+
+        // Use concurrent requests to fetch all metadata
+        $this->httpClient->preWarmCache($urls);
+
+        // Now fetch from cache and populate our metadata cache
+        foreach ($packageNames as $packageName) {
+            if (!isset($this->packageMetadataCache[$packageName])) {
+                $url = sprintf('%s/packages/%s.json', self::PACKAGIST_API_URL, $packageName);
+                $data = $this->httpClient->getJson($url);
+                if ($data !== null && isset($data['package']) && is_array($data['package'])) {
+                    /** @var array{versions?: mixed} $packageData */
+                    $packageData = $data['package'];
+                    $this->packageMetadataCache[$packageName] = $packageData;
+                }
+            }
+        }
+    }
+
+    /**
+     * Get package metadata from cache or fetch it
+     *
+     * @return array{versions?: mixed}|null
+     */
+    private function getPackageMetadata(string $packageName): ?array
+    {
+        if (isset($this->packageMetadataCache[$packageName])) {
+            return $this->packageMetadataCache[$packageName];
+        }
+
+        $apiUrl = sprintf('%s/packages/%s.json', self::PACKAGIST_API_URL, $packageName);
+        $data = $this->httpClient->getJson($apiUrl);
+
+        if ($data === null || !isset($data['package']) || !is_array($data['package'])) {
+            return null;
+        }
+
+        /** @var array{versions?: mixed} $packageData */
+        $packageData = $data['package'];
+        $this->packageMetadataCache[$packageName] = $packageData;
+
+        return $packageData;
+    }
+
+    /**
      * Search Packagist for packages with a given prefix
      *
-     * @return array<mixed>
+     * @return array<int, array{name?: string, description?: string}>
      */
     private function searchPackagist(string $query): array
     {
-        $apiUrl = 'https://packagist.org/search.json?q=' . urlencode($query) . '&per_page=100';
-        $response = $this->fetchFromPackagist($apiUrl);
+        $apiUrl = self::PACKAGIST_API_URL . '/search.json?q=' . urlencode($query) . '&per_page=100';
+        $data = $this->httpClient->getJson($apiUrl);
 
-        if ($response === null) {
+        if ($data === null || !isset($data['results']) || !is_array($data['results'])) {
             return [];
         }
 
-        $data = json_decode($response, true);
+        /** @var array<int, array{name?: string, description?: string}> $results */
+        $results = $data['results'];
 
-        if (!is_array($data) || !isset($data['results'])) {
-            return [];
-        }
-
-        return $data['results'];
+        return $results;
     }
 
     /**
@@ -315,29 +401,31 @@ class PackageService
     private function isPackageCompatibleWithVersion(string $packageName, string $typo3Version): bool
     {
         try {
-            $apiUrl = sprintf('https://packagist.org/packages/%s.json', $packageName);
-            $response = $this->fetchFromPackagist($apiUrl);
+            $packageData = $this->getPackageMetadata($packageName);
 
-            if ($response === null) {
-                return false;
-            }
-
-            $data = json_decode($response, true);
-
-            if (!is_array($data) || !isset($data['package']['versions'])) {
+            if ($packageData === null || !isset($packageData['versions']) || !is_array($packageData['versions'])) {
                 return false;
             }
 
             // Check each version of the package
-            foreach ($data['package']['versions'] as $versionString => $versionData) {
+            foreach ($packageData['versions'] as $versionString => $versionData) {
+                $versionStr = (string)$versionString;
                 // Skip dev versions
-                if (str_contains($versionString, 'dev')) {
+                if (str_contains($versionStr, 'dev')) {
+                    continue;
+                }
+
+                if (!is_array($versionData)) {
                     continue;
                 }
 
                 // Check if this package version requires a compatible typo3/cms-core
-                $require = $versionData['require'] ?? [];
-                $coreConstraint = $require['typo3/cms-core'] ?? null;
+                $require = isset($versionData['require']) && is_array($versionData['require'])
+                    ? $versionData['require']
+                    : [];
+                $coreConstraint = isset($require['typo3/cms-core']) && is_string($require['typo3/cms-core'])
+                    ? $require['typo3/cms-core']
+                    : null;
 
                 if ($coreConstraint === null) {
                     continue;
@@ -368,20 +456,13 @@ class PackageService
         $emptyResult = ['php' => null, 'required' => [], 'suggested' => []];
 
         try {
-            $apiUrl = sprintf('https://packagist.org/packages/%s.json', $packageName);
-            $response = $this->fetchFromPackagist($apiUrl);
+            $packageData = $this->getPackageMetadata($packageName);
 
-            if ($response === null) {
+            if ($packageData === null || !isset($packageData['versions']) || !is_array($packageData['versions'])) {
                 return $emptyResult;
             }
 
-            $data = json_decode($response, true);
-
-            if (!is_array($data) || !isset($data['package']['versions'])) {
-                return $emptyResult;
-            }
-
-            $versions = $data['package']['versions'];
+            $versions = $packageData['versions'];
 
             // Find version compatible with TYPO3 version
             foreach ($versions as $versionString => $versionData) {
@@ -389,43 +470,50 @@ class PackageService
                     continue;
                 }
 
+                $versionStr = (string)$versionString;
+
                 // Skip dev versions
-                if (str_contains((string)$versionString, 'dev')) {
+                if (str_contains($versionStr, 'dev')) {
                     continue;
                 }
 
-                $require = $versionData['require'] ?? [];
-                if (!is_array($require)) {
-                    continue;
-                }
+                $require = isset($versionData['require']) && is_array($versionData['require'])
+                    ? $versionData['require']
+                    : [];
 
-                $coreConstraint = $require['typo3/cms-core'] ?? null;
+                $coreConstraint = isset($require['typo3/cms-core']) && is_string($require['typo3/cms-core'])
+                    ? $require['typo3/cms-core']
+                    : null;
 
                 // For TYPO3 packages, check core compatibility
                 if ($coreConstraint !== null) {
                     $testVersion = $typo3Version . '.0';
-                    if (!Semver::satisfies($testVersion, (string)$coreConstraint)) {
+                    if (!Semver::satisfies($testVersion, $coreConstraint)) {
                         continue;
                     }
                 }
 
                 // Extract requirements
-                $phpConstraint = isset($require['php']) ? (string)$require['php'] : null;
+                $phpConstraint = isset($require['php']) && is_string($require['php'])
+                    ? $require['php']
+                    : null;
                 $requiredExt = [];
                 $suggestedExt = [];
 
                 foreach ($require as $key => $constraint) {
-                    if (str_starts_with((string)$key, 'ext-')) {
-                        $requiredExt[] = substr((string)$key, 4); // Remove 'ext-' prefix
+                    $keyStr = (string)$key;
+                    if (str_starts_with($keyStr, 'ext-')) {
+                        $requiredExt[] = substr($keyStr, 4); // Remove 'ext-' prefix
                     }
                 }
 
-                $suggest = $versionData['suggest'] ?? [];
-                if (is_array($suggest)) {
-                    foreach ($suggest as $key => $description) {
-                        if (str_starts_with((string)$key, 'ext-')) {
-                            $suggestedExt[] = substr((string)$key, 4);
-                        }
+                $suggest = isset($versionData['suggest']) && is_array($versionData['suggest'])
+                    ? $versionData['suggest']
+                    : [];
+                foreach ($suggest as $key => $description) {
+                    $keyStr = (string)$key;
+                    if (str_starts_with($keyStr, 'ext-')) {
+                        $suggestedExt[] = substr($keyStr, 4);
                     }
                 }
 
@@ -450,6 +538,9 @@ class PackageService
      */
     private function aggregatePackageRequirements(array $packages, string $typo3Version): array
     {
+        // Pre-warm cache for all packages at once
+        $this->preWarmPackageMetadataCache($packages);
+
         $phpConstraints = [];
         /** @var array<string, array<string>> $requiredExtensions */
         $requiredExtensions = [];  // ext => [packages that need it]
@@ -493,49 +584,6 @@ class PackageService
             'required' => $requiredExtensions,
             'suggested' => $suggestedExtensions,
         ];
-    }
-
-    /**
-     * Fetch data from Packagist API
-     *
-     * @throws \RuntimeException on network errors (caught internally by callers)
-     */
-    private function fetchFromPackagist(string $url): ?string
-    {
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => self::HTTP_TIMEOUT_SECONDS,
-                'user_agent' => self::USER_AGENT,
-                'ignore_errors' => true,
-            ],
-        ]);
-
-        try {
-            // Suppress warnings (e.g., connection timeout) - we handle errors via return value
-            $response = @file_get_contents($url, false, $context);
-
-            if ($response === false) {
-                return null;
-            }
-
-            // Check for HTTP error status codes
-            // $http_response_header is a special variable set by file_get_contents when using HTTP wrapper
-            $httpHeaders = $http_response_header;
-            if (is_array($httpHeaders) && count($httpHeaders) > 0) {
-                $statusLine = $httpHeaders[0];
-                if (preg_match('/HTTP\/\d+\.\d+\s+(\d+)/', $statusLine, $matches)) {
-                    $statusCode = (int)$matches[1];
-                    if ($statusCode >= 400) {
-                        return null;
-                    }
-                }
-            }
-
-            return $response;
-        } catch (\Throwable $e) {
-            // Log or handle the error as needed
-            return null;
-        }
     }
 
     /**

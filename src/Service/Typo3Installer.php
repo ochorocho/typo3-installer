@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace TYPO3\Installer\Service;
 
-use Composer\Console\Application as ComposerApplication;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\Process;
 use TYPO3\Installer\Model\InstallationConfig;
@@ -38,6 +35,110 @@ class Typo3Installer
     {
         $this->filesystem = new Filesystem();
         $this->infoService = new InstallationInfoService();
+    }
+
+    /**
+     * Get the path to the shipped composer.phar
+     *
+     * When running from a PHAR, the composer.phar must be extracted to a
+     * temporary location because PHP cannot execute a PHAR inside another PHAR.
+     */
+    private function getComposerPath(): string
+    {
+        // When running from PHAR, extract composer.phar to temp directory
+        if (\Phar::running()) {
+            $tempComposerPath = sys_get_temp_dir() . '/typo3-installer-composer.phar';
+
+            // Extract only if not already extracted or if installer PHAR is newer
+            $pharPath = \Phar::running(false);
+            $needsExtraction = !file_exists($tempComposerPath)
+                || filemtime($pharPath) > filemtime($tempComposerPath);
+
+            if ($needsExtraction) {
+                $sourceComposerPath = \Phar::running() . '/resources/composer.phar';
+
+                if (!file_exists($sourceComposerPath)) {
+                    throw new \RuntimeException(
+                        sprintf('Composer PHAR not found in installer at: %s', $sourceComposerPath)
+                    );
+                }
+
+                $content = file_get_contents($sourceComposerPath);
+                if ($content === false) {
+                    throw new \RuntimeException('Failed to read embedded composer.phar');
+                }
+
+                if (file_put_contents($tempComposerPath, $content) === false) {
+                    throw new \RuntimeException(
+                        sprintf('Failed to extract composer.phar to: %s', $tempComposerPath)
+                    );
+                }
+
+                chmod($tempComposerPath, 0755);
+            }
+
+            return $tempComposerPath;
+        }
+
+        // Development mode
+        return dirname(__DIR__, 2) . '/resources/composer.phar';
+    }
+
+    /**
+     * Run a Composer command using the shipped composer.phar
+     *
+     * @param array<string> $arguments
+     * @param callable(string): void|null $outputCallback Called with each output line
+     */
+    private function runComposerCommand(
+        array $arguments,
+        string $installDir,
+        ?string $phpBinary = null,
+        ?callable $outputCallback = null
+    ): void {
+        $php = $phpBinary ?? 'php';
+        $composerPath = $this->getComposerPath();
+
+        if (!file_exists($composerPath)) {
+            throw new \RuntimeException(
+                sprintf('Composer PHAR not found at: %s', $composerPath)
+            );
+        }
+
+        $process = new Process(
+            array_merge([$php, $composerPath], $arguments),
+            $installDir,
+            [
+                'COMPOSER_HOME' => sys_get_temp_dir() . '/composer',
+                'COMPOSER' => $installDir . '/composer.json',
+            ],
+            null,
+            self::PROCESS_TIMEOUT_SECONDS
+        );
+
+        // Run with real-time output streaming
+        $process->run(function (string $type, string $buffer) use ($outputCallback): void {
+            if ($outputCallback !== null) {
+                // Split buffer into lines and send each line
+                $lines = explode("\n", $buffer);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if ($line !== '') {
+                        $outputCallback($line);
+                    }
+                }
+            }
+        });
+
+        if (!$process->isSuccessful()) {
+            $errorOutput = $process->getErrorOutput();
+            $standardOutput = $process->getOutput();
+            $combinedOutput = trim($errorOutput . "\n" . $standardOutput);
+
+            throw new \RuntimeException(
+                sprintf('Composer command failed: %s', $combinedOutput ?: 'Unknown error')
+            );
+        }
     }
 
     /**
@@ -77,10 +178,14 @@ class Typo3Installer
     /**
      * Install TYPO3
      *
-     * @param callable(int, string): void $progressCallback
+     * @param callable(int, string): void $progressCallback Called with progress percentage and task name
+     * @param callable(string): void|null $outputCallback Called with each output line (for live streaming)
      */
-    public function install(InstallationConfig $config, callable $progressCallback): void
-    {
+    public function install(
+        InstallationConfig $config,
+        callable $progressCallback,
+        ?callable $outputCallback = null
+    ): void {
         $installDir = $this->getInstallDir($config);
 
         // Step 1: Prepare installation directory (10%)
@@ -89,19 +194,19 @@ class Typo3Installer
 
         // Step 2: Initialize Composer project (15%)
         $progressCallback(15, 'Initializing Composer project');
-        $this->initComposerProject($installDir);
+        $this->initComposerProject($installDir, $config->phpBinary, $outputCallback);
 
         // Step 3: Install selected packages via Composer (40%)
         $progressCallback(20, 'Installing TYPO3 packages via Composer');
-        $this->installPackages($installDir, $config->packages, $config->typo3Version);
+        $this->installPackages($installDir, $config->packages, $config->typo3Version, $config->phpBinary, $outputCallback);
 
         // Step 4: Run TYPO3 setup with database and admin config (70%)
         $progressCallback(50, 'Setting up TYPO3');
-        $this->setupTypo3($config, $installDir);
+        $this->setupTypo3($config, $installDir, $outputCallback);
 
         // Step 6: Clear caches (95%)
         $progressCallback(95, 'Clearing caches');
-        $this->clearCaches($installDir);
+        $this->clearCaches($installDir, $config->phpBinary, $outputCallback);
 
         // Step 7: Finalize (100%)
         $progressCallback(100, 'Installation complete!');
@@ -177,48 +282,29 @@ class Typo3Installer
 
     /**
      * Initialize a new Composer project with composer init
+     *
+     * @param callable(string): void|null $outputCallback
      */
-    private function initComposerProject(string $installDir): void
-    {
-        $originalDir = getcwd();
+    private function initComposerProject(
+        string $installDir,
+        ?string $phpBinary = null,
+        ?callable $outputCallback = null
+    ): void {
+        $this->runComposerCommand(
+            [
+                'init',
+                '--name=typo3/site',
+                '--description=TYPO3 CMS Site',
+                '--type=project',
+                '--no-interaction',
+            ],
+            $installDir,
+            $phpBinary,
+            $outputCallback
+        );
 
-        try {
-            chdir($installDir);
-            putenv('COMPOSER_HOME=' . sys_get_temp_dir() . '/composer');
-            // Set absolute path for composer.json to avoid PHAR path resolution issues
-            putenv('COMPOSER=' . $installDir . '/composer.json');
-
-            $input = new ArrayInput([
-                'command' => 'init',
-                '--name' => 'typo3/site',
-                '--description' => 'TYPO3 CMS Site',
-                '--type' => 'project',
-                '--no-interaction' => true,
-            ]);
-
-            $output = new BufferedOutput();
-
-            $application = new ComposerApplication();
-            $application->setAutoExit(false);
-            $application->setCatchExceptions(false);
-
-            $exitCode = $application->run($input, $output);
-
-            if ($exitCode !== 0) {
-                throw new \RuntimeException(
-                    sprintf('Composer init failed: %s', $output->fetch())
-                );
-            }
-
-            // Add TYPO3 installer paths configuration to composer.json
-            $this->configureComposerJson($installDir);
-        } finally {
-            if ($originalDir !== false) {
-                chdir($originalDir);
-            }
-            // Clean up COMPOSER env var
-            putenv('COMPOSER');
-        }
+        // Add TYPO3 installer paths configuration to composer.json
+        $this->configureComposerJson($installDir);
     }
 
     /**
@@ -277,64 +363,48 @@ class Typo3Installer
      * Install selected TYPO3 packages via Composer require
      *
      * @param array<string> $packages
+     * @param callable(string): void|null $outputCallback
      */
-    private function installPackages(string $installDir, array $packages, string $typo3Version): void
-    {
+    private function installPackages(
+        string $installDir,
+        array $packages,
+        string $typo3Version,
+        ?string $phpBinary = null,
+        ?callable $outputCallback = null
+    ): void {
         if (empty($packages)) {
             throw new \RuntimeException('No packages selected for installation');
         }
 
-        $originalDir = getcwd();
+        // Build package list with version constraint based on selected TYPO3 version
+        $versionConstraint = '^' . $typo3Version;
+        $packagesWithVersion = array_map(
+            fn(string $pkg): string => $pkg . ':' . $versionConstraint,
+            $packages
+        );
 
-        try {
-            chdir($installDir);
-            putenv('COMPOSER_HOME=' . sys_get_temp_dir() . '/composer');
-            // Set absolute path for composer.json to avoid PHAR path resolution issues
-            putenv('COMPOSER=' . $installDir . '/composer.json');
-
-            // Build package list with version constraint based on selected TYPO3 version
-            $versionConstraint = '^' . $typo3Version;
-            $packagesWithVersion = array_map(
-                fn(string $pkg): string => $pkg . ':' . $versionConstraint,
-                $packages
-            );
-
-            $input = new ArrayInput([
-                'command' => 'require',
-                'packages' => $packagesWithVersion,
-                '--no-interaction' => true,
-                '--prefer-dist' => true,
-            ]);
-
-            $output = new BufferedOutput();
-
-            $application = new ComposerApplication();
-            $application->setAutoExit(false);
-            $application->setCatchExceptions(false);
-
-            $exitCode = $application->run($input, $output);
-
-            if ($exitCode !== 0) {
-                throw new \RuntimeException(
-                    sprintf('Composer require failed: %s', $output->fetch())
-                );
-            }
-        } finally {
-            if ($originalDir !== false) {
-                chdir($originalDir);
-            }
-            // Clean up COMPOSER env var
-            putenv('COMPOSER');
-        }
+        $this->runComposerCommand(
+            array_merge(
+                ['require', '--no-interaction', '--prefer-dist'],
+                $packagesWithVersion
+            ),
+            $installDir,
+            $phpBinary,
+            $outputCallback
+        );
     }
 
     /**
      * Run TYPO3 setup command with database and admin configuration
      *
+     * @param callable(string): void|null $outputCallback
      * @throws \InvalidArgumentException if input validation fails
      */
-    private function setupTypo3(InstallationConfig $config, string $installDir): void
-    {
+    private function setupTypo3(
+        InstallationConfig $config,
+        string $installDir,
+        ?callable $outputCallback = null
+    ): void {
         $dbConfig = $config->database;
         $admin = $config->admin;
 
@@ -375,7 +445,9 @@ class Typo3Installer
                 '--no-interaction',
                 '--force',
             ],
-            $installDir
+            $installDir,
+            $config->phpBinary,
+            $outputCallback
         );
 
         // Create additional configuration for trusted hosts and other settings
@@ -398,11 +470,17 @@ PHP;
         file_put_contents($additionalConfig, $configContent);
     }
 
-    private function clearCaches(string $installDir): void
-    {
+    /**
+     * @param callable(string): void|null $outputCallback
+     */
+    private function clearCaches(
+        string $installDir,
+        ?string $phpBinary = null,
+        ?callable $outputCallback = null
+    ): void {
         // Clear TYPO3 caches
         try {
-            $this->runTypo3Command('cache:flush', [], $installDir);
+            $this->runTypo3Command('cache:flush', [], $installDir, $phpBinary, $outputCallback);
         } catch (\Exception $e) {
             // Ignore cache flush errors
         }
@@ -415,24 +493,45 @@ PHP;
 
     /**
      * @param array<string> $arguments
+     * @param callable(string): void|null $outputCallback Called with each output line
      */
-    private function runTypo3Command(string $command, array $arguments = [], string $installDir = '.'): void
-    {
+    private function runTypo3Command(
+        string $command,
+        array $arguments = [],
+        string $installDir = '.',
+        ?string $phpBinary = null,
+        ?callable $outputCallback = null
+    ): void {
         $typo3Binary = $installDir . '/vendor/bin/typo3';
 
         if (!file_exists($typo3Binary)) {
             throw new \RuntimeException('TYPO3 CLI not found. Installation may have failed.');
         }
 
+        // Use provided PHP binary or fall back to 'php'
+        $php = $phpBinary ?? 'php';
+
         $process = new Process(
-            array_merge(['php', $typo3Binary, $command], $arguments),
+            array_merge([$php, $typo3Binary, $command], $arguments),
             $installDir,
             null,
             null,
             self::PROCESS_TIMEOUT_SECONDS
         );
 
-        $process->run();
+        // Run with real-time output streaming
+        $process->run(function (string $type, string $buffer) use ($outputCallback): void {
+            if ($outputCallback !== null) {
+                // Split buffer into lines and send each line
+                $lines = explode("\n", $buffer);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if ($line !== '') {
+                        $outputCallback($line);
+                    }
+                }
+            }
+        });
 
         if (!$process->isSuccessful()) {
             $errorOutput = $process->getErrorOutput();

@@ -1,6 +1,13 @@
 import { LitElement, html, css } from 'lit';
 import { apiClient } from '../api/client.js';
+import { stepBaseStyles, formStyles, buttonStyles, spinnerStyles, srOnlyStyles, alertStyles } from './ui/shared-styles.js';
+import './ui/error-help.js';
+import './ui/step-actions.js';
 
+/**
+ * Database configuration step.
+ * @element step-database
+ */
 export class StepDatabase extends LitElement {
   static properties = {
     state: { type: Object },
@@ -8,188 +15,20 @@ export class StepDatabase extends LitElement {
     testResult: { type: Object }
   };
 
-  static styles = css`
-    :host {
-      display: block;
-    }
-
-    h2 {
-      margin: 0 0 var(--spacing-md, 16px) 0;
-      color: var(--color-secondary, #1a1a1a);
-    }
-
-    p {
-      color: var(--color-text-light, #666);
-      margin-bottom: var(--spacing-lg, 24px);
-    }
-
-    .form-group {
-      margin-bottom: var(--spacing-md, 16px);
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--spacing-md, 16px);
-    }
-
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: var(--spacing-xs, 4px);
-      color: var(--color-secondary, #1a1a1a);
-    }
-
-    input, select {
-      width: 100%;
-      padding: 6px 8px;
-      border: 1px solid var(--color-border, #bbb);
-      border-radius: var(--border-radius, 4px);
-      font-size: 14px;
-      background: var(--color-bg-white, #fff);
-    }
-
-    input:focus, select:focus {
-      outline: none;
-      border-color: var(--color-primary, #ff8700);
-      box-shadow: 0 0 0 3px rgba(255, 135, 0, 0.15);
-    }
-
-    input:focus-visible, select:focus-visible {
-      outline: 2px solid var(--color-primary, #ff8700);
-      outline-offset: 2px;
-    }
-
-    .help-text {
-      font-size: 12px;
-      color: var(--color-text-light, #666);
-      margin-top: var(--spacing-xs, 4px);
-    }
-
-    .test-result {
-      padding: var(--spacing-md, 16px);
-      border-radius: var(--border-radius, 4px);
-      margin-bottom: var(--spacing-lg, 24px);
-    }
-
-    .test-result.success {
-      background: #e8f5e9;
-      color: var(--color-success, #1cb841);
-      border: 1px solid var(--color-success, #1cb841);
-    }
-
-    .test-result.error {
-      background: #ffebee;
-      color: var(--color-error, #c83c3c);
-      border: 1px solid var(--color-error, #c83c3c);
-    }
-
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-
-    .actions {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: var(--spacing-md, 16px);
-      margin-top: var(--spacing-lg, 24px);
-    }
-
-    .actions-left {
-      display: flex;
-      gap: var(--spacing-md, 16px);
-    }
-
-    button {
-      padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
-      border: none;
-      border-radius: var(--border-radius, 4px);
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    button:focus-visible {
-      outline: 2px solid var(--color-primary, #ff8700);
-      outline-offset: 2px;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background: var(--color-primary, #ff8700);
-      color: white;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background: #e67a00;
-    }
-
-    .btn-secondary {
-      background: var(--color-info, #2196f3);
-      color: white;
-    }
-
-    .btn-secondary:hover:not(:disabled) {
-      background: #1976d2;
-    }
-
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--color-border, #ddd);
-      color: var(--color-text, #333);
-    }
-
-    .btn-outline:hover:not(:disabled) {
-      background: var(--color-bg, #f5f5f5);
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      border-top-color: white;
-      animation: spin 1s linear infinite;
-      margin-right: var(--spacing-sm, 8px);
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .test-result.error .error-help {
-      margin-top: var(--spacing-md, 16px);
-      padding-top: var(--spacing-md, 16px);
-      border-top: 1px solid rgba(200, 60, 60, 0.3);
-    }
-
-    .test-result.error .error-help-title {
-      font-weight: 600;
-      margin-bottom: var(--spacing-sm, 8px);
-    }
-
-    .test-result.error .error-help ul {
-      margin: 0;
-      padding-left: var(--spacing-lg, 24px);
-    }
-
-    .test-result.error .error-help li {
-      margin-bottom: var(--spacing-xs, 4px);
-    }
-  `;
+  static styles = [
+    stepBaseStyles,
+    formStyles,
+    buttonStyles,
+    spinnerStyles,
+    srOnlyStyles,
+    alertStyles,
+    css`
+      .actions-left {
+        display: flex;
+        gap: var(--spacing-md, 16px);
+      }
+    `
+  ];
 
   constructor() {
     super();
@@ -212,40 +51,35 @@ export class StepDatabase extends LitElement {
     this.testResult = null;
 
     try {
+      const db = this.state.database;
       const config = {
-        driver: this.state.database.driver,
-        host: this.state.database.host,
-        port: parseInt(this.state.database.port, 10),
-        name: this.state.database.name,
-        user: this.state.database.user,
-        password: this.state.database.password
+        driver: db.driver,
+        host: db.host,
+        port: parseInt(db.port, 10),
+        name: db.name,
+        user: db.user,
+        password: db.password
       };
 
       const response = await apiClient.testDatabase(config);
-
       this.testResult = { success: true, message: response.message || 'Connection successful!' };
 
       this.dispatchEvent(new CustomEvent('state-update', {
         bubbles: true,
         composed: true,
-        detail: {
-          database: { ...this.state.database, tested: true, valid: true }
-        }
+        detail: { database: { ...this.state.database, tested: true, valid: true } }
       }));
     } catch (error) {
       this.testResult = {
         success: false,
         message: error.getUserMessage?.() || error.message || 'Connection failed',
-        details: error.details || null,
-        help: this._getConnectionErrorHelp(error)
+        error: { message: error.message, details: error.details }
       };
 
       this.dispatchEvent(new CustomEvent('state-update', {
         bubbles: true,
         composed: true,
-        detail: {
-          database: { ...this.state.database, tested: true, valid: false }
-        }
+        detail: { database: { ...this.state.database, tested: true, valid: false } }
       }));
     } finally {
       this.testing = false;
@@ -254,51 +88,6 @@ export class StepDatabase extends LitElement {
 
   _canProceed() {
     return this.state?.database?.tested && this.state?.database?.valid;
-  }
-
-  _handlePrevious() {
-    this.dispatchEvent(new CustomEvent('previous-step', { bubbles: true, composed: true }));
-  }
-
-  _handleNext() {
-    this.dispatchEvent(new CustomEvent('next-step', { bubbles: true, composed: true }));
-  }
-
-  _getConnectionErrorHelp(error) {
-    const help = [];
-    const message = (error.message || '').toLowerCase();
-
-    // Check for common error patterns
-    if (message.includes('access denied') || message.includes('authentication')) {
-      help.push('Verify the username and password are correct');
-      help.push('Check that the user has permission to access the database');
-    }
-
-    if (message.includes('unknown database') || message.includes('does not exist')) {
-      help.push('The database must already exist - create it first');
-      help.push('Check the database name for typos');
-    }
-
-    if (message.includes('connection refused') || message.includes('could not connect')) {
-      help.push('Verify the database server is running');
-      help.push('Check the host and port are correct');
-      help.push('Ensure no firewall is blocking the connection');
-    }
-
-    if (message.includes('timeout') || error.details?.isTimeout) {
-      help.push('The database server may be slow or unreachable');
-      help.push('Try again or check the server status');
-    }
-
-    // Default suggestions if no specific match
-    if (help.length === 0) {
-      help.push('Verify all connection details are correct');
-      help.push('Ensure the database server is running and accessible');
-      help.push('Check that the database exists');
-      help.push('Verify the user has sufficient permissions');
-    }
-
-    return help;
   }
 
   render() {
@@ -347,31 +136,20 @@ export class StepDatabase extends LitElement {
       </div>
 
       ${this.testResult ? html`
-        <div class="test-result ${this.testResult.success ? 'success' : 'error'}" role="alert" aria-live="polite">
+        <div class="alert ${this.testResult.success ? 'alert-success' : 'alert-error'}" role="alert" aria-live="polite">
           <span class="sr-only">${this.testResult.success ? 'Success:' : 'Error:'}</span>
           ${this.testResult.message}
-          ${!this.testResult.success && this.testResult.help?.length > 0 ? html`
-            <div class="error-help">
-              <div class="error-help-title">What you can try:</div>
-              <ul>
-                ${this.testResult.help.map(tip => html`<li>${tip}</li>`)}
-              </ul>
-            </div>
+          ${!this.testResult.success && this.testResult.error ? html`
+            <t3-error-help .error=${this.testResult.error} context="database"></t3-error-help>
           ` : ''}
         </div>
       ` : ''}
 
-      <div class="actions">
-        <div class="actions-left">
-          <button class="btn-outline" @click=${this._handlePrevious}>Back</button>
-          <button class="btn-secondary" @click=${this._testConnection} ?disabled=${this.testing}>
-            ${this.testing ? html`<span class="spinner"></span>` : ''} Test Connection
-          </button>
-        </div>
-        <button class="btn-primary" @click=${this._handleNext} ?disabled=${!this._canProceed()}>
-          Continue
+      <t3-step-actions ?can-continue=${this._canProceed()}>
+        <button slot="left" class="btn-secondary" @click=${this._testConnection} ?disabled=${this.testing}>
+          ${this.testing ? html`<span class="spinner"></span>` : ''} Test Connection
         </button>
-      </div>
+      </t3-step-actions>
     `;
   }
 }

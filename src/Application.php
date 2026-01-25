@@ -11,6 +11,7 @@ use TYPO3\Installer\Api\DatabaseController;
 use TYPO3\Installer\Api\InfoController;
 use TYPO3\Installer\Api\InstallController;
 use TYPO3\Installer\Api\PackageController;
+use TYPO3\Installer\Api\PhpDetectionController;
 use TYPO3\Installer\Api\RequirementsCheckController;
 
 /**
@@ -23,6 +24,7 @@ class Application
     private InstallController $installController;
     private PackageController $packageController;
     private InfoController $infoController;
+    private PhpDetectionController $phpDetectionController;
 
     public function __construct()
     {
@@ -31,6 +33,7 @@ class Application
         $this->installController = new InstallController();
         $this->packageController = new PackageController();
         $this->infoController = new InfoController();
+        $this->phpDetectionController = new PhpDetectionController();
     }
 
     public function handle(Request $request): Response
@@ -62,7 +65,10 @@ class Application
                 '/api/validate-requirements' => $this->packageController->validateRequirements($request),
                 '/api/check-requirements' => $this->requirementsController->check($request),
                 '/api/test-database' => $this->databaseController->test($request),
+                '/api/detect-php' => $this->phpDetectionController->detect($request),
+                '/api/validate-php-binary' => $this->phpDetectionController->validate($request),
                 '/api/install' => $this->installController->install($request),
+                '/api/install-stream' => $this->installController->installStream($request),
                 '/api/status' => $this->installController->getStatus($request),
                 default => new JsonResponse(['error' => 'Not found'], 404)
             };

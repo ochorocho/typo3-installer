@@ -74,6 +74,21 @@ class InstallationInfoService
     }
 
     /**
+     * Get the path to the composer.phar that will be used for installation
+     *
+     * When running from PHAR, composer is extracted to a temp location.
+     * In development mode, it's in the resources directory.
+     */
+    public function getComposerPath(): string
+    {
+        if ($this->isRunningFromPhar()) {
+            return sys_get_temp_dir() . '/typo3-installer-composer.phar';
+        }
+
+        return dirname(__DIR__, 2) . '/resources/composer.phar';
+    }
+
+    /**
      * Validate the installation location
      *
      * @return array{valid: bool, warnings: array<string>}
@@ -117,7 +132,7 @@ class InstallationInfoService
     /**
      * Get all installation info as an array
      *
-     * @return array{installPath: string, webDir: string, pharPath: string, isRunningFromPhar: bool, validation: array{valid: bool, warnings: array<string>}}
+     * @return array{installPath: string, webDir: string, pharPath: string, isRunningFromPhar: bool, composerPath: string, validation: array{valid: bool, warnings: array<string>}}
      */
     public function getInfo(): array
     {
@@ -126,6 +141,7 @@ class InstallationInfoService
             'webDir' => $this->getWebDir(),
             'pharPath' => $this->getPharDirectory(),
             'isRunningFromPhar' => $this->isRunningFromPhar(),
+            'composerPath' => $this->getComposerPath(),
             'validation' => $this->validateInstallLocation(),
         ];
     }
