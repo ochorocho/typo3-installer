@@ -253,13 +253,14 @@ class ApiClient {
             try {
                 while (true) {
                     const { done, value } = await reader.read();
-                    if (done) break;
 
-                    buffer += decoder.decode(value, { stream: true });
+                    if (value) {
+                        buffer += decoder.decode(value, { stream: !done });
+                    }
 
                     // Parse SSE events from buffer
                     const lines = buffer.split('\n');
-                    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+                    buffer = done ? '' : (lines.pop() || ''); // Process all lines on done
 
                     let currentEvent = null;
                     for (const line of lines) {
@@ -275,6 +276,8 @@ class ApiClient {
                             currentEvent = null;
                         }
                     }
+
+                    if (done) break;
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {

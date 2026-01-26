@@ -15,11 +15,6 @@ export class StepSite extends LitElement {
     stepBaseStyles,
     formStyles,
     css`
-      .summary {
-        border-radius: var(--border-radius, 4px);
-        padding: var(--spacing-lg, 24px);
-        margin-top: var(--spacing-xl, 32px);
-      }
       .summary h3 { margin: 0 0 var(--spacing-md, 16px); }
       .summary-item {
         display: flex;
@@ -53,14 +48,14 @@ export class StepSite extends LitElement {
       <p>Configure your TYPO3 site settings and review the installation summary.</p>
 
       <div class="form-group">
-        <label for="siteName">Site Name</label>
-        <input type="text" id="siteName" .value=${site.name || ''} @input=${e => this._update('name', e.target.value)} placeholder="My TYPO3 Site">
+        <label for="siteName" class="required">Site Name</label>
+        <input type="text" id="siteName" required .value=${site.name || ''} @input=${e => this._update('name', e.target.value)} placeholder="My TYPO3 Site">
         <span class="help-text">The name of your website</span>
       </div>
 
       <div class="form-group">
-        <label for="baseUrl">Base URL</label>
-        <input type="text" id="baseUrl" .value=${site.baseUrl || ''} @input=${e => this._update('baseUrl', e.target.value)} placeholder="https://example.com">
+        <label for="baseUrl" class="required">Base URL</label>
+        <input type="text" id="baseUrl" required .value=${site.baseUrl || ''} @input=${e => this._update('baseUrl', e.target.value)} placeholder="https://example.com">
         <span class="help-text">The URL where your site will be accessible</span>
       </div>
 

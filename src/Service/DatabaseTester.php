@@ -25,15 +25,28 @@ class DatabaseTester
         try {
             $dsn = $this->buildDsn($driver, $host, $port, $name);
 
-            $pdo = new \PDO(
-                $dsn,
-                $user,
-                $password,
-                [
-                    \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
-                    \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
-                ]
-            );
+            // SQLite doesn't use user/password
+            if ($driver === 'pdo_sqlite') {
+                $pdo = new \PDO(
+                    $dsn,
+                    null,
+                    null,
+                    [
+                        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                        \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+                    ]
+                );
+            } else {
+                $pdo = new \PDO(
+                    $dsn,
+                    $user,
+                    $password,
+                    [
+                        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                        \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+                    ]
+                );
+            }
 
             // Test if we can actually query the database
             $pdo->query('SELECT 1');
@@ -51,6 +64,7 @@ class DatabaseTester
         return match ($driver) {
             'pdo_mysql' => sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $host, $port, $name),
             'pdo_pgsql' => sprintf('pgsql:host=%s;port=%d;dbname=%s', $host, $port, $name),
+            'pdo_sqlite' => sprintf('sqlite:%s', $name),
             default => throw new \InvalidArgumentException(sprintf('Unsupported database driver: %s', $driver)),
         };
     }

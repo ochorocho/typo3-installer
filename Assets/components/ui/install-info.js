@@ -75,10 +75,8 @@ export class InstallInfo extends LitElement {
       }
       .collapsible-header:hover { opacity: 0.8; }
       .collapsible-header t3-icon {
-        transition: transform 0.2s ease;
         color: var(--color-info-box-accent, #1565c0);
       }
-      .collapsible-header.expanded t3-icon { transform: rotate(90deg); }
       .collapsible-header span {
         font-size: 13px;
         font-weight: 500;
@@ -163,7 +161,7 @@ export class InstallInfo extends LitElement {
 
         <div class="collapsible">
           <div class="collapsible-header ${this._phpInfoExpanded ? 'expanded' : ''}" @click=${this._togglePhpInfo}>
-            <t3-icon identifier="actions-chevron-right" size="small"></t3-icon>
+            <t3-icon identifier="${this._phpInfoExpanded ? 'actions-caret-down' : 'actions-caret-end'}" size="small"></t3-icon>
             <span>PHP Information</span>
           </div>
           <div class="collapsible-content ${this._phpInfoExpanded ? 'expanded' : ''}">

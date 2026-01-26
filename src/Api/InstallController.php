@@ -102,6 +102,21 @@ class InstallController extends AbstractController
         }
 
         return new StreamedResponse(function () use ($data): void {
+            // Disable output buffering for SSE streaming
+            // This is critical for shared hosting environments
+            @ini_set('output_buffering', 'off');
+            @ini_set('zlib.output_compression', 'off');
+            @ini_set('implicit_flush', '1');
+
+            // Clear any existing output buffers
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
+            // Set unlimited execution time for installation
+            set_time_limit(0);
+            ignore_user_abort(false);
+
             try {
                 $config = InstallationConfig::fromArray($data);
 
@@ -215,11 +230,17 @@ class InstallController extends AbstractController
         echo "event: {$event}\n";
         echo 'data: ' . json_encode($data, JSON_THROW_ON_ERROR) . "\n\n";
 
-        // Flush output immediately
-        if (ob_get_level() > 0) {
-            ob_flush();
+        // Aggressive flushing for shared hosting environments
+        // Flush all output buffer levels
+        while (ob_get_level() > 0) {
+            ob_end_flush();
         }
         flush();
+
+        // Small delay to ensure data is sent through any proxy buffers
+        if ($event === 'complete' || $event === 'error') {
+            usleep(100000); // 100ms delay for final events
+        }
     }
 
     /**

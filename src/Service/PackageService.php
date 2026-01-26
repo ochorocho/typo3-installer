@@ -730,7 +730,7 @@ class PackageService
      *
      * @param array<string> $sourcePackages Packages that require/suggest this extension
      * @param array<string, string> $loadedExtensions
-     * @return array{title: string, description: string, status: string}
+     * @return array{title: string, description: string, status: string, packages: array<string>}
      */
     private function checkExtensionDynamic(
         string $extension,
@@ -762,6 +762,7 @@ class PackageService
                 $packageList
             ),
             'status' => $status,
+            'packages' => $sourcePackages,
         ];
     }
 

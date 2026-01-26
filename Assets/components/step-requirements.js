@@ -68,6 +68,20 @@ export class StepRequirements extends LitElement {
       .requirement-title { font-weight: 600; margin-bottom: var(--spacing-xs, 4px); }
       .requirement-description { font-size: 14px; color: var(--color-text-light, #666); }
 
+      .requirement-packages {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-xs, 4px);
+        margin-top: var(--spacing-xs, 4px);
+      }
+      .package-badge {
+        font-size: 11px;
+        padding: 2px 6px;
+        background: var(--color-bg, #f5f5f5);
+        border-radius: 3px;
+        color: var(--color-text-light, #666);
+      }
+
       .summary {
         display: flex;
         gap: var(--spacing-lg, 24px);
@@ -312,6 +326,14 @@ export class StepRequirements extends LitElement {
                   <span class="sr-only">- ${req.status === 'passed' ? 'Passed' : req.status === 'failed' ? 'Failed' : 'Warning'}</span>
                 </div>
                 <div class="requirement-description">${req.description}</div>
+                ${req.packages?.length > 0 ? html`
+                  <div class="requirement-packages">
+                    ${req.packages.slice(0, 3).map(pkg => html`
+                      <span class="package-badge">${pkg.replace('typo3/cms-', '')}</span>
+                    `)}
+                    ${req.packages.length > 3 ? html`<span class="package-badge">+${req.packages.length - 3}</span>` : ''}
+                  </div>
+                ` : ''}
               </div>
             </div>
           `)}

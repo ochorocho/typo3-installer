@@ -5,6 +5,20 @@ import './ui/error-help.js';
 import './ui/step-actions.js';
 
 /**
+ * Creates a debounced version of a function.
+ * @param {Function} fn - The function to debounce
+ * @param {number} ms - Delay in milliseconds
+ * @returns {Function} Debounced function
+ */
+function debounce(fn, ms) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
+/**
  * Database configuration step.
  * @element step-database
  */
@@ -34,6 +48,7 @@ export class StepDatabase extends LitElement {
     this.availableDrivers = [];
     this.driversLoading = true;
     this.driversError = null;
+    this._debouncedAutoValidate = debounce(() => this._autoValidate(), 800);
   }
 
   connectedCallback() {
@@ -62,6 +77,9 @@ export class StepDatabase extends LitElement {
             }
           });
         }
+
+        // Trigger auto-validation if state was restored from localStorage
+        this._autoValidate();
       }
     } catch (error) {
       this.driversError = {
@@ -82,9 +100,17 @@ export class StepDatabase extends LitElement {
       if (driver?.defaultPort) {
         updates.port = String(driver.defaultPort);
       }
+      // Clear server-related fields when switching to file-based driver
+      if (driver?.defaultPort === null) {
+        updates.host = '';
+        updates.port = '';
+        updates.user = '';
+        updates.password = '';
+      }
     }
 
     emit(this, 'state-update', { database: { ...this.state.database, ...updates } });
+    this._debouncedAutoValidate();
   }
 
   async _testConnection() {
@@ -111,6 +137,31 @@ export class StepDatabase extends LitElement {
     }
   }
 
+  _isFileBasedDriver() {
+    const driver = this.availableDrivers.find(d => d.value === this.state?.database?.driver);
+    return driver?.defaultPort === null;
+  }
+
+  /**
+   * Checks if all required fields are filled and triggers validation.
+   * Required fields depend on driver type:
+   * - Server-based (MySQL/PostgreSQL): host, name, user
+   * - File-based (SQLite): only name
+   */
+  _autoValidate() {
+    const db = this.state?.database;
+    if (!db || this.testing) return;
+
+    const isFileBased = this._isFileBasedDriver();
+    const hasRequiredFields = isFileBased
+      ? db.name?.trim()
+      : db.host?.trim() && db.name?.trim() && db.user?.trim();
+
+    if (hasRequiredFields) {
+      this._testConnection();
+    }
+  }
+
   _getPortHelpText() {
     const driver = this.availableDrivers.find(d => d.value === this.state?.database?.driver);
     if (!driver?.defaultPort) return 'Database server port';
@@ -119,6 +170,7 @@ export class StepDatabase extends LitElement {
 
   render() {
     const db = this.state?.database || {};
+    const isFileBased = this._isFileBasedDriver();
 
     return html`
       <h2>Database Configuration</h2>
@@ -149,35 +201,39 @@ export class StepDatabase extends LitElement {
         `}
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="host">Host</label>
-          <input type="text" id="host" .value=${db.host} @input=${e => this._update('host', e.target.value)} placeholder="localhost">
-          <span class="help-text">Database server hostname or IP</span>
+      ${!isFileBased ? html`
+        <div class="form-row">
+          <div class="form-group">
+            <label for="host" class="required">Host</label>
+            <input type="text" id="host" required .value=${db.host} @input=${e => this._update('host', e.target.value)} placeholder="localhost">
+            <span class="help-text">Database server hostname or IP</span>
+          </div>
+          <div class="form-group">
+            <label for="port">Port</label>
+            <input type="text" id="port" .value=${db.port} @input=${e => this._update('port', e.target.value)} placeholder=${this.availableDrivers.find(d => d.value === db.driver)?.defaultPort || '3306'}>
+            <span class="help-text">${this._getPortHelpText()}</span>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="port">Port</label>
-          <input type="text" id="port" .value=${db.port} @input=${e => this._update('port', e.target.value)} placeholder=${this.availableDrivers.find(d => d.value === db.driver)?.defaultPort || '3306'}>
-          <span class="help-text">${this._getPortHelpText()}</span>
-        </div>
-      </div>
+      ` : ''}
 
       <div class="form-group">
-        <label for="name">Database Name</label>
-        <input type="text" id="name" .value=${db.name} @input=${e => this._update('name', e.target.value)} placeholder="typo3">
-        <span class="help-text">The database must already exist</span>
+        <label for="name" class="required">${isFileBased ? 'Database File Path' : 'Database Name'}</label>
+        <input type="text" id="name" required .value=${db.name} @input=${e => this._update('name', e.target.value)} placeholder=${isFileBased ? '/path/to/database.sqlite' : 'typo3'}>
+        <span class="help-text">${isFileBased ? 'Path to the SQLite database file' : 'The database must already exist'}</span>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="user">Username</label>
-          <input type="text" id="user" .value=${db.user} @input=${e => this._update('user', e.target.value)} placeholder="root">
+      ${!isFileBased ? html`
+        <div class="form-row">
+          <div class="form-group">
+            <label for="user" class="required">Username</label>
+            <input type="text" id="user" required .value=${db.user} @input=${e => this._update('user', e.target.value)} placeholder="root">
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" .value=${db.password} @input=${e => this._update('password', e.target.value)}>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" .value=${db.password} @input=${e => this._update('password', e.target.value)}>
-        </div>
-      </div>
+      ` : ''}
 
       ${this.testResult ? html`
         <div class="alert ${this.testResult.success ? 'alert-success' : 'alert-error'}" role="alert" aria-live="polite">

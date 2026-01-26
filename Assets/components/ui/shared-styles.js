@@ -38,14 +38,32 @@ export const stepBaseStyles = [hostStyles, typographyStyles];
  * Button styles
  */
 export const buttonStyles = css`
-  button {
+  button,
+  a.btn-primary,
+  a.btn-secondary,
+  a.btn-outline,
+  a.btn-success,
+  a.btn-error {
     padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
     border: none;
     border-radius: var(--border-radius, 4px);
     font-weight: 500;
     cursor: pointer;
   }
-  button:focus-visible {
+  a.btn-primary,
+  a.btn-secondary,
+  a.btn-outline,
+  a.btn-success,
+  a.btn-error {
+    text-decoration: none;
+    display: inline-block;
+  }
+  button:focus-visible,
+  a.btn-primary:focus-visible,
+  a.btn-secondary:focus-visible,
+  a.btn-outline:focus-visible,
+  a.btn-success:focus-visible,
+  a.btn-error:focus-visible {
     outline: 2px solid var(--color-primary, #ff8700);
     outline-offset: 2px;
   }
@@ -58,27 +76,32 @@ export const buttonStyles = css`
     color: white;
   }
   .btn-primary:hover:not(:disabled) { background: var(--color-primary-dark, #e67a00); }
+  a.btn-primary:hover { background: var(--color-primary-dark, #e67a00); }
   .btn-secondary {
     background: var(--color-info, #0078d4);
     color: white;
   }
   .btn-secondary:hover:not(:disabled) { background: #005a9e; }
+  a.btn-secondary:hover { background: #005a9e; }
   .btn-outline {
     background: transparent;
     border: 1px solid var(--color-border, #bbb);
     color: var(--color-text, #333);
   }
   .btn-outline:hover:not(:disabled) { background: var(--color-bg-light, #fafafa); }
+  a.btn-outline:hover { background: var(--color-bg-light, #fafafa); }
   .btn-success {
     background: var(--color-success, #1cb841);
     color: white;
   }
   .btn-success:hover:not(:disabled) { background: #179e38; }
+  a.btn-success:hover { background: #179e38; }
   .btn-error {
     background: var(--color-error, #c83c3c);
     color: white;
   }
   .btn-error:hover:not(:disabled) { background: #a33232; }
+  a.btn-error:hover { background: #a33232; }
   .btn-small {
     padding: var(--spacing-xs, 4px) var(--spacing-md, 16px);
     font-size: 13px;
@@ -100,6 +123,10 @@ export const formStyles = css`
     font-weight: 600;
     margin-bottom: var(--spacing-xs, 4px);
     color: var(--color-text, #1a1a1a);
+  }
+  label.required::after {
+    content: ' *';
+    color: var(--color-error, #c83c3c);
   }
   input, select {
     width: 100%;

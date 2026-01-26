@@ -234,7 +234,7 @@ export class StepPackages extends LitElement {
         @retry=${this._handleRetryInfo}
       ></t3-install-info>
 
-      <t3-heading level="2">Select Packages</t3-heading>
+      <h2>Select Packages</h2>
       <p>Choose the TYPO3 version and packages to install. Core packages are required and cannot be deselected.</p>
 
       <t3-version-selector

@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'lit';
-import { hostStyles, emit } from './shared-styles.js';
+import { hostStyles, emit, spinnerStyles } from './shared-styles.js';
 import './loading-skeleton.js';
 import './section-error.js';
 
@@ -22,6 +22,7 @@ export class PackageList extends LitElement {
 
   static styles = [
     hostStyles,
+    spinnerStyles,
     css`
       :host { margin-bottom: var(--spacing-lg, 24px); }
       .package {
@@ -73,6 +74,10 @@ export class PackageList extends LitElement {
         padding: var(--spacing-md, 16px) var(--spacing-sm, 8px) var(--spacing-xs, 4px);
         border-bottom: 1px solid var(--color-border, #ddd);
         margin-bottom: var(--spacing-xs, 4px);
+        position: sticky;
+        top: 0;
+        background: var(--color-bg-white, white);
+        z-index: 10;
       }
       .group-header:not(:first-child) {
         margin-top: var(--spacing-md, 16px);
@@ -94,7 +99,7 @@ export class PackageList extends LitElement {
 
   render() {
     if (!this.versionsReady) return null;
-    if (this.loading) return html`Loading packages for TYPO3 ${this.typo3Version}...`;
+    if (this.loading) return html`<p><span class="spinner spinner-dark"></span> Loading packages for TYPO3 ${this.typo3Version}...</p>`;
     if (this.error) return html`<t3-section-error title="Failed to Load Packages" message=${this.error.message}></t3-section-error>`;
 
     // Group packages into categories

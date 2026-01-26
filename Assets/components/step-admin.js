@@ -80,13 +80,13 @@ export class StepAdmin extends LitElement {
            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email);
   }
 
-  _field(id, label, type, value, helpText, autocomplete) {
+  _field(id, label, type, value, helpText, autocomplete, required = false) {
     const hasError = this.touched[id] && this.errors[id];
     return html`
       <div class="form-group">
-        <label for=${id}>${label}</label>
+        <label for=${id} class=${required ? 'required' : ''}>${label}</label>
         <input type=${type} id=${id} class=${hasError ? 'error' : ''} aria-invalid=${hasError ? 'true' : 'false'}
-          .value=${value || ''} @input=${e => this._update(id, e.target.value)} @blur=${() => this._blur(id)} autocomplete=${autocomplete}>
+          ?required=${required} .value=${value || ''} @input=${e => this._update(id, e.target.value)} @blur=${() => this._blur(id)} autocomplete=${autocomplete}>
         ${hasError ? html`<div class="error-text" role="alert">${this.errors[id]}</div>` : html`<div class="help-text">${helpText}</div>`}
       </div>
     `;
@@ -100,12 +100,12 @@ export class StepAdmin extends LitElement {
       <h2>Admin Account</h2>
       <p>Create the administrator account for your TYPO3 installation.</p>
 
-      ${this._field('username', 'Username', 'text', admin.username, 'Minimum 3 characters', 'username')}
+      ${this._field('username', 'Username', 'text', admin.username, 'Minimum 3 characters', 'username', true)}
 
       <div class="form-group">
-        <label for="password">Password</label>
+        <label for="password" class="required">Password</label>
         <input type="password" id="password" class=${this.touched.password && this.errors.password ? 'error' : ''}
-          .value=${admin.password || ''} @input=${e => this._update('password', e.target.value)}
+          required .value=${admin.password || ''} @input=${e => this._update('password', e.target.value)}
           @blur=${() => this._blur('password')} autocomplete="new-password">
         ${admin.password ? html`
           <div class="password-strength" aria-live="polite">
@@ -118,7 +118,7 @@ export class StepAdmin extends LitElement {
           : html`<div class="help-text">Minimum 8 characters with uppercase, lowercase, and number</div>`}
       </div>
 
-      ${this._field('email', 'Email', 'email', admin.email, 'Used for password recovery and notifications', 'email')}
+      ${this._field('email', 'Email', 'email', admin.email, 'Used for password recovery and notifications', 'email', true)}
 
       <t3-step-actions ?can-continue=${this._canProceed()}></t3-step-actions>
     `;

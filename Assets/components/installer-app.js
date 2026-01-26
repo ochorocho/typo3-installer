@@ -4,6 +4,7 @@ import { installerContext, initialState, STEPS } from '../context/installer-cont
 import './ui/theme-toggle.js';
 
 const STORAGE_KEY = 'typo3-installer-state';
+const SESSION_KEY = 'typo3-installer-sensitive';
 
 export class InstallerApp extends LitElement {
   static properties = {
@@ -124,11 +125,11 @@ export class InstallerApp extends LitElement {
       font-weight: 600;
     }
 
-    .step-indicator.completed {
+    .step-indicator {
       cursor: pointer;
     }
 
-    .step-indicator.completed:hover {
+    .step-indicator:hover {
       transform: scale(1.05);
     }
 
@@ -136,19 +137,27 @@ export class InstallerApp extends LitElement {
       box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
     }
 
-    .step-indicator:not(.completed):not(.active) {
-      cursor: not-allowed;
+    .step-indicator:not(.completed):not(.active):hover .step-number {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
-    .progress-bar.nav-disabled .step-indicator.completed {
+    .step-indicator.incomplete .step-number {
+      border-color: var(--color-warning, #f76707);
+    }
+
+    .step-indicator.incomplete .step-title {
+      color: var(--color-warning, #f76707);
+    }
+
+    .progress-bar.nav-disabled .step-indicator {
       cursor: default;
     }
 
-    .progress-bar.nav-disabled .step-indicator.completed:hover {
+    .progress-bar.nav-disabled .step-indicator:hover {
       transform: none;
     }
 
-    .progress-bar.nav-disabled .step-indicator.completed:hover .step-number {
+    .progress-bar.nav-disabled .step-indicator:hover .step-number {
       box-shadow: none;
     }
 
@@ -174,8 +183,22 @@ export class InstallerApp extends LitElement {
         // Don't restore if installation was completed
         if (parsed.installation?.completed) {
           localStorage.removeItem(STORAGE_KEY);
+          sessionStorage.removeItem(SESSION_KEY);
           return { ...initialState };
         }
+
+        // Restore sensitive data from session storage
+        const sensitive = sessionStorage.getItem(SESSION_KEY);
+        if (sensitive) {
+          const passwords = JSON.parse(sensitive);
+          if (parsed.admin && passwords.adminPassword) {
+            parsed.admin.password = passwords.adminPassword;
+          }
+          if (parsed.database && passwords.databasePassword) {
+            parsed.database.password = passwords.databasePassword;
+          }
+        }
+
         return { ...initialState, ...parsed };
       }
     } catch {
@@ -186,7 +209,14 @@ export class InstallerApp extends LitElement {
 
   _saveState(state) {
     try {
-      // Filter out sensitive data (passwords)
+      // Store sensitive data (passwords) in session storage
+      const sensitive = {
+        adminPassword: state.admin?.password,
+        databasePassword: state.database?.password
+      };
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(sensitive));
+
+      // Filter out sensitive data from localStorage
       const safeState = {
         ...state,
         admin: state.admin ? {
@@ -207,6 +237,7 @@ export class InstallerApp extends LitElement {
   _clearState() {
     try {
       localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(SESSION_KEY);
     } catch {
       // Ignore storage errors
     }
@@ -240,8 +271,13 @@ export class InstallerApp extends LitElement {
   };
 
   _handleNextStep = () => {
-    if (this.state.currentStep < STEPS.length - 1) {
-      this.state = { ...this.state, currentStep: this.state.currentStep + 1 };
+    const nextStep = this.state.currentStep + 1;
+    if (nextStep < STEPS.length) {
+      // Prevent advancing to install step if not all requirements are met
+      if (nextStep === STEPS.length - 1 && !this._canStartInstallation()) {
+        return;
+      }
+      this.state = { ...this.state, currentStep: nextStep };
       this.requestUpdate();
     }
   };
@@ -257,13 +293,53 @@ export class InstallerApp extends LitElement {
     return this.state.currentStep === STEPS.length - 1;
   }
 
+  _isStepComplete(index) {
+    const step = STEPS[index];
+    switch (step.id) {
+      case 'packages':
+        return this.state.packages?.selected?.length > 0;
+      case 'requirements':
+        return this.state.requirements?.passed === true;
+      case 'database':
+        return this.state.database?.tested && this.state.database?.valid;
+      case 'admin':
+        const admin = this.state.admin || {};
+        return admin.username?.length >= 3 &&
+               admin.password?.length >= 8 &&
+               /[A-Z]/.test(admin.password || '') &&
+               /[a-z]/.test(admin.password || '') &&
+               /[0-9]/.test(admin.password || '') &&
+               /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin.email || '');
+      case 'site':
+        return this.state.site?.name?.length > 0 && this.state.site?.baseUrl?.length > 0;
+      case 'install':
+        return this.state.installation?.completed === true;
+      default:
+        return false;
+    }
+  }
+
+  _canStartInstallation() {
+    // Check all steps except the install step are complete
+    for (let i = 0; i < STEPS.length - 1; i++) {
+      if (!this._isStepComplete(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   _handleStepClick(index) {
     // Disable navigation when on the progress/install step
     if (this._isOnProgressStep()) {
       return;
     }
-    // Only allow navigation to completed steps (going back)
-    if (index < this.state.currentStep) {
+    // Prevent navigating to install step if not all steps are complete
+    if (index === STEPS.length - 1 && !this._canStartInstallation()) {
+      return;
+    }
+    // Allow navigation to any step
+    if (index !== this.state.currentStep) {
       this.state = { ...this.state, currentStep: index };
       this.requestUpdate();
     }
@@ -301,19 +377,28 @@ export class InstallerApp extends LitElement {
         </div>
 
         <div class="progress-bar ${this._isOnProgressStep() ? 'nav-disabled' : ''}">
-          ${STEPS.map((step, index) => html`
-            <div
-              class="step-indicator ${index === this.state.currentStep ? 'active' : ''} ${index < this.state.currentStep ? 'completed' : ''}"
-              @click=${() => this._handleStepClick(index)}
-              @keydown=${(e) => e.key === 'Enter' && this._handleStepClick(index)}
-              role="button"
-              tabindex="${index < this.state.currentStep && !this._isOnProgressStep() ? '0' : '-1'}"
-              aria-label="${step.title}${index < this.state.currentStep && !this._isOnProgressStep() ? ' - click to go back' : ''}"
-            >
-              <div class="step-number">${index < this.state.currentStep ? '' : index + 1}</div>
-              <div class="step-title">${step.title}</div>
-            </div>
-          `)}
+          ${STEPS.map((step, index) => {
+            const isActive = index === this.state.currentStep;
+            const isCompleted = this._isStepComplete(index);
+            const isVisited = index < this.state.currentStep;
+            const isIncomplete = isVisited && !isCompleted;
+            const isInstallStep = index === STEPS.length - 1;
+            const canNavigate = !this._isOnProgressStep() && (isInstallStep ? this._canStartInstallation() : true);
+
+            return html`
+              <div
+                class="step-indicator ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isIncomplete ? 'incomplete' : ''}"
+                @click=${() => this._handleStepClick(index)}
+                @keydown=${(e) => e.key === 'Enter' && this._handleStepClick(index)}
+                role="button"
+                tabindex="${canNavigate && !isActive ? '0' : '-1'}"
+                aria-label="${step.title}${isCompleted ? ' - completed' : isIncomplete ? ' - incomplete' : ''}"
+              >
+                <div class="step-number">${isCompleted ? '' : index + 1}</div>
+                <div class="step-title">${step.title}</div>
+              </div>
+            `;
+          })}
         </div>
 
         <div class="content">

@@ -24,6 +24,13 @@ import cog from '@typo3/icons/dist/svgs/actions/actions-cog.svg?raw';
 // Spinner
 import spinnerCircle from '@typo3/icons/dist/svgs/spinner/spinner-circle.svg?raw';
 
+// Navigation/Caret icons
+import caretEnd from '@typo3/icons/dist/svgs/actions/actions-caret-end.svg?raw';
+import caretDown from '@typo3/icons/dist/svgs/actions/actions-caret-down.svg?raw';
+
+// Branding
+import shieldTypo3 from '@typo3/icons/dist/svgs/actions/actions-shield-typo3.svg?raw';
+
 /**
  * Icon registry mapping identifiers to raw SVG content.
  * @type {Record<string, string>}
@@ -47,4 +54,11 @@ export const iconRegistry = {
 
   // Spinner
   'spinner-circle': spinnerCircle,
+
+  // Navigation/Caret icons
+  'actions-caret-end': caretEnd,
+  'actions-caret-down': caretDown,
+
+  // Branding
+  'actions-shield-typo3': shieldTypo3,
 };

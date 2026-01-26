@@ -152,7 +152,53 @@ export class StepProgress extends LitElement {
     }
   }
 
+  /**
+   * Validates that all required configuration fields are present.
+   * Passwords are not persisted to localStorage, so they may be missing after a page reload.
+   * @returns {{ valid: boolean, missingFields: string[] }}
+   */
+  _validateConfig() {
+    const missingFields = [];
+    const db = this.state?.database || {};
+    const admin = this.state?.admin || {};
+    const site = this.state?.site || {};
+
+    // Database validation (server-based drivers need host/user, file-based only need name)
+    if (!db.name) missingFields.push('Database name');
+    if (db.driver !== 'pdo_sqlite') {
+      if (!db.host) missingFields.push('Database host');
+      if (!db.user) missingFields.push('Database user');
+    }
+
+    // Admin validation
+    if (!admin.username) missingFields.push('Admin username');
+    if (!admin.password) missingFields.push('Admin password');
+    if (!admin.email) missingFields.push('Admin email');
+
+    // Site validation
+    if (!site.name) missingFields.push('Site name');
+    if (!site.baseUrl) missingFields.push('Site URL');
+
+    return { valid: missingFields.length === 0, missingFields };
+  }
+
   async _startInstallation() {
+    // Validate configuration before starting
+    const validation = this._validateConfig();
+    if (!validation.valid) {
+      const missingList = validation.missingFields.join(', ');
+      this._updateInstallState({
+        running: false,
+        error: {
+          message: `Missing required fields: ${missingList}. Please go back and complete all fields. Note: Passwords are not saved after page reload for security reasons.`,
+          details: null,
+          isValidationError: true
+        }
+      });
+      this.canRetry = false;
+      return;
+    }
+
     this.canRetry = false;
     this.outputLines = [];
     this.currentStep = 'prepare';
@@ -276,19 +322,22 @@ export class StepProgress extends LitElement {
     }
 
     if (install.error) {
+      const isValidationError = install.error.isValidationError;
       return html`
         <div class="error-message" role="alert">
-          <h3>Installation Failed</h3>
+          <h3>${isValidationError ? 'Missing Configuration' : 'Installation Failed'}</h3>
           <p class="error-description">${install.error.message || 'An unexpected error occurred.'}</p>
           ${install.error.details ? html`<details><summary>Technical details</summary><div class="error-details">${install.error.details}</div></details>` : ''}
           <div class="error-actions">
-            <button class="btn-primary" @click=${this._handleRetry}>Retry Installation</button>
-            <button class="btn-outline" @click=${this._handleGoBack}>Go Back to Configuration</button>
+            ${isValidationError ? '' : html`<button class="btn-primary" @click=${this._handleRetry}>Retry Installation</button>`}
+            <button class="${isValidationError ? 'btn-primary' : 'btn-outline'}" @click=${this._handleGoBack}>Go Back to Configuration</button>
           </div>
-          <t3-error-help .error=${install.error} context="installation"></t3-error-help>
+          ${isValidationError ? '' : html`<t3-error-help .error=${install.error} context="installation"></t3-error-help>`}
         </div>
-        <t3-terminal-output .lines=${this.outputLines} .autoScroll=${this.autoScroll}
-          @toggle-autoscroll=${this._handleToggleAutoScroll} @clear-output=${this._handleClearOutput}></t3-terminal-output>
+        ${this.outputLines.length > 0 ? html`
+          <t3-terminal-output .lines=${this.outputLines} .autoScroll=${this.autoScroll}
+            @toggle-autoscroll=${this._handleToggleAutoScroll} @clear-output=${this._handleClearOutput}></t3-terminal-output>
+        ` : ''}
       `;
     }
 
