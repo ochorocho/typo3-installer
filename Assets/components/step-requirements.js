@@ -1,10 +1,11 @@
 import { LitElement, html, css } from 'lit';
 import { apiClient } from '../api/client.js';
-import { stepBaseStyles, buttonStyles, spinnerStyles, srOnlyStyles } from './ui/shared-styles.js';
+import { stepBaseStyles, buttonStyles, srOnlyStyles, emit } from './ui/shared-styles.js';
 import './ui/error-help.js';
 import './ui/php-version-warning.js';
 import './ui/step-actions.js';
 import './ui/t3-icon.js';
+import './ui/spinner.js';
 
 /**
  * System requirements check step.
@@ -25,7 +26,6 @@ export class StepRequirements extends LitElement {
   static styles = [
     stepBaseStyles,
     buttonStyles,
-    spinnerStyles,
     srOnlyStyles,
     css`
       .requirements-list { margin-bottom: var(--spacing-lg, 24px); }
@@ -93,8 +93,8 @@ export class StepRequirements extends LitElement {
 
       .summary-item { display: flex; align-items: center; gap: var(--spacing-sm, 8px); }
       .summary-count { font-weight: 600; font-size: 1.25rem; }
-      .summary-count.passed { color: var(--color-success, #1cb841); }
-      .summary-count.failed { color: var(--color-error, #c83c3c); }
+      .summary-count.passed { color: var(--color-success-accessible, #0d7b31); }
+      .summary-count.failed { color: var(--color-error-accessible, #b33636); }
       .summary-count.warning { color: var(--color-warning, #f76707); }
 
       .packages-info {
@@ -142,13 +142,31 @@ export class StepRequirements extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    if (!this.state?.requirements?.checked) {
-      this._checkRequirements();
-    } else {
+
+    // Check if we have fresh cached results from prefetch
+    const cachedFor = this.state?.requirements?.prefetchedFor;
+    const currentPackages = this.state?.packages?.selected || [];
+    const currentVersion = this.state?.typo3Version || '13.4';
+
+    const isCacheFresh = cachedFor &&
+      cachedFor.version === currentVersion &&
+      JSON.stringify([...cachedFor.packages].sort()) === JSON.stringify([...currentPackages].sort());
+
+    if (this.state?.requirements?.checked && isCacheFresh) {
+      // Use cached results from prefetch
       this.requirements = this.state.requirements.results;
       if (this.state?.phpDetection?.checked) {
         this.phpDetection = this.state.phpDetection;
       }
+    } else if (this.state?.requirements?.checked && !cachedFor) {
+      // Legacy path: results without prefetch metadata (e.g., from previous check)
+      this.requirements = this.state.requirements.results;
+      if (this.state?.phpDetection?.checked) {
+        this.phpDetection = this.state.phpDetection;
+      }
+    } else {
+      // Need fresh check
+      this._checkRequirements();
     }
   }
 
@@ -173,15 +191,19 @@ export class StepRequirements extends LitElement {
         selectedBinary: phpResponse.mismatch ? null : phpResponse.cliBinary
       };
 
-      this.dispatchEvent(new CustomEvent('state-update', {
-        bubbles: true,
-        composed: true,
-        detail: {
-          requirements: { checked: true, passed: requirementsResponse.passed, results: this.requirements },
-          packages: { ...this.state.packages, validated: true },
-          phpDetection: this.phpDetection
-        }
-      }));
+      emit(this, 'state-update', {
+        requirements: {
+          checked: true,
+          passed: requirementsResponse.passed,
+          results: this.requirements,
+          prefetchedFor: {
+            packages: [...(this.state?.packages?.selected || [])],
+            version: this.state?.typo3Version || '13.4'
+          }
+        },
+        packages: { ...this.state.packages, validated: true },
+        phpDetection: this.phpDetection
+      });
     } catch (error) {
       this.error = {
         message: error.getUserMessage?.() || error.message || 'Failed to check requirements',
@@ -232,11 +254,7 @@ export class StepRequirements extends LitElement {
   }
 
   _updatePhpDetectionState() {
-    this.dispatchEvent(new CustomEvent('state-update', {
-      bubbles: true,
-      composed: true,
-      detail: { phpDetection: this.phpDetection }
-    }));
+    emit(this, 'state-update', { phpDetection: this.phpDetection });
   }
 
   _getStatusIcon(status) {
@@ -260,15 +278,17 @@ export class StepRequirements extends LitElement {
     };
   }
 
-  _canProceed() {
-    if (!this.state?.requirements?.passed || this.checking) return false;
-    if (this.phpDetection?.mismatch) return this.phpDetection.selectedBinary !== null;
-    return true;
-  }
-
   render() {
     const summary = this._getSummary();
     const selectedPackages = this.state?.packages?.selected || [];
+
+    // Button enabled only when: not checking, no errors, no failures, PHP resolved
+    const phpResolved = !this.phpDetection?.mismatch || this.phpDetection?.selectedBinary;
+    const canContinue = !this.checking &&
+                        !this.error &&
+                        this.requirements.length > 0 &&
+                        summary.failed === 0 &&
+                        phpResolved;
 
     return html`
       <h2>System Requirements</h2>
@@ -290,7 +310,7 @@ export class StepRequirements extends LitElement {
         </div>
       ` : this.checking ? html`
         <div class="requirements-list">
-          <p><span class="spinner"></span> Checking requirements...</p>
+          <ui-spinner>Checking requirements...</ui-spinner>
         </div>
       ` : html`
         <div class="summary">
@@ -340,9 +360,9 @@ export class StepRequirements extends LitElement {
         </div>
       `}
 
-      <t3-step-actions ?can-continue=${this._canProceed()}>
+      <t3-step-actions ?can-continue=${canContinue} ?loading=${this.checking}>
         <button slot="left" class="btn-secondary" @click=${this._checkRequirements} ?disabled=${this.checking}>
-          ${this.checking ? html`<span class="spinner"></span>` : ''} Recheck
+          ${this.checking ? html`<ui-spinner size="small">Recheck</ui-spinner>` : 'Recheck'}
         </button>
       </t3-step-actions>
     `;

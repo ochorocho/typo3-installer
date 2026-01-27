@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { ContextProvider } from '@lit/context';
 import { installerContext, initialState, STEPS } from '../context/installer-context.js';
+import { isStepComplete, canStartInstallation } from '../utils/step-validators.js';
 import './ui/theme-toggle.js';
 
 const STORAGE_KEY = 'typo3-installer-state';
@@ -24,13 +25,17 @@ export class InstallerApp extends LitElement {
       padding: var(--spacing-lg, 24px);
     }
 
+    .shadow-radius {
+      border-radius: var(--border-radius-lg, 8px);
+      box-shadow: var(--shadow, 0 0 8px rgba(0,0,0,0.1));
+    }
+
     .header {
       position: relative;
       text-align: center;
       padding: var(--spacing-xl, 32px) 0;
-      background: var(--color-primary, #ff8700);
+      background: var(--color-primary-accessible, #b35c00);
       color: white;
-      border-radius: var(--border-radius-lg, 8px) var(--border-radius-lg, 8px) 0 0;
       margin-bottom: 0;
     }
 
@@ -42,7 +47,6 @@ export class InstallerApp extends LitElement {
 
     .header p {
       margin: 0;
-      opacity: 0.9;
     }
 
     .header-controls {
@@ -149,6 +153,26 @@ export class InstallerApp extends LitElement {
       color: var(--color-warning, #f76707);
     }
 
+    .step-indicator.shake {
+      animation: shake 0.6s ease-in-out;
+    }
+
+    .step-indicator.shake .step-number {
+      border-color: var(--color-error, #c83c3c);
+      box-shadow: 0 0 0 3px rgba(200, 60, 60, 0.3);
+    }
+
+    .step-indicator.shake .step-title {
+      color: var(--color-error, #c83c3c);
+      font-weight: 600;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+      20%, 40%, 60%, 80% { transform: translateX(4px); }
+    }
+
     .progress-bar.nav-disabled .step-indicator {
       cursor: default;
     }
@@ -164,8 +188,6 @@ export class InstallerApp extends LitElement {
     .content {
       background: var(--color-bg-white, white);
       padding: var(--spacing-xl, 32px);
-      border-radius: 0 0 var(--border-radius-lg, 8px) var(--border-radius-lg, 8px);
-      box-shadow: var(--shadow, 0 2px 8px rgba(0,0,0,0.1));
     }
   `;
 
@@ -248,6 +270,7 @@ export class InstallerApp extends LitElement {
     this.addEventListener('state-update', this._handleStateUpdate);
     this.addEventListener('next-step', this._handleNextStep);
     this.addEventListener('previous-step', this._handlePreviousStep);
+    this.addEventListener('validation-failed', this._handleValidationFailed);
   }
 
   disconnectedCallback() {
@@ -255,6 +278,7 @@ export class InstallerApp extends LitElement {
     this.removeEventListener('state-update', this._handleStateUpdate);
     this.removeEventListener('next-step', this._handleNextStep);
     this.removeEventListener('previous-step', this._handlePreviousStep);
+    this.removeEventListener('validation-failed', this._handleValidationFailed);
   }
 
   _handleStateUpdate = (e) => {
@@ -289,44 +313,42 @@ export class InstallerApp extends LitElement {
     }
   };
 
+  _handleValidationFailed = () => {
+    // Find all incomplete steps and animate them
+    const incompleteIndices = [];
+    for (let i = 0; i < STEPS.length - 1; i++) {
+      if (!this._isStepComplete(i)) {
+        incompleteIndices.push(i);
+      }
+    }
+
+    if (incompleteIndices.length === 0) return;
+
+    // Get step indicators and add shake class
+    const indicators = this.shadowRoot.querySelectorAll('.step-indicator');
+    incompleteIndices.forEach(index => {
+      const indicator = indicators[index];
+      if (indicator) {
+        indicator.classList.add('shake');
+        // Remove the class after animation completes
+        setTimeout(() => {
+          indicator.classList.remove('shake');
+        }, 600);
+      }
+    });
+  };
+
   _isOnProgressStep() {
     return this.state.currentStep === STEPS.length - 1;
   }
 
   _isStepComplete(index) {
     const step = STEPS[index];
-    switch (step.id) {
-      case 'packages':
-        return this.state.packages?.selected?.length > 0;
-      case 'requirements':
-        return this.state.requirements?.passed === true;
-      case 'database':
-        return this.state.database?.tested && this.state.database?.valid;
-      case 'admin':
-        const admin = this.state.admin || {};
-        return admin.username?.length >= 3 &&
-               admin.password?.length >= 8 &&
-               /[A-Z]/.test(admin.password || '') &&
-               /[a-z]/.test(admin.password || '') &&
-               /[0-9]/.test(admin.password || '') &&
-               /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin.email || '');
-      case 'site':
-        return this.state.site?.name?.length > 0 && this.state.site?.baseUrl?.length > 0;
-      case 'install':
-        return this.state.installation?.completed === true;
-      default:
-        return false;
-    }
+    return isStepComplete(step.id, this.state);
   }
 
   _canStartInstallation() {
-    // Check all steps except the install step are complete
-    for (let i = 0; i < STEPS.length - 1; i++) {
-      if (!this._isStepComplete(i)) {
-        return false;
-      }
-    }
-    return true;
+    return canStartInstallation(this.state);
   }
 
   _handleStepClick(index) {
@@ -368,41 +390,43 @@ export class InstallerApp extends LitElement {
   render() {
     return html`
       <div class="installer">
-        <div class="header">
-          <div class="header-controls">
-            <t3-theme-toggle></t3-theme-toggle>
+        <div class="shadow-radius">
+          <div class="header">
+            <div class="header-controls">
+              <t3-theme-toggle></t3-theme-toggle>
+            </div>
+            <h1>TYPO3 Installer</h1>
+            <p>Install TYPO3 CMS on your server</p>
           </div>
-          <h1>TYPO3 Installer</h1>
-          <p>Install TYPO3 CMS on your server</p>
-        </div>
 
-        <div class="progress-bar ${this._isOnProgressStep() ? 'nav-disabled' : ''}">
-          ${STEPS.map((step, index) => {
-            const isActive = index === this.state.currentStep;
-            const isCompleted = this._isStepComplete(index);
-            const isVisited = index < this.state.currentStep;
-            const isIncomplete = isVisited && !isCompleted;
-            const isInstallStep = index === STEPS.length - 1;
-            const canNavigate = !this._isOnProgressStep() && (isInstallStep ? this._canStartInstallation() : true);
+          <div class="progress-bar ${this._isOnProgressStep() ? 'nav-disabled' : ''}">
+            ${STEPS.map((step, index) => {
+              const isActive = index === this.state.currentStep;
+              const isCompleted = this._isStepComplete(index);
+              const isVisited = index < this.state.currentStep;
+              const isIncomplete = isVisited && !isCompleted;
+              const isInstallStep = index === STEPS.length - 1;
+              const canNavigate = !this._isOnProgressStep() && (isInstallStep ? this._canStartInstallation() : true);
 
-            return html`
-              <div
-                class="step-indicator ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isIncomplete ? 'incomplete' : ''}"
-                @click=${() => this._handleStepClick(index)}
-                @keydown=${(e) => e.key === 'Enter' && this._handleStepClick(index)}
-                role="button"
-                tabindex="${canNavigate && !isActive ? '0' : '-1'}"
-                aria-label="${step.title}${isCompleted ? ' - completed' : isIncomplete ? ' - incomplete' : ''}"
-              >
-                <div class="step-number">${isCompleted ? '' : index + 1}</div>
-                <div class="step-title">${step.title}</div>
-              </div>
-            `;
-          })}
-        </div>
+              return html`
+                <div
+                  class="step-indicator ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isIncomplete ? 'incomplete' : ''}"
+                  @click=${() => this._handleStepClick(index)}
+                  @keydown=${(e) => e.key === 'Enter' && this._handleStepClick(index)}
+                  role="button"
+                  tabindex="${canNavigate && !isActive ? '0' : '-1'}"
+                  aria-label="${step.title}${isCompleted ? ' - completed' : isIncomplete ? ' - incomplete' : ''}"
+                >
+                  <div class="step-number">${isCompleted ? '' : index + 1}</div>
+                  <div class="step-title">${step.title}</div>
+                </div>
+              `;
+            })}
+          </div>
 
-        <div class="content">
-          ${this._renderStepContent()}
+          <div class="content">
+            ${this._renderStepContent()}
+          </div>
         </div>
       </div>
     `;

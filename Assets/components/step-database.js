@@ -1,22 +1,10 @@
 import { LitElement, html, css } from 'lit';
 import { apiClient } from '../api/client.js';
-import { stepBaseStyles, formStyles, buttonStyles, spinnerStyles, srOnlyStyles, alertStyles, emit } from './ui/shared-styles.js';
+import { stepBaseStyles, formStyles, buttonStyles, srOnlyStyles, alertStyles, emit } from './ui/shared-styles.js';
+import { debounce } from '../utils/helpers.js';
 import './ui/error-help.js';
 import './ui/step-actions.js';
-
-/**
- * Creates a debounced version of a function.
- * @param {Function} fn - The function to debounce
- * @param {number} ms - Delay in milliseconds
- * @returns {Function} Debounced function
- */
-function debounce(fn, ms) {
-  let timer;
-  return function(...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn.apply(this, args), ms);
-  };
-}
+import './ui/spinner.js';
 
 /**
  * Database configuration step.
@@ -36,7 +24,6 @@ export class StepDatabase extends LitElement {
     stepBaseStyles,
     formStyles,
     buttonStyles,
-    spinnerStyles,
     srOnlyStyles,
     alertStyles
   ];
@@ -245,9 +232,9 @@ export class StepDatabase extends LitElement {
         </div>
       ` : ''}
 
-      <t3-step-actions ?can-continue=${this.state?.database?.tested && this.state?.database?.valid}>
-        <button slot="left" class="btn-secondary" @click=${this._testConnection} ?disabled=${this.testing}>
-          ${this.testing ? html`<span class="spinner"></span>` : ''} Test Connection
+      <t3-step-actions ?can-continue=${!this.driversLoading && !this.driversError && this.availableDrivers.length > 0 && this.state?.database?.tested && this.state?.database?.valid}>
+        <button slot="left" class="btn-secondary" @click=${this._testConnection} ?disabled=${this.testing || this.driversLoading || this.driversError || this.availableDrivers.length === 0}>
+          ${this.testing ? html`<ui-spinner size="small">Test Connection</ui-spinner>` : 'Test Connection'}
         </button>
       </t3-step-actions>
     `;

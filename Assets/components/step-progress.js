@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { apiClient } from '../api/client.js';
-import { stepBaseStyles, buttonStyles } from './ui/shared-styles.js';
+import { stepBaseStyles, buttonStyles, emit } from './ui/shared-styles.js';
+import { validateInstallationConfig } from '../utils/step-validators.js';
 import './ui/error-help.js';
 import './ui/terminal-output.js';
 import './ui/task-list.js';
@@ -47,7 +48,7 @@ export class StepProgress extends LitElement {
       }
 
       .success-message h3 {
-        color: var(--color-success, #1cb841);
+        color: var(--color-success-heading, #0d7b31);
         margin: 0 0 var(--spacing-md, 16px) 0;
         font-size: 1.5rem;
       }
@@ -158,28 +159,7 @@ export class StepProgress extends LitElement {
    * @returns {{ valid: boolean, missingFields: string[] }}
    */
   _validateConfig() {
-    const missingFields = [];
-    const db = this.state?.database || {};
-    const admin = this.state?.admin || {};
-    const site = this.state?.site || {};
-
-    // Database validation (server-based drivers need host/user, file-based only need name)
-    if (!db.name) missingFields.push('Database name');
-    if (db.driver !== 'pdo_sqlite') {
-      if (!db.host) missingFields.push('Database host');
-      if (!db.user) missingFields.push('Database user');
-    }
-
-    // Admin validation
-    if (!admin.username) missingFields.push('Admin username');
-    if (!admin.password) missingFields.push('Admin password');
-    if (!admin.email) missingFields.push('Admin email');
-
-    // Site validation
-    if (!site.name) missingFields.push('Site name');
-    if (!site.baseUrl) missingFields.push('Site URL');
-
-    return { valid: missingFields.length === 0, missingFields };
+    return validateInstallationConfig(this.state);
   }
 
   async _startInstallation() {
@@ -254,11 +234,7 @@ export class StepProgress extends LitElement {
   }
 
   _updateInstallState(installData) {
-    this.dispatchEvent(new CustomEvent('state-update', {
-      bubbles: true,
-      composed: true,
-      detail: { installation: { ...this.state.installation, ...installData } }
-    }));
+    emit(this, 'state-update', { installation: { ...this.state.installation, ...installData } });
     this.requestUpdate();
   }
 
@@ -298,7 +274,7 @@ export class StepProgress extends LitElement {
   }
 
   _handleRetry() { this._startInstallation(); }
-  _handleGoBack() { this.dispatchEvent(new CustomEvent('previous-step', { bubbles: true, composed: true })); }
+  _handleGoBack() { emit(this, 'previous-step'); }
   _handleToggleAutoScroll() { this.autoScroll = !this.autoScroll; }
   _handleClearOutput() { this.outputLines = []; }
 
@@ -347,7 +323,7 @@ export class StepProgress extends LitElement {
       <p>Please wait while TYPO3 is being installed. You can follow the progress below.</p>
 
       <div class="progress-container">
-        <div class="progress-bar" role="progressbar" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-bar" role="progressbar" aria-label="Installation progress" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
           <div class="progress-fill" style="width: ${progress}%"></div>
         </div>
         <div class="progress-text">

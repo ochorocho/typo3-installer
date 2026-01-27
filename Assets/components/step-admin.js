@@ -1,5 +1,15 @@
 import { LitElement, html, css } from 'lit';
 import { stepBaseStyles, formStyles, emit } from './ui/shared-styles.js';
+import {
+  isValidUsername,
+  getUsernameError,
+  isValidPassword,
+  getPasswordError,
+  getPasswordStrength,
+  isValidEmail,
+  getEmailError,
+  isValidAdmin
+} from '../utils/validators.js';
 import './ui/step-actions.js';
 
 /**
@@ -29,9 +39,9 @@ export class StepAdmin extends LitElement {
       .password-strength-fill.medium { width: 66%; background: var(--color-warning, #f76707); }
       .password-strength-fill.strong { width: 100%; background: var(--color-success, #1cb841); }
       .password-strength-label { font-size: 12px; margin-top: var(--spacing-xs, 4px); }
-      .password-strength-label.weak { color: var(--color-error, #c83c3c); }
+      .password-strength-label.weak { color: var(--color-error-accessible, #b33636); }
       .password-strength-label.medium { color: var(--color-warning, #f76707); }
-      .password-strength-label.strong { color: var(--color-success, #1cb841); }
+      .password-strength-label.strong { color: var(--color-success-accessible, #0d7b31); }
     `
   ];
 
@@ -39,6 +49,25 @@ export class StepAdmin extends LitElement {
     super();
     this.errors = {};
     this.touched = {};
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    // Validate existing state on load (e.g., from localStorage or navigation)
+    this._validateOnLoad();
+  }
+
+  _validateOnLoad() {
+    const admin = this.state?.admin;
+    if (!admin) return;
+
+    // Validate all fields that have values to populate errors
+    ['username', 'password', 'email'].forEach(field => {
+      if (admin[field] !== undefined && admin[field] !== '') {
+        this.touched = { ...this.touched, [field]: true };
+        this._validate(field, admin[field]);
+      }
+    });
   }
 
   _update(field, value) {
@@ -53,31 +82,20 @@ export class StepAdmin extends LitElement {
 
   _validate(field, value) {
     const validators = {
-      username: v => (!v || v.length < 3) ? 'Username must be at least 3 characters' : null,
-      password: v => {
-        if (!v || v.length < 8) return 'Password must be at least 8 characters';
-        if (!/[A-Z]/.test(v)) return 'Password must contain at least one uppercase letter';
-        if (!/[a-z]/.test(v)) return 'Password must contain at least one lowercase letter';
-        if (!/[0-9]/.test(v)) return 'Password must contain at least one number';
-        return null;
-      },
-      email: v => (!v || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) ? 'Please enter a valid email address' : null
+      username: getUsernameError,
+      password: getPasswordError,
+      email: getEmailError
     };
     const error = validators[field]?.(value);
     this.errors = error ? { ...this.errors, [field]: error } : (delete this.errors[field], { ...this.errors });
   }
 
-  _getStrength(p) {
-    if (!p) return { level: 'weak', label: 'Weak' };
-    let score = (p.length >= 8) + (p.length >= 12) + (/[A-Z]/.test(p) && /[a-z]/.test(p)) + /[0-9]/.test(p) + /[^A-Za-z0-9]/.test(p);
-    return score <= 2 ? { level: 'weak', label: 'Weak' } : score <= 3 ? { level: 'medium', label: 'Medium' } : { level: 'strong', label: 'Strong' };
+  _getStrength(password) {
+    return getPasswordStrength(password);
   }
 
   _canProceed() {
-    const a = this.state?.admin || {};
-    return a.username?.length >= 3 && a.password?.length >= 8 &&
-           /[A-Z]/.test(a.password) && /[a-z]/.test(a.password) && /[0-9]/.test(a.password) &&
-           /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email);
+    return isValidAdmin(this.state?.admin);
   }
 
   _field(id, label, type, value, helpText, autocomplete, required = false) {
@@ -118,7 +136,7 @@ export class StepAdmin extends LitElement {
           : html`<div class="help-text">Minimum 8 characters with uppercase, lowercase, and number</div>`}
       </div>
 
-      ${this._field('email', 'Email', 'email', admin.email, 'Used for password recovery and notifications', 'email', true)}
+      ${this._field('email', 'Email (optional)', 'email', admin.email, 'Used for password recovery and notifications', 'email', false)}
 
       <t3-step-actions ?can-continue=${this._canProceed()}></t3-step-actions>
     `;

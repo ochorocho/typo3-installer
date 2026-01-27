@@ -45,22 +45,47 @@ class ApiClient {
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
         const timeout = options.timeout || this.defaultTimeout;
+        const externalSignal = options.signal;
 
         // Create abort controller for timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const timeoutController = new AbortController();
+        const timeoutId = setTimeout(() => timeoutController.abort(), timeout);
+
+        // Combine external signal with timeout signal
+        let combinedSignal;
+        if (externalSignal) {
+            if (typeof AbortSignal.any === 'function') {
+                combinedSignal = AbortSignal.any([timeoutController.signal, externalSignal]);
+            } else {
+                // Fallback: create new controller that aborts when either signal aborts
+                const combinedController = new AbortController();
+                const abort = () => combinedController.abort();
+
+                if (timeoutController.signal.aborted || externalSignal.aborted) {
+                    combinedController.abort();
+                } else {
+                    timeoutController.signal.addEventListener('abort', abort, { once: true });
+                    externalSignal.addEventListener('abort', abort, { once: true });
+                }
+                combinedSignal = combinedController.signal;
+            }
+        } else {
+            combinedSignal = timeoutController.signal;
+        }
 
         const config = {
             headers: {
                 'Content-Type': 'application/json',
                 ...options.headers
             },
-            signal: controller.signal,
+            signal: combinedSignal,
             ...options
         };
 
-        // Remove our custom timeout option from fetch config
+        // Remove our custom options from fetch config
         delete config.timeout;
+        delete config.signal;
+        config.signal = combinedSignal;
 
         try {
             const response = await fetch(url, config);
@@ -102,8 +127,13 @@ class ApiClient {
         } catch (error) {
             clearTimeout(timeoutId);
 
-            // Handle abort (timeout)
+            // Handle abort - distinguish between timeout and external signal
             if (error.name === 'AbortError') {
+                // If external signal was aborted, re-throw as AbortError (not timeout)
+                if (externalSignal?.aborted) {
+                    throw error;
+                }
+                // Otherwise it's a timeout
                 throw new ApiError('Request timed out', {
                     endpoint,
                     isTimeout: true
@@ -146,11 +176,12 @@ class ApiClient {
         });
     }
 
-    async validateRequirements(packages, typo3Version = '13.4') {
+    async validateRequirements(packages, typo3Version = '13.4', options = {}) {
         return this.request('/api/validate-requirements', {
             method: 'POST',
             body: JSON.stringify({ packages, typo3Version }),
-            timeout: 60000 // 60 seconds for requirements validation
+            timeout: 60000, // 60 seconds for requirements validation
+            signal: options.signal
         });
     }
 
@@ -204,9 +235,10 @@ class ApiClient {
         });
     }
 
-    async detectPhp() {
+    async detectPhp(options = {}) {
         return this.request('/api/detect-php', {
-            method: 'POST'
+            method: 'POST',
+            signal: options.signal
         });
     }
 

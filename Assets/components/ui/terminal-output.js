@@ -1,4 +1,5 @@
 import { LitElement, html, css } from 'lit';
+import { emit } from './shared-styles.js';
 
 /**
  * Terminal-style output display component.
@@ -26,7 +27,7 @@ export class TerminalOutput extends LitElement {
     }
 
     .terminal-header {
-      background: #2d2d2d;
+      background: var(--terminal-header-bg, #2d2d2d);
       padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
       display: flex;
       justify-content: space-between;
@@ -34,7 +35,7 @@ export class TerminalOutput extends LitElement {
     }
 
     .terminal-title {
-      color: #aaa;
+      color: var(--terminal-text-muted, #aaa);
       font-size: 12px;
       font-family: monospace;
     }
@@ -46,28 +47,28 @@ export class TerminalOutput extends LitElement {
 
     .terminal-controls button {
       background: transparent;
-      border: 1px solid #555;
-      color: #aaa;
+      border: 1px solid var(--terminal-border, #555);
+      color: var(--terminal-text-muted, #aaa);
       font-size: 10px;
       padding: 2px 6px;
-      border-radius: 3px;
+      border-radius: var(--border-radius, 4px);
       cursor: pointer;
     }
 
     .terminal-controls button:hover {
-      background: #444;
+      background: var(--terminal-border, #444);
       color: #fff;
     }
 
     .terminal-controls button.active {
-      background: var(--color-primary, #ff8700);
-      border-color: var(--color-primary, #ff8700);
+      background: var(--color-primary-accessible, #b35c00);
+      border-color: var(--color-primary-accessible, #b35c00);
       color: #fff;
     }
 
     .terminal-output {
-      background: #1e1e1e;
-      color: #d4d4d4;
+      background: var(--terminal-bg, #1e1e1e);
+      color: var(--terminal-text, #d4d4d4);
       font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
       font-size: 12px;
       line-height: 1.4;
@@ -78,17 +79,17 @@ export class TerminalOutput extends LitElement {
     }
 
     .terminal-output::-webkit-scrollbar { width: 8px; }
-    .terminal-output::-webkit-scrollbar-track { background: #1e1e1e; }
-    .terminal-output::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-    .terminal-output::-webkit-scrollbar-thumb:hover { background: #777; }
+    .terminal-output::-webkit-scrollbar-track { background: var(--terminal-bg, #1e1e1e); }
+    .terminal-output::-webkit-scrollbar-thumb { background: var(--terminal-scrollbar, #555); border-radius: var(--border-radius, 4px); }
+    .terminal-output::-webkit-scrollbar-thumb:hover { background: var(--terminal-scrollbar-hover, #777); }
 
     .output-line { margin: 0; padding: 1px 0; }
 
     .output-line.step-marker {
-      color: var(--color-primary, #ff8700);
+      color: var(--terminal-step-marker, var(--color-primary, #ff8700));
       font-weight: bold;
       margin-top: 8px;
-      border-top: 1px solid #333;
+      border-top: 1px solid var(--terminal-border, #333);
       padding-top: 8px;
     }
 
@@ -98,10 +99,10 @@ export class TerminalOutput extends LitElement {
       padding-top: 0;
     }
 
-    .output-line .timestamp { color: #888; margin-right: 8px; }
-    .output-line.error { color: #f14c4c; }
-    .output-line.success { color: #4ec9b0; }
-    .output-line.info { color: #3794ff; }
+    .output-line .timestamp { color: var(--terminal-timestamp, #888); margin-right: 8px; }
+    .output-line.error { color: var(--terminal-error, #f14c4c); }
+    .output-line.success { color: var(--terminal-success, #4ec9b0); }
+    .output-line.info { color: var(--terminal-info, #3794ff); }
   `;
 
   constructor() {
@@ -124,7 +125,7 @@ export class TerminalOutput extends LitElement {
   }
 
   _toggleAutoScroll() {
-    this.dispatchEvent(new CustomEvent('toggle-autoscroll', { bubbles: true, composed: true }));
+    emit(this, 'toggle-autoscroll');
   }
 
   render() {
@@ -138,7 +139,7 @@ export class TerminalOutput extends LitElement {
             </button>
           </div>
         </div>
-        <div class="terminal-output">
+        <div class="terminal-output" tabindex="0">
           ${this.lines.length === 0
             ? html`<div class="output-line info">Waiting for output...</div>`
             : this.lines.map(line => html`

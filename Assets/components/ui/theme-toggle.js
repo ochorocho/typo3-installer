@@ -40,18 +40,16 @@ export class ThemeToggle extends LitElement {
     }
 
     .theme-btn:hover {
-      background: var(--color-bg-white, #fff);
       color: var(--color-text, #333);
     }
 
     .theme-btn.active {
-      background: var(--color-bg-white, #fff);
-      color: var(--color-primary, #ff8700);
+      color: var(--color-text, #ff8700);
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .theme-btn:focus-visible {
-      outline: 2px solid var(--color-primary, #ff8700);
+      outline: 2px solid var(--color-text-white, #ff8700);
       outline-offset: 1px;
     }
 

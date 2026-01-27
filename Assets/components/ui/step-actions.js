@@ -1,5 +1,6 @@
 import { LitElement, html, css } from 'lit';
-import { hostStyles, buttonStyles, spinnerStyles, emit } from './shared-styles.js';
+import { hostStyles, buttonStyles, emit } from './shared-styles.js';
+import './spinner.js';
 
 /**
  * Reusable step navigation actions (Back/Continue buttons).
@@ -20,7 +21,6 @@ export class StepActions extends LitElement {
   static styles = [
     hostStyles,
     buttonStyles,
-    spinnerStyles,
     css`
       :host { margin-top: var(--spacing-lg, 24px); }
       .actions {
@@ -45,8 +45,18 @@ export class StepActions extends LitElement {
     this.continueVariant = 'primary';
   }
 
+  _handleContinueClick() {
+    if (!this.canContinue || this.loading) {
+      // Emit event to highlight invalid steps when clicking disabled button
+      emit(this, 'validation-failed');
+      return;
+    }
+    emit(this, 'next-step');
+  }
+
   render() {
     const btnClass = this.continueVariant === 'success' ? 'btn-success' : 'btn-primary';
+    const isDisabled = !this.canContinue || this.loading;
     return html`
       <div class="actions">
         <div class="actions-left">
@@ -57,11 +67,10 @@ export class StepActions extends LitElement {
         </div>
         <button
           class="${btnClass}"
-          @click=${() => emit(this, 'next-step')}
-          ?disabled=${!this.canContinue || this.loading}
+          @click=${this._handleContinueClick}
+          ?disabled=${isDisabled}
         >
-          ${this.loading ? html`<span class="spinner"></span>` : ''}
-          ${this.continueText}
+          ${this.loading ? html`<ui-spinner size="small">${this.continueText}</ui-spinner>` : html`${this.continueText}`}
         </button>
       </div>
     `;

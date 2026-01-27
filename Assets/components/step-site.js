@@ -1,5 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { stepBaseStyles, formStyles, emit } from './ui/shared-styles.js';
+import { isValidUrl, isValidSiteName, getSiteNameError, getUrlError } from '../utils/validators.js';
+import { canStartInstallation } from '../utils/step-validators.js';
 import './ui/step-actions.js';
 
 /**
@@ -8,7 +10,9 @@ import './ui/step-actions.js';
  */
 export class StepSite extends LitElement {
   static properties = {
-    state: { type: Object }
+    state: { type: Object },
+    errors: { type: Object },
+    touched: { type: Object }
   };
 
   static styles = [
@@ -27,21 +31,64 @@ export class StepSite extends LitElement {
     `
   ];
 
+  constructor() {
+    super();
+    this.errors = {};
+    this.touched = {};
+  }
+
   connectedCallback() {
     super.connectedCallback();
     if (!this.state?.site?.baseUrl) {
       emit(this, 'state-update', { site: { ...this.state?.site, baseUrl: window.location.origin } });
     }
+    // Validate existing state on load
+    this._validateOnLoad();
+  }
+
+  _validateOnLoad() {
+    const site = this.state?.site;
+    if (!site) return;
+
+    // Validate all fields that have values
+    if (site.name !== undefined && site.name !== '') {
+      this.touched = { ...this.touched, name: true };
+      this._validate('name', site.name);
+    }
+    if (site.baseUrl !== undefined && site.baseUrl !== '') {
+      this.touched = { ...this.touched, baseUrl: true };
+      this._validate('baseUrl', site.baseUrl);
+    }
   }
 
   _update(field, value) {
     emit(this, 'state-update', { site: { ...this.state.site, [field]: value } });
+    this._validate(field, value);
+  }
+
+  _blur(field) {
+    this.touched = { ...this.touched, [field]: true };
+    this._validate(field, this.state?.site?.[field]);
+  }
+
+  _validate(field, value) {
+    const validators = {
+      name: getSiteNameError,
+      baseUrl: (v) => getUrlError(v, true)
+    };
+    const error = validators[field]?.(value);
+    this.errors = error ? { ...this.errors, [field]: error } : (delete this.errors[field], { ...this.errors });
+  }
+
+  _validateAll() {
+    // Use centralized step validation
+    return canStartInstallation(this.state);
   }
 
   render() {
     const { site = {}, database: db = {}, admin = {}, packages = {} } = this.state || {};
     const drivers = { pdo_mysql: 'MySQL / MariaDB', pdo_pgsql: 'PostgreSQL' };
-    const canProceed = site.name?.length > 0 && site.baseUrl?.length > 0;
+    const canProceed = this._validateAll();
 
     return html`
       <h2>Site Configuration</h2>
@@ -49,14 +96,30 @@ export class StepSite extends LitElement {
 
       <div class="form-group">
         <label for="siteName" class="required">Site Name</label>
-        <input type="text" id="siteName" required .value=${site.name || ''} @input=${e => this._update('name', e.target.value)} placeholder="My TYPO3 Site">
-        <span class="help-text">The name of your website</span>
+        <input type="text" id="siteName" required
+          class=${this.touched.name && this.errors.name ? 'error' : ''}
+          aria-invalid=${this.touched.name && this.errors.name ? 'true' : 'false'}
+          .value=${site.name || ''}
+          @input=${e => this._update('name', e.target.value)}
+          @blur=${() => this._blur('name')}
+          placeholder="My TYPO3 Site">
+        ${this.touched.name && this.errors.name
+          ? html`<div class="error-text" role="alert">${this.errors.name}</div>`
+          : html`<span class="help-text">The name of your website</span>`}
       </div>
 
       <div class="form-group">
         <label for="baseUrl" class="required">Base URL</label>
-        <input type="text" id="baseUrl" required .value=${site.baseUrl || ''} @input=${e => this._update('baseUrl', e.target.value)} placeholder="https://example.com">
-        <span class="help-text">The URL where your site will be accessible</span>
+        <input type="text" id="baseUrl" required
+          class=${this.touched.baseUrl && this.errors.baseUrl ? 'error' : ''}
+          aria-invalid=${this.touched.baseUrl && this.errors.baseUrl ? 'true' : 'false'}
+          .value=${site.baseUrl || ''}
+          @input=${e => this._update('baseUrl', e.target.value)}
+          @blur=${() => this._blur('baseUrl')}
+          placeholder="https://example.com">
+        ${this.touched.baseUrl && this.errors.baseUrl
+          ? html`<div class="error-text" role="alert">${this.errors.baseUrl}</div>`
+          : html`<span class="help-text">The URL where your site will be accessible</span>`}
       </div>
 
       <div class="summary">
@@ -66,7 +129,7 @@ export class StepSite extends LitElement {
           ['Database Type', drivers[db.driver] || db.driver],
           ['Database', `${db.user}@${db.host}:${db.port}/${db.name}`],
           ['Admin User', admin.username],
-          ['Admin Email', admin.email],
+          ['Admin Email', admin.email || '(not provided)'],
           ['Site Name', site.name || '-'],
           ['Base URL', site.baseUrl || '-']
         ].map(([label, value]) => html`

@@ -1,9 +1,11 @@
 import { LitElement, html, css } from 'lit';
 import { apiClient } from '../api/client.js';
+import { emit } from './ui/shared-styles.js';
 import './ui/heading.js';
 import './ui/install-info.js';
 import './ui/version-selector.js';
 import './ui/package-list.js';
+import './ui/step-actions.js';
 
 export class StepPackages extends LitElement {
   static properties = {
@@ -22,7 +24,9 @@ export class StepPackages extends LitElement {
     selectedPackages: { type: Array },
     installInfo: { type: Object },
     versions: { type: Array },
-    selectedVersion: { type: String }
+    selectedVersion: { type: String },
+    // Background prefetching
+    _prefetchingRequirements: { type: Boolean, state: true }
   };
 
   static styles = css`
@@ -33,39 +37,6 @@ export class StepPackages extends LitElement {
     p {
       color: var(--color-text-light, #666);
       margin-bottom: var(--spacing-lg, 24px);
-    }
-
-    .actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: var(--spacing-md, 16px);
-    }
-
-    button {
-      padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
-      border: none;
-      border-radius: var(--border-radius, 4px);
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    button:focus-visible {
-      outline: 2px solid var(--color-primary, #ff8700);
-      outline-offset: 2px;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background: var(--color-primary, #ff8700);
-      color: white;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background: var(--color-primary-dark, #e67a00);
     }
   `;
 
@@ -86,11 +57,111 @@ export class StepPackages extends LitElement {
     this.installInfo = null;
     this.versions = [];
     this.selectedVersion = '13.4';
+    // Background prefetching
+    this._prefetchingRequirements = false;
+    this._prefetchAbortController = null;
+    this._prefetchDebounceTimer = null;
   }
 
   connectedCallback() {
     super.connectedCallback();
-    this._loadData();
+    this._initializeFromStateOrFetch();
+  }
+
+  _initializeFromStateOrFetch() {
+    // Check if we have cached data in state
+    const hasVersions = this.state?.versions?.length > 0;
+    const hasPackages = this.state?.packages?.available &&
+                        Object.keys(this.state.packages.available).length > 0;
+    const cachedVersion = this.state?.typo3Version;
+
+    if (hasVersions && hasPackages && cachedVersion) {
+      // Restore from state - no API calls needed for versions/packages
+      this.versions = this.state.versions;
+      this.selectedVersion = cachedVersion;
+      this.packages = this.state.packages.available;
+      this.requiredPackages = this.state.packages.required || [];
+      this.selectedPackages = this.state.packages.selected || [];
+      this.loadingVersions = false;
+      this.loadingPackages = false;
+
+      // Still load info (it's small and shows current server state)
+      this._loadInfo();
+    } else {
+      // No cache - fetch everything
+      this._loadData();
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._cancelPrefetch();
+  }
+
+  _cancelPrefetch() {
+    if (this._prefetchDebounceTimer) {
+      clearTimeout(this._prefetchDebounceTimer);
+      this._prefetchDebounceTimer = null;
+    }
+    if (this._prefetchAbortController) {
+      this._prefetchAbortController.abort();
+      this._prefetchAbortController = null;
+    }
+  }
+
+  _schedulePrefetch() {
+    this._cancelPrefetch();
+    this._prefetchDebounceTimer = setTimeout(() => {
+      this._prefetchRequirements();
+    }, 1000);
+  }
+
+  async _prefetchRequirements() {
+    if (this.selectedPackages.length === 0) return;
+
+    this._prefetchAbortController = new AbortController();
+    this._prefetchingRequirements = true;
+
+    try {
+      const [requirementsResponse, phpResponse] = await Promise.all([
+        apiClient.validateRequirements(
+          this.selectedPackages,
+          this.selectedVersion,
+          { signal: this._prefetchAbortController.signal }
+        ),
+        apiClient.detectPhp({ signal: this._prefetchAbortController.signal })
+      ]);
+
+      // Store results in state with metadata for freshness check
+      emit(this, 'state-update', {
+        requirements: {
+          checked: true,
+          passed: requirementsResponse.passed,
+          results: requirementsResponse.requirements || [],
+          prefetchedFor: {
+            packages: [...this.selectedPackages],
+            version: this.selectedVersion
+          }
+        },
+        phpDetection: {
+          checked: true,
+          fpmVersion: phpResponse.fpmVersion,
+          cliBinary: phpResponse.cliBinary,
+          cliVersion: phpResponse.cliVersion,
+          mismatch: phpResponse.mismatch,
+          availableVersions: phpResponse.availableVersions || [],
+          selectedBinary: phpResponse.mismatch ? null : phpResponse.cliBinary
+        },
+        packages: { ...this.state?.packages, validated: true }
+      });
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.warn('Background requirements check failed:', error);
+      }
+    } finally {
+      this._prefetchingRequirements = false;
+      this._prefetchAbortController = null;
+    }
   }
 
   async _loadData() {
@@ -191,22 +262,25 @@ export class StepPackages extends LitElement {
   }
 
   _updateState() {
-    this.dispatchEvent(new CustomEvent('state-update', {
-      bubbles: true,
-      composed: true,
-      detail: {
-        typo3Version: this.selectedVersion,
-        packages: {
-          available: this.packages,
-          selected: this.selectedPackages,
-          validated: false
-        }
-      }
-    }));
+    emit(this, 'state-update', {
+      typo3Version: this.selectedVersion,
+      versions: this.versions,
+      packages: {
+        available: this.packages,
+        selected: this.selectedPackages,
+        required: this.requiredPackages,
+        validated: false
+      },
+      // Mark requirements as needing recheck when packages change
+      requirements: { checked: false, passed: false, results: [] }
+    });
+
+    // Schedule background prefetch
+    this._schedulePrefetch();
   }
 
   _handleNext() {
-    this.dispatchEvent(new CustomEvent('next-step', { bubbles: true, composed: true }));
+    emit(this, 'next-step');
   }
 
   _handleRetryInfo() {
@@ -223,7 +297,13 @@ export class StepPackages extends LitElement {
 
   render() {
     // Determine if Continue button should be disabled
-    const canContinue = !this.loadingPackages && !this.packagesError && this.versions.length > 0;
+    // Explicitly check all loading and error states for clarity
+    const canContinue = !this.loadingVersions &&
+                        !this.loadingPackages &&
+                        !this.versionsError &&
+                        !this.packagesError &&
+                        this.versions.length > 0 &&
+                        this.selectedPackages.length > 0;
     const versionsReady = !this.loadingVersions && !this.versionsError && this.versions.length > 0;
 
     return html`
@@ -258,13 +338,10 @@ export class StepPackages extends LitElement {
         @retry=${this._handleRetryPackages}
       ></t3-package-list>
 
-      <div class="actions">
-        <button class="btn-primary"
-          ?disabled=${!canContinue}
-          @click=${this._handleNext}>
-          Continue
-        </button>
-      </div>
+      <t3-step-actions
+        ?show-back=${false}
+        ?can-continue=${canContinue}
+      ></t3-step-actions>
     `;
   }
 }

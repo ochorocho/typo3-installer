@@ -59,7 +59,7 @@ export class InstallInfo extends LitElement {
         padding-top: var(--spacing-sm, 8px);
         border-top: 1px solid var(--color-info-box-border, rgba(144, 202, 249, 0.5));
       }
-      .warnings ul { margin: 0; padding-left: var(--spacing-md, 16px); font-size: 12px; color: var(--color-warning, #e65100); }
+      .warnings ul { margin: 0; padding-left: var(--spacing-md, 16px); font-size: 12px; color: var(--color-warning-text, #9a4408); }
       .collapsible {
         margin-top: var(--spacing-md, 16px);
         border-top: 1px solid var(--color-info-box-border, rgba(144, 202, 249, 0.5));
