@@ -415,7 +415,7 @@ class Typo3Installer
         $dbPassword = $this->validateInput($dbConfig->password, 'database.password', true);
         $adminUsername = $this->validateInput($admin->username, 'admin.username');
         $adminPassword = $this->validateInput($admin->password, 'admin.password');
-        $adminEmail = $this->validateInput($admin->email, 'admin.email');
+        $adminEmail = $this->validateInput($admin->email ?? '', 'admin.email', true);
         $siteName = $this->validateInput($config->site->name, 'site.name');
         $baseUrl = $this->validateInput($config->site->baseUrl, 'site.baseUrl');
 
@@ -426,29 +426,30 @@ class Typo3Installer
             default => 'mysqli'
         };
 
+        // Build base CLI arguments
+        $cliArgs = [
+            '--driver=' . $driver,
+            '--host=' . $host,
+            '--port=' . $dbConfig->port,
+            '--dbname=' . $dbName,
+            '--username=' . $dbUser,
+            '--password=' . $dbPassword,
+            '--admin-username=' . $adminUsername,
+            '--admin-user-password=' . $adminPassword,
+            '--project-name=' . $siteName,
+            '--create-site=' . $baseUrl,
+            '--server-type=' . $this->detectServerType(),
+            '--no-interaction',
+            '--force',
+        ];
+
+        // Only add email if provided
+        if ($adminEmail !== '') {
+            $cliArgs[] = '--admin-email=' . $adminEmail;
+        }
+
         // Run TYPO3 setup command with all parameters non-interactively
-        $this->runTypo3Command(
-            'setup',
-            [
-                '--driver=' . $driver,
-                '--host=' . $host,
-                '--port=' . $dbConfig->port,
-                '--dbname=' . $dbName,
-                '--username=' . $dbUser,
-                '--password=' . $dbPassword,
-                '--admin-username=' . $adminUsername,
-                '--admin-user-password=' . $adminPassword,
-                '--admin-email=' . $adminEmail,
-                '--project-name=' . $siteName,
-                '--create-site=' . $baseUrl,
-                '--server-type=' . $this->detectServerType(),
-                '--no-interaction',
-                '--force',
-            ],
-            $installDir,
-            $config->phpBinary,
-            $outputCallback
-        );
+        $this->runTypo3Command('setup', $cliArgs, $installDir, $config->phpBinary, $outputCallback);
 
         // Create additional configuration for trusted hosts and other settings
         $additionalConfig = $installDir . '/config/system/additional.php';
