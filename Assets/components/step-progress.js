@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { apiClient } from '../api/client.js';
 import { stepBaseStyles, buttonStyles, emit } from './ui/shared-styles.js';
-import { validateInstallationConfig } from '../utils/step-validators.js';
+import { validateInstallationConfig, getIncompleteStepDetails } from '../utils/step-validators.js';
 import './ui/error-help.js';
 import './ui/terminal-output.js';
 import './ui/task-list.js';
@@ -155,7 +155,7 @@ export class StepProgress extends LitElement {
 
   /**
    * Validates that all required configuration fields are present.
-   * Passwords are not persisted to localStorage, so they may be missing after a page reload.
+   * State is stored in sessionStorage and cleared on completion or when the window closes.
    * @returns {{ valid: boolean, missingFields: string[] }}
    */
   _validateConfig() {
@@ -206,6 +206,8 @@ export class StepProgress extends LitElement {
         this._addOutputLine(`[COMPLETE] ${data.message}`, 'success');
         this._updateTaskStatus('finalize', 'completed');
         this._updateInstallState({ running: false, progress: 100, currentTask: 'Installation complete', completed: true, error: null, backendUrl: data.backendUrl });
+        // Explicitly clear session storage on successful completion
+        try { sessionStorage.removeItem('typo3-installer-state'); } catch { /* ignore */ }
       },
       onError: (error) => {
         this._addOutputLine(`[ERROR] ${error.message}`, 'error');
@@ -281,33 +283,27 @@ export class StepProgress extends LitElement {
   render() {
     const install = this.state?.installation || {};
 
-    if (install.completed) {
-      return html`
-        <div class="success-message">
-          <h3>Installation Complete!</h3>
-          <p>TYPO3 has been successfully installed on your server.</p>
-          <div class="admin-info"><p>Admin username: <strong>${this.state.admin.username}</strong></p></div>
-          <div class="success-buttons">
-            <a href="${install.backendUrl || '/typo3'}" class="btn-success" target="_blank">Go to TYPO3 Backend</a>
-            <a href="${this.state.site?.baseUrl || '/'}" class="btn-outline" target="_blank">Go to Frontend</a>
-          </div>
-        </div>
-        <t3-terminal-output .lines=${this.outputLines} .autoScroll=${this.autoScroll}
-          @toggle-autoscroll=${this._handleToggleAutoScroll} @clear-output=${this._handleClearOutput}></t3-terminal-output>
-      `;
-    }
-
     if (install.error) {
       const isValidationError = install.error.isValidationError;
+      const incompleteSteps = isValidationError ? getIncompleteStepDetails(this.state) : [];
       return html`
         <div class="error-message" role="alert">
           <h3>${isValidationError ? 'Missing Configuration' : 'Installation Failed'}</h3>
           <p class="error-description">${install.error.message || 'An unexpected error occurred.'}</p>
           ${install.error.details ? html`<details><summary>Technical details</summary><div class="error-details">${install.error.details}</div></details>` : ''}
-          <div class="error-actions">
-            ${isValidationError ? '' : html`<button class="btn-primary" @click=${this._handleRetry}>Retry Installation</button>`}
-            <button class="${isValidationError ? 'btn-primary' : 'btn-outline'}" @click=${this._handleGoBack}>Go Back to Configuration</button>
-          </div>
+          ${isValidationError && incompleteSteps.length > 0 ? html`
+            <p>The following steps need attention:</p>
+            <div class="error-actions">
+              ${incompleteSteps.map(step => html`
+                <button class="btn-primary" @click=${() => emit(this, 'navigate-to-step', { stepId: step.id })}>${step.name}</button>
+              `)}
+            </div>
+          ` : html`
+            <div class="error-actions">
+              ${isValidationError ? '' : html`<button class="btn-primary" @click=${this._handleRetry}>Retry Installation</button>`}
+              <button class="${isValidationError ? 'btn-primary' : 'btn-outline'}" @click=${this._handleGoBack}>Go Back to Configuration</button>
+            </div>
+          `}
           ${isValidationError ? '' : html`<t3-error-help .error=${install.error} context="installation"></t3-error-help>`}
         </div>
         ${this.outputLines.length > 0 ? html`
@@ -319,8 +315,8 @@ export class StepProgress extends LitElement {
 
     const progress = install.progress || 0;
     return html`
-      <h2>Installing TYPO3</h2>
-      <p>Please wait while TYPO3 is being installed. You can follow the progress below.</p>
+      <h2>${install.completed ? 'TYPO3 Installed' : 'Installing TYPO3'}</h2>
+      ${install.completed ? '' : html`<p>Please wait while TYPO3 is being installed. You can follow the progress below.</p>`}
 
       <div class="progress-container">
         <div class="progress-bar" role="progressbar" aria-label="Installation progress" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
@@ -333,6 +329,16 @@ export class StepProgress extends LitElement {
       </div>
 
       <t3-task-list .tasks=${this.tasks}></t3-task-list>
+
+      ${install.completed ? html`
+        <div class="success-message">
+          <h3>Installation Complete!</h3>
+          <div class="success-buttons">
+            <a href="${install.backendUrl || '/typo3'}" class="btn-success" target="_blank">Go to TYPO3 Backend</a>
+            <a href="${this.state.site?.baseUrl || '/'}" class="btn-outline" target="_blank">Go to Frontend</a>
+          </div>
+        </div>
+      ` : ''}
 
       <t3-terminal-output .lines=${this.outputLines} .autoScroll=${this.autoScroll}
         @toggle-autoscroll=${this._handleToggleAutoScroll} @clear-output=${this._handleClearOutput}></t3-terminal-output>

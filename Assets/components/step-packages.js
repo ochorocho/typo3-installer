@@ -340,7 +340,7 @@ export class StepPackages extends LitElement {
 
       <t3-step-actions
         ?show-back=${false}
-        ?can-continue=${canContinue}
+        .canContinue=${canContinue}
       ></t3-step-actions>
     `;
   }

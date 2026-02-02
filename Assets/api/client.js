@@ -258,10 +258,25 @@ class ApiClient {
      * @returns {Object} Control object with close() method
      */
     installWithStreaming(config, callbacks = {}) {
+        const STALL_TIMEOUT_MS = 10000;
         const url = `${this.baseUrl}/api/install-stream`;
 
         // Use fetch with POST to send config, then read as stream
         const controller = new AbortController();
+        let receivedData = false;
+        let stallTimer = null;
+        let fellBackToPolling = false;
+
+        // Start stall detection timer — if no SSE data arrives within
+        // STALL_TIMEOUT_MS, abort the stream and fall back to polling
+        stallTimer = setTimeout(() => {
+            if (!receivedData && !fellBackToPolling) {
+                console.warn('SSE stall detected — falling back to polling');
+                fellBackToPolling = true;
+                controller.abort();
+                this._pollInstallationStatus(callbacks);
+            }
+        }, STALL_TIMEOUT_MS);
 
         const streamPromise = fetch(url, {
             method: 'POST',
@@ -273,6 +288,7 @@ class ApiClient {
             signal: controller.signal
         }).then(async response => {
             if (!response.ok) {
+                clearTimeout(stallTimer);
                 throw new ApiError(`Failed to start streaming: ${response.status}`, {
                     statusCode: response.status
                 });
@@ -288,6 +304,12 @@ class ApiClient {
 
                     if (value) {
                         buffer += decoder.decode(value, { stream: !done });
+
+                        // Mark that we received data and cancel stall timer
+                        if (!receivedData) {
+                            receivedData = true;
+                            clearTimeout(stallTimer);
+                        }
                     }
 
                     // Parse SSE events from buffer
@@ -313,6 +335,7 @@ class ApiClient {
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
+                    clearTimeout(stallTimer);
                     if (callbacks.onError) {
                         callbacks.onError(new ApiError('Stream connection lost', {
                             isNetworkError: true,
@@ -322,6 +345,9 @@ class ApiClient {
                 }
             }
         }).catch(error => {
+            // If we already fell back to polling, suppress the AbortError
+            if (fellBackToPolling) return;
+            clearTimeout(stallTimer);
             if (error.name !== 'AbortError' && callbacks.onError) {
                 callbacks.onError(error instanceof ApiError ? error : new ApiError(error.message, {
                     isNetworkError: true
@@ -330,9 +356,95 @@ class ApiClient {
         });
 
         return {
-            close: () => controller.abort(),
+            close: () => {
+                clearTimeout(stallTimer);
+                controller.abort();
+            },
             promise: streamPromise
         };
+    }
+
+    /**
+     * Poll /api/status as a fallback when SSE streaming is stalled or unavailable.
+     * Maps status data to the same callback interface as SSE streaming.
+     * @private
+     */
+    _pollInstallationStatus(callbacks) {
+        const POLL_INTERVAL_MS = 1500;
+        let lastStep = null;
+
+        const poll = async () => {
+            try {
+                const status = await this.getStatus();
+
+                if (status.error) {
+                    if (callbacks.onError) {
+                        callbacks.onError(new ApiError(
+                            status.error.message || 'Installation failed',
+                            { details: status.error.details }
+                        ));
+                    }
+                    return; // Stop polling
+                }
+
+                const step = this._mapProgressToStep(status.progress);
+
+                // Send step change event if step changed
+                if (step !== lastStep) {
+                    if (callbacks.onStep) {
+                        callbacks.onStep({
+                            step,
+                            progress: status.progress,
+                            task: status.currentTask,
+                        });
+                    }
+                    lastStep = step;
+                }
+
+                // Send progress event
+                if (callbacks.onProgress) {
+                    callbacks.onProgress({
+                        progress: status.progress,
+                        task: status.currentTask,
+                        step,
+                    });
+                }
+
+                if (status.completed) {
+                    if (callbacks.onComplete) {
+                        callbacks.onComplete({
+                            message: 'Installation complete!',
+                            backendUrl: status.backendUrl || '',
+                        });
+                    }
+                    return; // Stop polling
+                }
+
+                // Continue polling
+                setTimeout(poll, POLL_INTERVAL_MS);
+            } catch (error) {
+                // Network errors during polling — retry silently
+                console.warn('Status poll failed, retrying...', error.message);
+                setTimeout(poll, POLL_INTERVAL_MS);
+            }
+        };
+
+        // Start polling immediately
+        poll();
+    }
+
+    /**
+     * Map progress percentage to step identifier.
+     * Mirrors PHP InstallController::mapProgressToStep().
+     * @private
+     */
+    _mapProgressToStep(progress) {
+        if (progress >= 98) return 'finalize';
+        if (progress >= 90) return 'cache';
+        if (progress >= 50) return 'setup';
+        if (progress >= 20) return 'composer';
+        if (progress >= 15) return 'init';
+        return 'prepare';
     }
 
     /**

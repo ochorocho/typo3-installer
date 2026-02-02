@@ -53,9 +53,23 @@ export class StepAdmin extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    // Validate existing state on load (e.g., from localStorage or navigation)
+    this.addEventListener('force-validate', this._handleForceValidate);
+    // Validate existing state on load (e.g., from sessionStorage or navigation)
     this._validateOnLoad();
   }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListener('force-validate', this._handleForceValidate);
+  }
+
+  _handleForceValidate = () => {
+    this.touched = { username: true, password: true, email: true };
+    const admin = this.state?.admin || {};
+    this._validate('username', admin.username);
+    this._validate('password', admin.password);
+    this._validate('email', admin.email);
+  };
 
   _validateOnLoad() {
     const admin = this.state?.admin;
@@ -100,12 +114,14 @@ export class StepAdmin extends LitElement {
 
   _field(id, label, type, value, helpText, autocomplete, required = false) {
     const hasError = this.touched[id] && this.errors[id];
+    const descId = `${id}-desc`;
     return html`
       <div class="form-group">
         <label for=${id} class=${required ? 'required' : ''}>${label}</label>
         <input type=${type} id=${id} class=${hasError ? 'error' : ''} aria-invalid=${hasError ? 'true' : 'false'}
+          aria-describedby=${descId}
           ?required=${required} .value=${value || ''} @input=${e => this._update(id, e.target.value)} @blur=${() => this._blur(id)} autocomplete=${autocomplete}>
-        ${hasError ? html`<div class="error-text" role="alert">${this.errors[id]}</div>` : html`<div class="help-text">${helpText}</div>`}
+        ${hasError ? html`<div id=${descId} class="error-text" role="alert">${this.errors[id]}</div>` : html`<div id=${descId} class="help-text">${helpText}</div>`}
       </div>
     `;
   }
@@ -123,6 +139,8 @@ export class StepAdmin extends LitElement {
       <div class="form-group">
         <label for="password" class="required">Password</label>
         <input type="password" id="password" class=${this.touched.password && this.errors.password ? 'error' : ''}
+          aria-invalid=${this.touched.password && this.errors.password ? 'true' : 'false'}
+          aria-describedby="password-desc"
           required .value=${admin.password || ''} @input=${e => this._update('password', e.target.value)}
           @blur=${() => this._blur('password')} autocomplete="new-password">
         ${admin.password ? html`
@@ -132,13 +150,13 @@ export class StepAdmin extends LitElement {
           </div>
         ` : ''}
         ${this.touched.password && this.errors.password
-          ? html`<div class="error-text" role="alert">${this.errors.password}</div>`
-          : html`<div class="help-text">Minimum 8 characters with uppercase, lowercase, and number</div>`}
+          ? html`<div id="password-desc" class="error-text" role="alert">${this.errors.password}</div>`
+          : html`<div id="password-desc" class="help-text">Minimum 8 characters with uppercase, lowercase, and number</div>`}
       </div>
 
-      ${this._field('email', 'Email (optional)', 'email', admin.email, 'Used for password recovery and notifications', 'email', false)}
+      ${this._field('email', 'Email', 'email', admin.email, 'Used for password recovery and notifications', 'email', true)}
 
-      <t3-step-actions ?can-continue=${this._canProceed()}></t3-step-actions>
+      <t3-step-actions .canContinue=${this._canProceed()}></t3-step-actions>
     `;
   }
 }

@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
-import { stepBaseStyles, formStyles, emit } from './ui/shared-styles.js';
+import { stepBaseStyles, formStyles, alertStyles, emit } from './ui/shared-styles.js';
 import { isValidUrl, isValidSiteName, getSiteNameError, getUrlError } from '../utils/validators.js';
-import { canStartInstallation } from '../utils/step-validators.js';
+import { canStartInstallation, getIncompleteStepDetails } from '../utils/step-validators.js';
 import './ui/step-actions.js';
 
 /**
@@ -12,13 +12,28 @@ export class StepSite extends LitElement {
   static properties = {
     state: { type: Object },
     errors: { type: Object },
-    touched: { type: Object }
+    touched: { type: Object },
+    showValidationSummary: { type: Boolean }
   };
 
   static styles = [
     stepBaseStyles,
     formStyles,
+    alertStyles,
     css`
+      .validation-summary ul {
+        margin: var(--spacing-sm, 8px) 0 0;
+        padding-left: var(--spacing-lg, 24px);
+      }
+      .validation-summary a {
+        color: inherit;
+        font-weight: 600;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      .validation-summary a:hover {
+        text-decoration: none;
+      }
       .summary h3 { margin: 0 0 var(--spacing-md, 16px); }
       .summary-item {
         display: flex;
@@ -35,16 +50,34 @@ export class StepSite extends LitElement {
     super();
     this.errors = {};
     this.touched = {};
+    this.showValidationSummary = false;
   }
 
   connectedCallback() {
     super.connectedCallback();
+    this.addEventListener('force-validate', this._handleForceValidate);
     if (!this.state?.site?.baseUrl) {
       emit(this, 'state-update', { site: { ...this.state?.site, baseUrl: window.location.origin } });
     }
     // Validate existing state on load
     this._validateOnLoad();
   }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.removeEventListener('force-validate', this._handleForceValidate);
+  }
+
+  _handleForceValidate = () => {
+    this.touched = { name: true, baseUrl: true };
+    const site = this.state?.site || {};
+    this._validate('name', site.name);
+    this._validate('baseUrl', site.baseUrl);
+    // Show validation summary if installation can't start
+    if (!canStartInstallation(this.state)) {
+      this.showValidationSummary = true;
+    }
+  };
 
   _validateOnLoad() {
     const site = this.state?.site;
@@ -80,9 +113,18 @@ export class StepSite extends LitElement {
     this.errors = error ? { ...this.errors, [field]: error } : (delete this.errors[field], { ...this.errors });
   }
 
+  _navigateToStep(stepId) {
+    emit(this, 'navigate-to-step', { stepId });
+  }
+
   _validateAll() {
     // Use centralized step validation
-    return canStartInstallation(this.state);
+    const canProceed = canStartInstallation(this.state);
+    // Clear validation summary when all steps are complete
+    if (canProceed) {
+      this.showValidationSummary = false;
+    }
+    return canProceed;
   }
 
   render() {
@@ -99,13 +141,14 @@ export class StepSite extends LitElement {
         <input type="text" id="siteName" required
           class=${this.touched.name && this.errors.name ? 'error' : ''}
           aria-invalid=${this.touched.name && this.errors.name ? 'true' : 'false'}
+          aria-describedby="siteName-desc"
           .value=${site.name || ''}
           @input=${e => this._update('name', e.target.value)}
           @blur=${() => this._blur('name')}
           placeholder="My TYPO3 Site">
         ${this.touched.name && this.errors.name
-          ? html`<div class="error-text" role="alert">${this.errors.name}</div>`
-          : html`<span class="help-text">The name of your website</span>`}
+          ? html`<div id="siteName-desc" class="error-text" role="alert">${this.errors.name}</div>`
+          : html`<span id="siteName-desc" class="help-text">The name of your website</span>`}
       </div>
 
       <div class="form-group">
@@ -113,13 +156,14 @@ export class StepSite extends LitElement {
         <input type="text" id="baseUrl" required
           class=${this.touched.baseUrl && this.errors.baseUrl ? 'error' : ''}
           aria-invalid=${this.touched.baseUrl && this.errors.baseUrl ? 'true' : 'false'}
+          aria-describedby="baseUrl-desc"
           .value=${site.baseUrl || ''}
           @input=${e => this._update('baseUrl', e.target.value)}
           @blur=${() => this._blur('baseUrl')}
           placeholder="https://example.com">
         ${this.touched.baseUrl && this.errors.baseUrl
-          ? html`<div class="error-text" role="alert">${this.errors.baseUrl}</div>`
-          : html`<span class="help-text">The URL where your site will be accessible</span>`}
+          ? html`<div id="baseUrl-desc" class="error-text" role="alert">${this.errors.baseUrl}</div>`
+          : html`<span id="baseUrl-desc" class="help-text">The URL where your site will be accessible</span>`}
       </div>
 
       <div class="summary">
@@ -129,7 +173,7 @@ export class StepSite extends LitElement {
           ['Database Type', drivers[db.driver] || db.driver],
           ['Database', `${db.user}@${db.host}:${db.port}/${db.name}`],
           ['Admin User', admin.username],
-          ['Admin Email', admin.email || '(not provided)'],
+          ['Admin Email', admin.email || '-'],
           ['Site Name', site.name || '-'],
           ['Base URL', site.baseUrl || '-']
         ].map(([label, value]) => html`
@@ -137,7 +181,18 @@ export class StepSite extends LitElement {
         `)}
       </div>
 
-      <t3-step-actions ?can-continue=${canProceed} continue-text="Start Installation" continue-variant="success"></t3-step-actions>
+      ${this.showValidationSummary && !canProceed ? html`
+        <div class="alert alert-error validation-summary" role="alert">
+          <strong>Cannot start installation.</strong> The following steps need attention:
+          <ul>
+            ${getIncompleteStepDetails(this.state).map(step => html`
+              <li><a href="#" @click=${(e) => { e.preventDefault(); this._navigateToStep(step.id); }}>${step.name}</a></li>
+            `)}
+          </ul>
+        </div>
+      ` : ''}
+
+      <t3-step-actions .canContinue=${canProceed} continue-text="Start Installation" continue-variant="success"></t3-step-actions>
     `;
   }
 }

@@ -65,7 +65,7 @@ export class StepDatabase extends LitElement {
           });
         }
 
-        // Trigger auto-validation if state was restored from localStorage
+        // Trigger auto-validation if state was restored from sessionStorage
         this._autoValidate();
       }
     } catch (error) {
@@ -155,6 +155,20 @@ export class StepDatabase extends LitElement {
     return `Default: ${driver.defaultPort}`;
   }
 
+  _renderConnectionStatus() {
+    const db = this.state?.database || {};
+    if (this.testing) {
+      return html`<div class="alert alert-warning" role="status">Testing connection...</div>`;
+    }
+    if (db.tested && db.valid) {
+      return html`<div class="alert alert-success" role="status">Connection verified</div>`;
+    }
+    if (db.tested && !db.valid) {
+      return ''; // existing testResult error handles this
+    }
+    return html`<div class="alert alert-warning" role="status">Connection not tested yet. Complete all required fields to auto-test.</div>`;
+  }
+
   render() {
     const db = this.state?.database || {};
     const isFileBased = this._isFileBasedDriver();
@@ -222,6 +236,8 @@ export class StepDatabase extends LitElement {
         </div>
       ` : ''}
 
+      ${this._renderConnectionStatus()}
+
       ${this.testResult ? html`
         <div class="alert ${this.testResult.success ? 'alert-success' : 'alert-error'}" role="alert" aria-live="polite">
           <span class="sr-only">${this.testResult.success ? 'Success:' : 'Error:'}</span>
@@ -232,7 +248,7 @@ export class StepDatabase extends LitElement {
         </div>
       ` : ''}
 
-      <t3-step-actions ?can-continue=${!this.driversLoading && !this.driversError && this.availableDrivers.length > 0 && this.state?.database?.tested && this.state?.database?.valid}>
+      <t3-step-actions .canContinue=${!this.driversLoading && !this.driversError && this.availableDrivers.length > 0 && this.state?.database?.tested && this.state?.database?.valid}>
         <button slot="left" class="btn-secondary" @click=${this._testConnection} ?disabled=${this.testing || this.driversLoading || this.driversError || this.availableDrivers.length === 0}>
           ${this.testing ? html`<ui-spinner size="small">Test Connection</ui-spinner>` : 'Test Connection'}
         </button>

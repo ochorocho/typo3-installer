@@ -360,7 +360,7 @@ export class StepRequirements extends LitElement {
         </div>
       `}
 
-      <t3-step-actions ?can-continue=${canContinue} ?loading=${this.checking}>
+      <t3-step-actions .canContinue=${canContinue} ?loading=${this.checking}>
         <button slot="left" class="btn-secondary" @click=${this._checkRequirements} ?disabled=${this.checking}>
           ${this.checking ? html`<ui-spinner size="small">Recheck</ui-spinner>` : 'Recheck'}
         </button>

@@ -47,6 +47,8 @@ export class StepActions extends LitElement {
 
   _handleContinueClick() {
     if (!this.canContinue || this.loading) {
+      // Force all fields to show validation errors
+      emit(this, 'force-validate');
       // Emit event to highlight invalid steps when clicking disabled button
       emit(this, 'validation-failed');
       return;

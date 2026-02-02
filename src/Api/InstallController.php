@@ -115,7 +115,13 @@ class InstallController extends AbstractController
 
             // Set unlimited execution time for installation
             set_time_limit(0);
-            ignore_user_abort(false);
+            // Keep installation running even if SSE connection drops
+            // (frontend can fall back to polling /api/status)
+            ignore_user_abort(true);
+
+            // Initial padding to break through proxy buffers immediately
+            echo ': ' . str_repeat(' ', 8192) . "\n\n";
+            flush();
 
             try {
                 $config = InstallationConfig::fromArray($data);
@@ -214,9 +220,10 @@ class InstallController extends AbstractController
     {
         return [
             'Content-Type' => 'text/event-stream',
-            'Cache-Control' => 'no-cache',
+            'Cache-Control' => 'no-cache, no-store',
             'Connection' => 'keep-alive',
-            'X-Accel-Buffering' => 'no', // Disable nginx buffering
+            'X-Accel-Buffering' => 'no',           // Disable nginx buffering
+            'X-Content-Type-Options' => 'nosniff',  // Prevents content-type sniffing delays
         ];
     }
 
@@ -228,16 +235,16 @@ class InstallController extends AbstractController
     private function sendSseEvent(string $event, array $data): void
     {
         echo "event: {$event}\n";
-        echo 'data: ' . json_encode($data, JSON_THROW_ON_ERROR) . "\n\n";
+        echo 'data: ' . json_encode($data, JSON_THROW_ON_ERROR) . "\n";
+        // Padding to exceed proxy buffer thresholds (4KB+)
+        echo ': ' . str_repeat(' ', 4096) . "\n";
+        echo "\n";
 
-        // Aggressive flushing for shared hosting environments
-        // Flush all output buffer levels
         while (ob_get_level() > 0) {
             ob_end_flush();
         }
         flush();
 
-        // Small delay to ensure data is sent through any proxy buffers
         if ($event === 'complete' || $event === 'error') {
             usleep(100000); // 100ms delay for final events
         }

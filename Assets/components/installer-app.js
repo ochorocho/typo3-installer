@@ -5,11 +5,11 @@ import { isStepComplete, canStartInstallation } from '../utils/step-validators.j
 import './ui/theme-toggle.js';
 
 const STORAGE_KEY = 'typo3-installer-state';
-const SESSION_KEY = 'typo3-installer-sensitive';
 
 export class InstallerApp extends LitElement {
   static properties = {
-    state: { type: Object }
+    state: { type: Object },
+    invalidSteps: { type: Array }
   };
 
   static styles = css`
@@ -153,6 +153,17 @@ export class InstallerApp extends LitElement {
       color: var(--color-warning, #f76707);
     }
 
+    .step-indicator.has-error .step-number {
+      border-color: var(--color-error, #c83c3c);
+      background: var(--color-error-bg, #ffebee);
+      color: var(--color-error, #c83c3c);
+    }
+
+    .step-indicator.has-error .step-title {
+      color: var(--color-error, #c83c3c);
+      font-weight: 600;
+    }
+
     .step-indicator.shake {
       animation: shake 0.6s ease-in-out;
     }
@@ -194,33 +205,20 @@ export class InstallerApp extends LitElement {
   constructor() {
     super();
     this.state = this._loadState();
+    this.invalidSteps = [];
     new ContextProvider(this, { context: installerContext, initialValue: this.state });
   }
 
   _loadState() {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = sessionStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         // Don't restore if installation was completed
         if (parsed.installation?.completed) {
-          localStorage.removeItem(STORAGE_KEY);
-          sessionStorage.removeItem(SESSION_KEY);
+          sessionStorage.removeItem(STORAGE_KEY);
           return { ...initialState };
         }
-
-        // Restore sensitive data from session storage
-        const sensitive = sessionStorage.getItem(SESSION_KEY);
-        if (sensitive) {
-          const passwords = JSON.parse(sensitive);
-          if (parsed.admin && passwords.adminPassword) {
-            parsed.admin.password = passwords.adminPassword;
-          }
-          if (parsed.database && passwords.databasePassword) {
-            parsed.database.password = passwords.databasePassword;
-          }
-        }
-
         return { ...initialState, ...parsed };
       }
     } catch {
@@ -231,26 +229,7 @@ export class InstallerApp extends LitElement {
 
   _saveState(state) {
     try {
-      // Store sensitive data (passwords) in session storage
-      const sensitive = {
-        adminPassword: state.admin?.password,
-        databasePassword: state.database?.password
-      };
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(sensitive));
-
-      // Filter out sensitive data from localStorage
-      const safeState = {
-        ...state,
-        admin: state.admin ? {
-          ...state.admin,
-          password: undefined
-        } : undefined,
-        database: state.database ? {
-          ...state.database,
-          password: undefined
-        } : undefined
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(safeState));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
       // Ignore storage errors
     }
@@ -258,8 +237,7 @@ export class InstallerApp extends LitElement {
 
   _clearState() {
     try {
-      localStorage.removeItem(STORAGE_KEY);
-      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
     } catch {
       // Ignore storage errors
     }
@@ -271,6 +249,7 @@ export class InstallerApp extends LitElement {
     this.addEventListener('next-step', this._handleNextStep);
     this.addEventListener('previous-step', this._handlePreviousStep);
     this.addEventListener('validation-failed', this._handleValidationFailed);
+    this.addEventListener('navigate-to-step', this._handleNavigateToStep);
   }
 
   disconnectedCallback() {
@@ -279,6 +258,7 @@ export class InstallerApp extends LitElement {
     this.removeEventListener('next-step', this._handleNextStep);
     this.removeEventListener('previous-step', this._handlePreviousStep);
     this.removeEventListener('validation-failed', this._handleValidationFailed);
+    this.removeEventListener('navigate-to-step', this._handleNavigateToStep);
   }
 
   _handleStateUpdate = (e) => {
@@ -289,6 +269,11 @@ export class InstallerApp extends LitElement {
       this._clearState();
     } else {
       this._saveState(this.state);
+    }
+
+    // Clear error indicators for steps that are now complete
+    if (this.invalidSteps.length > 0) {
+      this.invalidSteps = this.invalidSteps.filter(i => !this._isStepComplete(i));
     }
 
     this.requestUpdate();
@@ -322,7 +307,13 @@ export class InstallerApp extends LitElement {
       }
     }
 
-    if (incompleteIndices.length === 0) return;
+    if (incompleteIndices.length === 0) {
+      this.invalidSteps = [];
+      return;
+    }
+
+    // Set persistent error state on incomplete steps
+    this.invalidSteps = [...incompleteIndices];
 
     // Get step indicators and add shake class
     const indicators = this.shadowRoot.querySelectorAll('.step-indicator');
@@ -336,6 +327,15 @@ export class InstallerApp extends LitElement {
         }, 600);
       }
     });
+  };
+
+  _handleNavigateToStep = (e) => {
+    const stepId = e.detail.stepId;
+    const index = STEPS.findIndex(s => s.id === stepId);
+    if (index >= 0) {
+      this.state = { ...this.state, currentStep: index };
+      this.requestUpdate();
+    }
   };
 
   _isOnProgressStep() {
@@ -408,9 +408,11 @@ export class InstallerApp extends LitElement {
               const isInstallStep = index === STEPS.length - 1;
               const canNavigate = !this._isOnProgressStep() && (isInstallStep ? this._canStartInstallation() : true);
 
+              const hasError = this.invalidSteps?.includes(index);
+
               return html`
                 <div
-                  class="step-indicator ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isIncomplete ? 'incomplete' : ''}"
+                  class="step-indicator ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${isIncomplete ? 'incomplete' : ''} ${hasError ? 'has-error' : ''}"
                   @click=${() => this._handleStepClick(index)}
                   @keydown=${(e) => e.key === 'Enter' && this._handleStepClick(index)}
                   role="button"
