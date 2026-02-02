@@ -23,7 +23,25 @@ class InstallController extends AbstractController
         ?string $statusFile = null
     ) {
         $this->installer = $installer ?? new Typo3Installer();
-        $this->statusFile = $statusFile ?? sys_get_temp_dir() . '/typo3-installer-status.json';
+        $this->statusFile = $statusFile ?? $this->getStatusFilePath();
+    }
+
+    /**
+     * Get a deterministic status file path that all requests resolve to.
+     *
+     * On shared hosting, sys_get_temp_dir() may return different paths per request
+     * (per-process isolation, open_basedir, etc.), so polling /api/status would
+     * read from a different directory than the one the install process wrote to.
+     * Using a path relative to the PHAR ensures consistency.
+     */
+    private function getStatusFilePath(): string
+    {
+        $pharPath = \Phar::running(false);
+        if ($pharPath !== '') {
+            return dirname($pharPath) . '/.typo3-installer-status.json';
+        }
+
+        return sys_get_temp_dir() . '/typo3-installer-status.json';
     }
 
     public function install(Request $request): JsonResponse
@@ -123,6 +141,24 @@ class InstallController extends AbstractController
             echo ': ' . str_repeat(' ', 8192) . "\n\n";
             flush();
 
+            // Register shutdown function to capture fatal errors (e.g. max_execution_time exceeded)
+            $statusFile = $this->statusFile;
+            register_shutdown_function(static function () use ($statusFile): void {
+                $error = error_get_last();
+                if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+                    $status = [
+                        'progress' => 0,
+                        'currentTask' => 'Failed',
+                        'completed' => false,
+                        'error' => [
+                            'message' => 'PHP process terminated unexpectedly: ' . $error['message'],
+                            'details' => sprintf('%s in %s on line %d', $error['message'], $error['file'], $error['line']),
+                        ],
+                    ];
+                    file_put_contents($statusFile, json_encode($status, JSON_THROW_ON_ERROR));
+                }
+            });
+
             try {
                 $config = InstallationConfig::fromArray($data);
 
@@ -175,12 +211,12 @@ class InstallController extends AbstractController
                 // Run installation with streaming callbacks
                 $this->installer->install($config, $progressCallback, $outputCallback);
 
-                $basePath = dirname(explode('.phar', $_SERVER['DOCUMENT_URI'])[0] ?? '/');
+                $backendUrl = $this->computeBackendUrl();
 
                 // Send completion event
                 $this->sendSseEvent('complete', [
                     'message' => 'Installation complete!',
-                    'backendUrl' => $basePath . 'typo3/',
+                    'backendUrl' => $backendUrl,
                 ]);
 
                 // Update status file
@@ -189,7 +225,7 @@ class InstallController extends AbstractController
                     'currentTask' => 'Installation complete',
                     'completed' => true,
                     'error' => null,
-                    'backendUrl' => $basePath . 'typo3/',
+                    'backendUrl' => $backendUrl,
                 ]);
             } catch (\Exception $e) {
                 $this->sendSseEvent('error', [
@@ -222,8 +258,9 @@ class InstallController extends AbstractController
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache, no-store',
             'Connection' => 'keep-alive',
-            'X-Accel-Buffering' => 'no',           // Disable nginx buffering
-            'X-Content-Type-Options' => 'nosniff',  // Prevents content-type sniffing delays
+            'X-Accel-Buffering' => 'no',              // Disable nginx buffering
+            'X-Content-Type-Options' => 'nosniff',     // Prevents content-type sniffing delays
+            'X-LiteSpeed-Cache-Control' => 'no-cache', // Disable LiteSpeed buffering
         ];
     }
 
@@ -289,6 +326,11 @@ class InstallController extends AbstractController
         /** @var array<string, mixed> $status */
         $status = json_decode($fileContent !== false ? $fileContent : '{}', true);
 
+        // Clean up status file after completion or error to prevent stale data on next install
+        if (($status['completed'] ?? false) === true || ($status['error'] ?? null) !== null) {
+            @unlink($this->statusFile);
+        }
+
         return new JsonResponse($status);
     }
 
@@ -297,6 +339,24 @@ class InstallController extends AbstractController
      */
     private function runInstallation(InstallationConfig $config): void
     {
+        // Register shutdown function to capture fatal errors (e.g. max_execution_time exceeded)
+        $statusFile = $this->statusFile;
+        register_shutdown_function(static function () use ($statusFile): void {
+            $error = error_get_last();
+            if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+                $status = [
+                    'progress' => 0,
+                    'currentTask' => 'Failed',
+                    'completed' => false,
+                    'error' => [
+                        'message' => 'PHP process terminated unexpectedly: ' . $error['message'],
+                        'details' => sprintf('%s in %s on line %d', $error['message'], $error['file'], $error['line']),
+                    ],
+                ];
+                file_put_contents($statusFile, json_encode($status, JSON_THROW_ON_ERROR));
+            }
+        });
+
         try {
             $this->installer->install($config, function (int $progress, string $task) {
                 $this->updateStatus([
@@ -307,7 +367,7 @@ class InstallController extends AbstractController
                 ]);
             });
 
-            $basePath = dirname(explode('.phar', $_SERVER['DOCUMENT_URI'])[0] ?? '/');
+            $backendUrl = $this->computeBackendUrl();
 
             // Installation complete
             $this->updateStatus([
@@ -315,7 +375,7 @@ class InstallController extends AbstractController
                 'currentTask' => 'Installation complete',
                 'completed' => true,
                 'error' => null,
-                'backendUrl' => $basePath . 'typo3/',
+                'backendUrl' => $backendUrl,
             ]);
         } catch (\Exception $e) {
             $this->updateStatus([
@@ -328,6 +388,23 @@ class InstallController extends AbstractController
                 ],
             ]);
         }
+    }
+
+    /**
+     * Compute the TYPO3 backend URL based on the current request URI.
+     *
+     * Falls back through multiple $_SERVER variables since DOCUMENT_URI
+     * is not available on all hosting environments (e.g. some LiteSpeed setups).
+     */
+    private function computeBackendUrl(): string
+    {
+        $documentUri = $_SERVER['DOCUMENT_URI'] ?? $_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? '/';
+        $basePath = dirname(explode('.phar', $documentUri)[0]);
+        if ($basePath === '.' || $basePath === '') {
+            $basePath = '/';
+        }
+
+        return rtrim($basePath, '/') . '/typo3/';
     }
 
     /**

@@ -160,9 +160,6 @@ export class StepDatabase extends LitElement {
     if (this.testing) {
       return html`<div class="alert alert-warning" role="status">Testing connection...</div>`;
     }
-    if (db.tested && db.valid) {
-      return html`<div class="alert alert-success" role="status">Connection verified</div>`;
-    }
     if (db.tested && !db.valid) {
       return ''; // existing testResult error handles this
     }
@@ -235,8 +232,6 @@ export class StepDatabase extends LitElement {
           </div>
         </div>
       ` : ''}
-
-      ${this._renderConnectionStatus()}
 
       ${this.testResult ? html`
         <div class="alert ${this.testResult.success ? 'alert-success' : 'alert-error'}" role="alert" aria-live="polite">

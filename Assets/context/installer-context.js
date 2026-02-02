@@ -43,7 +43,7 @@ export const initialState = {
     valid: false
   },
   admin: {
-    username: 'admin',
+    username: '',
     password: '',
     email: ''
   },

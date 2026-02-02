@@ -371,7 +371,10 @@ class ApiClient {
      */
     _pollInstallationStatus(callbacks) {
         const POLL_INTERVAL_MS = 1500;
+        const STALL_TIMEOUT_MS = 120000; // 120s without progress change = stalled
         let lastStep = null;
+        let lastProgress = -1;
+        let lastProgressChangeTime = Date.now();
 
         const poll = async () => {
             try {
@@ -382,6 +385,21 @@ class ApiClient {
                         callbacks.onError(new ApiError(
                             status.error.message || 'Installation failed',
                             { details: status.error.details }
+                        ));
+                    }
+                    return; // Stop polling
+                }
+
+                // Stall detection: if progress hasn't changed for STALL_TIMEOUT_MS, report error
+                if (status.progress !== lastProgress) {
+                    lastProgress = status.progress;
+                    lastProgressChangeTime = Date.now();
+                } else if (Date.now() - lastProgressChangeTime > STALL_TIMEOUT_MS) {
+                    if (callbacks.onError) {
+                        callbacks.onError(new ApiError(
+                            'Installation appears to have stalled. The server may have terminated the process. ' +
+                            'Check your hosting\'s PHP max_execution_time setting.',
+                            { isTimeout: true }
                         ));
                     }
                     return; // Stop polling

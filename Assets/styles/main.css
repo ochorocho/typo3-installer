@@ -13,9 +13,9 @@
 
   /* Status Colors - TYPO3 official palette */
   --color-success: #1cb841;
-  --color-success-accessible: #0d7b31;  /* WCAG AA compliant on light bg (4.8:1) */
+  --color-success-accessible: #1a8834;
   --color-error: #c83c3c;
-  --color-error-accessible: #b33636;    /* WCAG AA compliant on error-bg (5.0:1) */
+  --color-error-accessible: #b33636;
   --color-warning: #f76707;
   --color-info: #0078d4;
 
