@@ -92,11 +92,11 @@ export const buttonStyles = css`
   .btn-outline:hover:not(:disabled) { background: var(--color-bg-light, #fafafa); }
   a.btn-outline:hover { background: var(--color-bg-light, #fafafa); }
   .btn-success {
-    background: var(--color-success-accessible, #0d7b31);
+    background: var(--color-success-btn, #137526);
     color: white;
   }
-  .btn-success:hover:not(:disabled) { background: var(--color-success-dark, #0a6228); }
-  a.btn-success:hover { background: var(--color-success-dark, #0a6228); }
+  .btn-success:hover:not(:disabled) { background: var(--color-success-btn-hover, #0a6228); }
+  a.btn-success:hover { background: var(--color-success-btn-hover, #0a6228); }
   .btn-error {
     background: var(--color-error, #c83c3c);
     color: white;
@@ -175,7 +175,7 @@ export const alertStyles = css`
   .alert-success {
     background: var(--color-success-bg, #e8f5e9);
     border: 1px solid var(--color-success, #1cb841);
-    color: var(--color-success, #0d7b31);
+    color: var(--color-success-accessible, #137526);
   }
   .alert-error {
     background: var(--color-error-bg, #ffebee);

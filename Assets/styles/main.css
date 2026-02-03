@@ -13,7 +13,7 @@
 
   /* Status Colors - TYPO3 official palette */
   --color-success: #1cb841;
-  --color-success-accessible: #1a8834;
+  --color-success-accessible: #137526;
   --color-error: #c83c3c;
   --color-error-accessible: #b33636;
   --color-warning: #f76707;
@@ -47,7 +47,11 @@
   --color-warning-text: #9a4408;
 
   /* Accessible success heading color */
-  --color-success-heading: #0d7b31;
+  --color-success-heading: #137526;
+
+  /* Button background colors (must have 4.5:1 contrast with white text) */
+  --color-success-btn: #137526;
+  --color-success-btn-hover: #0a6228;
 
   /* Button hover colors */
   --color-info-dark: #005a9e;
@@ -116,11 +120,19 @@
   --color-warning-bg: #3d2a1a;
   --color-info-bg: #1a2a3d;
 
+  /* Accessible status colors for dark backgrounds (WCAG AA 4.5:1) */
+  --color-success-accessible: #5cc86a;
+  --color-error-accessible: #f47070;
+
   /* Accessible warning text for dark mode info boxes */
   --color-warning-text: #ffb347;
 
   /* Accessible success heading for dark mode */
   --color-success-heading: #4ec9a0;
+
+  /* Button backgrounds (dark enough for white text in both modes) */
+  --color-success-btn: #168030;
+  --color-success-btn-hover: #137526;
 
   /* Button hover colors (slightly lighter for dark mode) */
   --color-info-dark: #1a8cd8;
@@ -149,10 +161,10 @@
   --color-info-box-value: #e0e0e0;
   --color-info-box-value-bg: rgba(0, 0, 0, 0.3);
 
-    /* Input colors - always black on white for clarity */
-    --color-input-bg: #44444;
-    --color-input-text: #ffffff;
-    --color-input-border: var(--color-border-light);
+  /* Input colors - dark mode */
+  --color-input-bg: #444444;
+  --color-input-text: #ffffff;
+  --color-input-border: var(--color-border-light);
 }
 
 /* Auto mode - follows system preference */
@@ -174,6 +186,14 @@
     --color-error-bg: #3d1a1a;
     --color-warning-bg: #3d2a1a;
     --color-info-bg: #1a2a3d;
+
+    /* Accessible status colors for dark backgrounds (WCAG AA 4.5:1) */
+    --color-success-accessible: #5cc86a;
+    --color-error-accessible: #f47070;
+
+    /* Button backgrounds (dark enough for white text in both modes) */
+    --color-success-btn: #168030;
+    --color-success-btn-hover: #137526;
 
     /* Accessible warning text for dark mode info boxes */
     --color-warning-text: #ffb347;
@@ -208,8 +228,8 @@
     --color-info-box-value: #e0e0e0;
     --color-info-box-value-bg: rgba(0, 0, 0, 0.3);
 
-    /* Input colors - always black on white for clarity */
-    --color-input-bg: #44444;
+    /* Input colors - dark mode */
+    --color-input-bg: #444444;
     --color-input-text: #ffffff;
     --color-input-border: var(--color-border-light);
   }
