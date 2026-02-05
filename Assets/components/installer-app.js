@@ -1,8 +1,9 @@
 import { LitElement, html, css } from 'lit';
 import { ContextProvider } from '@lit/context';
 import { installerContext, initialState, STEPS } from '../context/installer-context.js';
-import { isStepComplete, canStartInstallation } from '../utils/step-validators.js';
+import { isStepComplete, canStartInstallation } from '../utils/index.js';
 import './ui/theme-toggle.js';
+import './ui/t3-icon.js'
 
 const STORAGE_KEY = 'typo3-installer-state';
 
@@ -28,16 +29,18 @@ export class InstallerApp extends LitElement {
     .shadow-radius {
       border-radius: var(--border-radius-lg, 8px);
       box-shadow: var(--shadow, 0 0 8px rgba(0,0,0,0.1));
+      background: var(--color-bg-white, white);
     }
 
     .header {
       position: relative;
-      text-align: center;
-      padding: var(--spacing-xl, 32px) 0;
-      background: var(--color-primary-accessible, #b35c00);
-      color: white;
-      margin-bottom: 0;
-      border-radius: var(--border-radius-lg, 8px) var(--border-radius-lg, 8px) 0 0
+      padding: var(--spacing-xl, 32px);
+      //border-radius: var(--border-radius-lg, 8px) var(--border-radius-lg, 8px) 0 0
+    }
+
+    [identifier="typo3-logo"] {
+      width: 20%;
+      max-width: 200px;
     }
 
     .header h1 {
@@ -61,6 +64,7 @@ export class InstallerApp extends LitElement {
       justify-content: space-between;
       padding: var(--spacing-lg, 24px);
       background: var(--color-bg-white, white);
+      border-top: 1px solid var(--color-border, #bbbbbb);
       border-bottom: 1px solid var(--color-border, #bbbbbb);
       position: relative;
     }
@@ -397,8 +401,7 @@ export class InstallerApp extends LitElement {
             <div class="header-controls">
               <t3-theme-toggle></t3-theme-toggle>
             </div>
-            <h1>TYPO3 Installer</h1>
-            <p>Install TYPO3 CMS on your server</p>
+            <t3-icon identifier="typo3-logo" size="auto"></t3-icon>
           </div>
 
           <div class="progress-bar ${this._isOnProgressStep() ? 'nav-disabled' : ''}">

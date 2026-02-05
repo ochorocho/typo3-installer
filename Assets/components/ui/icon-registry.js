@@ -30,12 +30,16 @@ import caretDown from '@typo3/icons/dist/svgs/actions/actions-caret-down.svg?raw
 
 // Branding
 import shieldTypo3 from '@typo3/icons/dist/svgs/actions/actions-shield-typo3.svg?raw';
+import typo3Logo from '../../images/typo3-logo.svg?raw';
 
 /**
  * Icon registry mapping identifiers to raw SVG content.
  * @type {Record<string, string>}
  */
 export const iconRegistry = {
+  // Branding
+  'typo3-logo': typo3Logo,
+
   // Status icons
   'actions-check-circle': checkCircle,
   'actions-exclamation-circle': exclamationCircle,

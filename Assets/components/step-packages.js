@@ -6,6 +6,7 @@ import './ui/install-info.js';
 import './ui/version-selector.js';
 import './ui/package-list.js';
 import './ui/step-actions.js';
+import './ui/spinner.js';
 
 export class StepPackages extends LitElement {
   static properties = {
@@ -37,6 +38,42 @@ export class StepPackages extends LitElement {
     p {
       color: var(--color-text-light, #333333);
       margin-bottom: var(--spacing-lg, 24px);
+    }
+
+    .heading-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacing-md, 16px);
+    }
+
+    .heading-row h2 {
+      margin-bottom: 0;
+    }
+
+    .btn-refresh {
+      background: transparent;
+      border: 1px solid var(--color-border, #bbb);
+      color: var(--color-text, #333);
+      padding: var(--spacing-xs, 4px) var(--spacing-md, 16px);
+      font-size: 13px;
+      border-radius: var(--border-radius, 4px);
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-refresh:hover:not(:disabled) {
+      background: var(--color-bg-light, #fafafa);
+    }
+
+    .btn-refresh:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-refresh:focus-visible {
+      outline: 2px solid var(--color-primary, #ff8700);
+      outline-offset: 2px;
     }
   `;
 
@@ -291,6 +328,22 @@ export class StepPackages extends LitElement {
     this._loadVersions();
   }
 
+  _handleRefresh() {
+    this._loadPackages();
+  }
+
+  _handlePackagesToggleAll(event) {
+    const { packageIds, selected } = event.detail;
+    if (selected) {
+      const newIds = packageIds.filter(id => !this.selectedPackages.includes(id));
+      this.selectedPackages = [...this.selectedPackages, ...newIds];
+    } else {
+      const removeSet = new Set(packageIds);
+      this.selectedPackages = this.selectedPackages.filter(id => !removeSet.has(id));
+    }
+    this._updateState();
+  }
+
   _handleRetryPackages() {
     this._loadPackages();
   }
@@ -314,8 +367,10 @@ export class StepPackages extends LitElement {
         @retry=${this._handleRetryInfo}
       ></t3-install-info>
 
-      <h2>Select Packages</h2>
-      <p>Choose the TYPO3 version and packages to install. Core packages are required and cannot be deselected.</p>
+      <div class="heading-row">
+        <h2>Select Packages</h2>
+      </div>
+      <p>Choose the TYPO3 version and packages to install. Core packages are always included automatically.</p>
 
       <t3-version-selector
         .versions=${this.versions}
@@ -335,6 +390,7 @@ export class StepPackages extends LitElement {
         .error=${this.packagesError}
         .versionsReady=${versionsReady}
         @package-toggle=${this._handlePackageToggle}
+        @packages-toggle-all=${this._handlePackagesToggleAll}
         @retry=${this._handleRetryPackages}
       ></t3-package-list>
 

@@ -67,6 +67,7 @@ class PackageController extends AbstractController
             return $data;
         }
 
+        // todo check why this is thrown?!!
         if (!isset($data['packages']) || !is_array($data['packages'])) {
             return new JsonResponse([
                 'success' => false,

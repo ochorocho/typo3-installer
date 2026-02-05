@@ -46,6 +46,11 @@ export class T3Icon extends LitElement {
       height: 32px;
     }
 
+    :host([size="auto"]) {
+      width: 100%;
+      height: auto;
+    }
+
     svg {
       width: 100%;
       height: 100%;

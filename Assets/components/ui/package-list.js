@@ -8,6 +8,7 @@ import './spinner.js';
  * Package list with checkboxes for selection.
  * @element t3-package-list
  * @fires package-toggle - When checkbox toggled, detail: { packageId, selected }
+ * @fires packages-toggle-all - When group toggle-all changed, detail: { packageIds, selected }
  * @fires retry - When retry button is clicked after error
  */
 export class PackageList extends LitElement {
@@ -45,7 +46,6 @@ export class PackageList extends LitElement {
       }
       .package input:disabled { cursor: not-allowed; }
       .package-info { flex: 1; cursor: pointer; }
-      .package.required .package-info { cursor: default; }
       .package-name { font-weight: 600; color: var(--color-secondary, #1a1a1a); }
       .package-id {
         font-size: 12px;
@@ -57,13 +57,6 @@ export class PackageList extends LitElement {
         font-size: 14px;
         margin-top: var(--spacing-xs, 4px);
         color: var(--color-text-light, #333333);
-      }
-      .package.required { background: var(--color-warning-bg, #fff3e0); }
-      .package.required .package-name::after {
-        content: ' (required)';
-        font-size: 12px;
-        font-weight: normal;
-        color: var(--color-primary, #ff8700);
       }
       .group-header {
         font-size: 14px;
@@ -82,6 +75,19 @@ export class PackageList extends LitElement {
       .group-header:not(:first-child) {
         margin-top: var(--spacing-md, 16px);
       }
+      .group-toggle {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm, 8px);
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .group-toggle input {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: var(--color-primary, #ff8700);
+      }
     `
   ];
 
@@ -97,24 +103,27 @@ export class PackageList extends LitElement {
     emit(this, 'package-toggle', { packageId: id, selected: !this.selectedPackages.includes(id) });
   }
 
+  _toggleAll(packages, selected) {
+    const packageIds = packages.map(([id]) => id);
+    emit(this, 'packages-toggle-all', { packageIds, selected });
+  }
+
   render() {
     if (!this.versionsReady) return null;
     if (this.loading) return html`<ui-spinner>Loading packages for TYPO3 ${this.typo3Version}...</ui-spinner>`;
     if (this.error) return html`<t3-section-error title="Failed to Load Packages" message=${this.error.message}></t3-section-error>`;
 
-    // Group packages into categories
+    // Group packages into categories (exclude required packages from display)
     const entries = Object.entries(this.packages);
-    const requiredPkgs = entries.filter(([id]) => this.requiredPackages.includes(id)).sort(([a], [b]) => a.localeCompare(b));
     const themePkgs = entries.filter(([id]) => !this.requiredPackages.includes(id) && id.startsWith('typo3/theme-')).sort(([a], [b]) => a.localeCompare(b));
     const extensionPkgs = entries.filter(([id]) => !this.requiredPackages.includes(id) && !id.startsWith('typo3/theme-')).sort(([a], [b]) => a.localeCompare(b));
 
     const renderPackage = ([id, pkg]) => {
-      const required = this.requiredPackages.includes(id);
       const selected = this.selectedPackages.includes(id);
       const inputId = `pkg-${id.replace('/', '-')}`;
       return html`
-        <div class="package ${required ? 'required' : ''}">
-          <input type="checkbox" id=${inputId} .checked=${selected} ?disabled=${required} @change=${() => this._toggle(id)}>
+        <div class="package">
+          <input type="checkbox" id=${inputId} .checked=${selected} @change=${() => this._toggle(id)}>
           <label for=${inputId} class="package-info">
             <div><span class="package-name">${pkg.name}</span><span class="package-id">${id}</span></div>
             <div class="package-desc">${pkg.description}</div>
@@ -124,22 +133,33 @@ export class PackageList extends LitElement {
     };
 
     // Calculate selected counts per group
-    const requiredSelected = requiredPkgs.filter(([id]) => this.selectedPackages.includes(id)).length;
     const themeSelected = themePkgs.filter(([id]) => this.selectedPackages.includes(id)).length;
     const extensionSelected = extensionPkgs.filter(([id]) => this.selectedPackages.includes(id)).length;
 
     return html`
       <div class="packages" role="group" aria-label="Available TYPO3 packages">
-        ${requiredPkgs.length > 0 ? html`
-          <div class="group-header">Core Packages (${requiredSelected}/${requiredPkgs.length})</div>
-          ${requiredPkgs.map(renderPackage)}
-        ` : ''}
         ${themePkgs.length > 0 ? html`
-          <div class="group-header">Themes (${themeSelected}/${themePkgs.length})</div>
+          <div class="group-header">
+            <label class="group-toggle">
+              <input type="checkbox"
+                     .checked=${themeSelected === themePkgs.length}
+                     .indeterminate=${themeSelected > 0 && themeSelected < themePkgs.length}
+                     @change=${(e) => this._toggleAll(themePkgs, e.target.checked)}>
+              Themes (${themeSelected}/${themePkgs.length})
+            </label>
+          </div>
           ${themePkgs.map(renderPackage)}
         ` : ''}
         ${extensionPkgs.length > 0 ? html`
-          <div class="group-header">Core Extensions (${extensionSelected}/${extensionPkgs.length})</div>
+          <div class="group-header">
+            <label class="group-toggle">
+              <input type="checkbox"
+                     .checked=${extensionSelected === extensionPkgs.length}
+                     .indeterminate=${extensionSelected > 0 && extensionSelected < extensionPkgs.length}
+                     @change=${(e) => this._toggleAll(extensionPkgs, e.target.checked)}>
+              Core Extensions (${extensionSelected}/${extensionPkgs.length})
+            </label>
+          </div>
           ${extensionPkgs.map(renderPackage)}
         ` : ''}
       </div>
