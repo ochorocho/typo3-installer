@@ -26,6 +26,7 @@ class PackageService
         'typo3/cms-frontend',
         'typo3/cms-filelist',
         'typo3/cms-fluid',
+        'typo3/cms-install',
         'typo3/cms-setup',
         'typo3/cms-recycler',
     ];
