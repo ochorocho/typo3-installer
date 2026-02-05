@@ -14,7 +14,8 @@ export class VersionSelector extends LitElement {
     versions: { type: Array },
     selectedVersion: { type: String, attribute: 'selected-version' },
     loading: { type: Boolean },
-    error: { type: Object }
+    error: { type: Object },
+    refreshing: { type: Boolean }
   };
 
   static styles = [
@@ -44,6 +45,19 @@ export class VersionSelector extends LitElement {
         cursor: pointer;
       }
       .version-info { font-size: 13px; color: var(--color-text-light, #333333); }
+      .btn-refresh {
+        background: transparent;
+        border: 1px solid var(--color-border, #bbb);
+        color: var(--color-text, #333);
+        padding: var(--spacing-xs, 4px) var(--spacing-md, 16px);
+        font-size: 13px;
+        border-radius: var(--border-radius, 4px);
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .btn-refresh:hover:not(:disabled) { background: var(--color-bg-light, #fafafa); }
+      .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+      .btn-refresh:focus-visible { outline: 2px solid var(--color-primary, #ff8700); outline-offset: 2px; }
     `
   ];
 
@@ -64,7 +78,12 @@ export class VersionSelector extends LitElement {
         <select id="typo3-version" @change=${e => emit(this, 'version-change', { version: e.target.value })} .value=${this.selectedVersion}>
           ${this.versions.map(v => html`<option value=${v.version}>${v.version} (Latest: ${v.latest})</option>`)}
         </select>
-        <!-- REFRESH_HERE-->
+        <button class="btn-refresh"
+                ?disabled=${this.refreshing}
+                @click=${this.refreshList}
+                title="Refresh package list">
+          ${this.refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
         <span class="version-info">Will install typo3/cms-core:^${this.selectedVersion}</span>
       </div>
     `;

@@ -65,7 +65,6 @@ export class StepActions extends LitElement {
           ${this.showBack ? html`
             <button class="btn-outline" @click=${() => emit(this, 'previous-step')}>Back</button>
           ` : ''}
-          <slot name="left"></slot>
         </div>
         <button
           class="${btnClass}"

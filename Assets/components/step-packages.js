@@ -6,7 +6,6 @@ import './ui/install-info.js';
 import './ui/version-selector.js';
 import './ui/package-list.js';
 import './ui/step-actions.js';
-import './ui/spinner.js';
 
 export class StepPackages extends LitElement {
   static properties = {
@@ -49,31 +48,6 @@ export class StepPackages extends LitElement {
 
     .heading-row h2 {
       margin-bottom: 0;
-    }
-
-    .btn-refresh {
-      background: transparent;
-      border: 1px solid var(--color-border, #bbb);
-      color: var(--color-text, #333);
-      padding: var(--spacing-xs, 4px) var(--spacing-md, 16px);
-      font-size: 13px;
-      border-radius: var(--border-radius, 4px);
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    .btn-refresh:hover:not(:disabled) {
-      background: var(--color-bg-light, #fafafa);
-    }
-
-    .btn-refresh:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .btn-refresh:focus-visible {
-      outline: 2px solid var(--color-primary, #ff8700);
-      outline-offset: 2px;
     }
   `;
 
@@ -369,12 +343,6 @@ export class StepPackages extends LitElement {
 
       <div class="heading-row">
         <h2>Select Packages</h2>
-        <button class="btn-refresh"
-                ?disabled=${this.loadingPackages}
-                @click=${this._handleRefresh}
-                title="Refresh package list">
-          ${this.loadingPackages ? html`<ui-spinner size="small">Refresh</ui-spinner>` : 'Refresh'}
-        </button>
       </div>
       <p>Choose the TYPO3 version and packages to install. Core packages are always included automatically.</p>
 
@@ -383,8 +351,9 @@ export class StepPackages extends LitElement {
         .selectedVersion=${this.selectedVersion}
         .loading=${this.loadingVersions}
         .error=${this.versionsError}
+        .refreshing=${this.loadingPackages}
         @version-change=${this._handleVersionChange}
-        @retry=${this._handleRetryVersions}
+        @retry=${this._handleRefresh}
       ></t3-version-selector>
 
       <t3-package-list

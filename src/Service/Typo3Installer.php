@@ -405,6 +405,19 @@ class Typo3Installer
         string $installDir,
         ?callable $outputCallback = null
     ): void {
+        // Remove any settings.php created by composer plugins to ensure clean setup
+        // The typo3 setup command needs a fresh state to properly configure the database
+        $settingsPath = $installDir . '/config/system/settings.php';
+        if (file_exists($settingsPath)) {
+            $this->filesystem->remove($settingsPath);
+        }
+
+        // Also remove var/cache to ensure no stale configuration cache
+        $varCachePath = $installDir . '/var/cache';
+        if (file_exists($varCachePath)) {
+            $this->filesystem->remove($varCachePath);
+        }
+
         $dbConfig = $config->database;
         $admin = $config->admin;
 

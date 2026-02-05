@@ -216,7 +216,7 @@ export class StepDatabase extends LitElement {
 
       <div class="form-group">
         <label for="name" class="required">${isFileBased ? 'Database File Path' : 'Database Name'}</label>
-        <input type="text" id="name" required .value=${db.name} @input=${e => this._update('name', e.target.value)} placeholder=${isFileBased ? '/path/to/database.sqlite' : 'typo3'}>
+        <input type="text" id="name" required autocomplete="off" .value=${db.name} @input=${e => this._update('name', e.target.value)} placeholder=${isFileBased ? '/path/to/database.sqlite' : 'typo3'}>
         <span class="help-text">${isFileBased ? 'Path to the SQLite database file' : 'The database must already exist'}</span>
       </div>
 
@@ -228,7 +228,7 @@ export class StepDatabase extends LitElement {
           </div>
           <div class="form-group">
             <label for="password">Password</label>
-            <input type="password" id="password" .value=${db.password} @input=${e => this._update('password', e.target.value)}>
+            <input type="password" id="password" autocomplete="off" .value=${db.password} @input=${e => this._update('password', e.target.value)}>
           </div>
         </div>
       ` : ''}
