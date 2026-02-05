@@ -369,6 +369,12 @@ export class StepPackages extends LitElement {
 
       <div class="heading-row">
         <h2>Select Packages</h2>
+        <button class="btn-refresh"
+                ?disabled=${this.loadingPackages}
+                @click=${this._handleRefresh}
+                title="Refresh package list">
+          ${this.loadingPackages ? html`<ui-spinner size="small">Refresh</ui-spinner>` : 'Refresh'}
+        </button>
       </div>
       <p>Choose the TYPO3 version and packages to install. Core packages are always included automatically.</p>
 

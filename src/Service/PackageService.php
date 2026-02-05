@@ -24,6 +24,10 @@ class PackageService
         'typo3/cms-core',
         'typo3/cms-backend',
         'typo3/cms-frontend',
+        'typo3/cms-filelist',
+        'typo3/cms-fluid',
+        'typo3/cms-setup',
+        'typo3/cms-recycler',
     ];
 
     /**
@@ -33,6 +37,8 @@ class PackageService
         'typo3/cms-composer-installers',
         'typo3/cms-styleguide',
         'typo3/cms-cli',
+        // Replaced by the Package Manager
+        'typo3/cms-extensionmanager',
         // No v14.1 version as of today, leads to stability issues with composer
         'typo3/cms-base-distribution',
     ];
@@ -48,14 +54,16 @@ class PackageService
      * Recommended packages that should be pre-selected
      */
     private const RECOMMENDED_PACKAGES = [
-        'typo3/cms-fluid',
-        'typo3/cms-fluid-styled-content',
-        'typo3/cms-extbase',
         'typo3/cms-rte-ckeditor',
-        'typo3/cms-filelist',
         'typo3/cms-beuser',
         'typo3/cms-setup',
         'typo3/theme-camino',
+        'typo3/cms-viewpage',
+        'typo3/cms-seo',
+        'typo3/cms-scheduler',
+        'typo3/cms-form',
+        'typo3/cms-redirects',
+        'typo3/cms-linkvalidator',
     ];
 
     /**
@@ -705,20 +713,36 @@ class PackageService
     }
 
     /**
+     * Normalize PHP version for semver comparison
+     *
+     * PHP versions may include custom suffixes (e.g., "8.4.16-nmm1" for NMM hosting)
+     * which semver treats as pre-release identifiers. This strips suffixes to get
+     * a clean major.minor.patch version.
+     */
+    private function normalizePhpVersion(string $version): string
+    {
+        if (preg_match('/^(\d+\.\d+\.\d+)/', $version, $matches)) {
+            return $matches[1];
+        }
+        return $version;
+    }
+
+    /**
      * Check PHP version requirement
      *
      * @return array{title: string, description: string, status: string}
      */
     private function checkPhpVersion(string $currentVersion, string $constraint): array
     {
-        $satisfies = Semver::satisfies($currentVersion, $constraint);
+        $normalizedVersion = $this->normalizePhpVersion($currentVersion);
+        $satisfies = Semver::satisfies($normalizedVersion, $constraint);
 
         return [
             'title' => 'PHP Version',
             'description' => sprintf(
                 'Required: %s (Current: %s)',
                 $constraint,
-                $currentVersion
+                $currentVersion  // Show original version in description
             ),
             'status' => $satisfies ? 'passed' : 'failed',
         ];
