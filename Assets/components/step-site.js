@@ -38,10 +38,10 @@ export class StepSite extends LitElement {
       .summary-item {
         display: flex;
         padding: var(--spacing-sm, 8px) 0;
-        border-bottom: 1px solid var(--color-border, #ddd);
+        border-bottom: 1px solid var(--color-border, #bbbbbb);
       }
       .summary-item:last-child { border-bottom: none; }
-      .summary-label { width: 150px; font-weight: 600; color: var(--color-text-light, #666); }
+      .summary-label { width: 150px; font-weight: 600; color: var(--color-text-light, #333333); }
       .summary-value { flex: 1; color: var(--color-secondary, #1a1a1a); }
     `
   ];

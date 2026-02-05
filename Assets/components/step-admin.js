@@ -30,7 +30,7 @@ export class StepAdmin extends LitElement {
       .password-strength { margin-top: var(--spacing-sm, 8px); }
       .password-strength-bar {
         height: 4px;
-        background: var(--color-border, #ddd);
+        background: var(--color-border, #bbbbbb);
         border-radius: 2px;
         overflow: hidden;
       }
@@ -41,7 +41,7 @@ export class StepAdmin extends LitElement {
       .password-strength-label { font-size: 12px; margin-top: var(--spacing-xs, 4px); }
       .password-strength-label.weak { color: var(--color-error-accessible, #b33636); }
       .password-strength-label.medium { color: var(--color-warning, #f76707); }
-      .password-strength-label.strong { color: var(--color-success-accessible, #0d7b31); }
+      .password-strength-label.strong { color: var(--color-success-accessible, #137526); }
     `
   ];
 

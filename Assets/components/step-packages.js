@@ -35,7 +35,7 @@ export class StepPackages extends LitElement {
     }
 
     p {
-      color: var(--color-text-light, #666);
+      color: var(--color-text-light, #333333);
       margin-bottom: var(--spacing-lg, 24px);
     }
   `;

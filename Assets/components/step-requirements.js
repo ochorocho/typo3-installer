@@ -34,7 +34,7 @@ export class StepRequirements extends LitElement {
         display: flex;
         align-items: flex-start;
         padding: var(--spacing-md, 16px);
-        border: 1px solid var(--color-border, #ddd);
+        border: 1px solid var(--color-border, #bbbbbb);
         border-radius: var(--border-radius, 4px);
         margin-bottom: var(--spacing-sm, 8px);
         background: var(--color-bg-white, white);
@@ -66,7 +66,7 @@ export class StepRequirements extends LitElement {
 
       .requirement-content { flex: 1; }
       .requirement-title { font-weight: 600; margin-bottom: var(--spacing-xs, 4px); }
-      .requirement-description { font-size: 14px; color: var(--color-text-light, #666); }
+      .requirement-description { font-size: 14px; color: var(--color-text-light, #333333); }
 
       .requirement-packages {
         display: flex;
@@ -79,7 +79,7 @@ export class StepRequirements extends LitElement {
         padding: 2px 6px;
         background: var(--color-bg, #f5f5f5);
         border-radius: 3px;
-        color: var(--color-text-light, #666);
+        color: var(--color-text-light, #333333);
       }
 
       .summary {
@@ -93,13 +93,13 @@ export class StepRequirements extends LitElement {
 
       .summary-item { display: flex; align-items: center; gap: var(--spacing-sm, 8px); }
       .summary-count { font-weight: 600; font-size: 1.25rem; }
-      .summary-count.passed { color: var(--color-success-accessible, #0d7b31); }
+      .summary-count.passed { color: var(--color-success-accessible, #137526); }
       .summary-count.failed { color: var(--color-error-accessible, #b33636); }
       .summary-count.warning { color: var(--color-warning, #f76707); }
 
       .packages-info {
         font-size: 14px;
-        color: var(--color-text-light, #666);
+        color: var(--color-text-light, #333333);
         background: var(--color-bg, #f5f5f5);
         padding: var(--spacing-md, 16px);
         border-radius: var(--border-radius, 4px);

@@ -61,7 +61,7 @@ export class InstallerApp extends LitElement {
       justify-content: space-between;
       padding: var(--spacing-lg, 24px);
       background: var(--color-bg-white, white);
-      border-bottom: 1px solid var(--color-border, #ddd);
+      border-bottom: 1px solid var(--color-border, #bbbbbb);
       position: relative;
     }
 
@@ -72,7 +72,7 @@ export class InstallerApp extends LitElement {
       left: var(--spacing-lg, 24px);
       right: var(--spacing-lg, 24px);
       height: 2px;
-      background: var(--color-border, #ddd);
+      background: var(--color-border, #bbbbbb);
       transform: translateY(-50%);
       z-index: 0;
     }
@@ -120,7 +120,7 @@ export class InstallerApp extends LitElement {
     .step-title {
       margin-top: var(--spacing-xs, 4px);
       font-size: 12px;
-      color: var(--color-text-light, #666);
+      color: var(--color-text-light, #333333);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }

@@ -48,21 +48,13 @@ export class StepProgress extends LitElement {
       }
 
       .success-message h3 {
-        color: var(--color-success-heading, #0d7b31);
+        color: var(--color-success-heading, #137526);
         margin: 0 0 var(--spacing-md, 16px) 0;
         font-size: 1.5rem;
       }
 
       .success-message p { margin: 0 0 var(--spacing-md, 16px) 0; color: var(--color-text, #333); }
       .success-message .admin-info { font-size: 14px; margin-bottom: var(--spacing-lg, 24px); }
-
-      button {
-        padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
-        border: none;
-        border-radius: var(--border-radius, 4px);
-        font-weight: 500;
-        cursor: pointer;
-      }
 
       .success-buttons {
         display: flex;

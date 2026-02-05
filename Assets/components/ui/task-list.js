@@ -37,13 +37,13 @@ export class TaskList extends LitElement {
         justify-content: center;
         flex-shrink: 0;
       }
-      .task.pending .task-icon { color: var(--color-text-light, #666); }
+      .task.pending .task-icon { color: var(--color-text-light, #333333); }
       .task.running .task-icon { color: var(--color-primary-accessible, #b35c00); }
-      .task.completed .task-icon { color: var(--color-success-accessible, #0d7b31); }
+      .task.completed .task-icon { color: var(--color-success-accessible, #137526); }
       .task.error .task-icon { color: var(--color-error-accessible, #b33636); }
-      .task.pending { color: var(--color-text-light, #666); }
+      .task.pending { color: var(--color-text-light, #333333); }
       .task.running { font-weight: 600; }
-      .task.completed { color: var(--color-success-accessible, #0d7b31); }
+      .task.completed { color: var(--color-success-accessible, #137526); }
       .task.error { color: var(--color-error-accessible, #b33636); }
     `
   ];

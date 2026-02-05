@@ -1,4 +1,5 @@
 import { LitElement, html, css } from 'lit';
+import { hostStyles, buttonStyles, spinnerStyles } from './shared-styles.js';
 
 /**
  * @element t3-php-version-warning
@@ -22,11 +23,11 @@ export class PhpVersionWarning extends LitElement {
     showCustomInput: { type: Boolean }
   };
 
-  static styles = css`
-    :host {
-      display: block;
-    }
-
+  static styles = [
+    hostStyles,
+    buttonStyles,
+    spinnerStyles,
+    css`
     .php-version-warning {
       background: var(--color-warning-bg, #fff3e0);
       border: 1px solid var(--color-warning, #f76707);
@@ -78,10 +79,10 @@ export class PhpVersionWarning extends LitElement {
       width: 100%;
       max-width: 400px;
       padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
-      border: 1px solid var(--color-border, #ddd);
+      border: 1px solid var(--color-border, #bbbbbb);
       border-radius: var(--border-radius, 4px);
       font-size: 14px;
-      background: white;
+      background: var(--color-input-bg, #ffffff);
     }
 
     .php-selector select:focus,
@@ -125,63 +126,14 @@ export class PhpVersionWarning extends LitElement {
 
     .validation-result.success {
       background: var(--color-success-bg, #e8f5e9);
-      color: var(--color-success, #1cb841);
+      color: var(--color-success-accessible, #137526);
     }
 
     .validation-result.error {
       background: var(--color-error-bg, #ffebee);
       color: var(--color-error, #c83c3c);
     }
-
-    .btn-secondary {
-      background: var(--color-info, #0078d4);
-      color: white;
-      padding: var(--spacing-sm, 8px) var(--spacing-lg, 24px);
-      border: none;
-      border-radius: var(--border-radius, 4px);
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    .btn-secondary:hover:not(:disabled) {
-      background: #005a9e;
-    }
-
-    .btn-secondary:focus-visible {
-      outline: 2px solid var(--color-primary, #ff8700);
-      outline-offset: 2px;
-    }
-
-    .btn-secondary:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .btn-small {
-      padding: var(--spacing-xs, 4px) var(--spacing-md, 16px);
-      font-size: 13px;
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      border-top-color: white;
-      animation: spin 1s linear infinite;
-      margin-right: var(--spacing-sm, 8px);
-    }
-
-    .spinner-dark {
-      border-color: rgba(0,0,0,0.1);
-      border-top-color: var(--color-info, #2196f3);
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  `;
+  `];
 
   constructor() {
     super();

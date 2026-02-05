@@ -51,12 +51,12 @@ export class PackageList extends LitElement {
         font-size: 12px;
         font-family: monospace;
         margin-left: var(--spacing-sm, 8px);
-        color: var(--color-text-light, #666);
+        color: var(--color-text-light, #333333);
       }
       .package-desc {
         font-size: 14px;
         margin-top: var(--spacing-xs, 4px);
-        color: var(--color-text-light, #666);
+        color: var(--color-text-light, #333333);
       }
       .package.required { background: var(--color-warning-bg, #fff3e0); }
       .package.required .package-name::after {
@@ -70,9 +70,9 @@ export class PackageList extends LitElement {
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        color: var(--color-text-light, #666);
+        color: var(--color-text-light, #333333);
         padding: var(--spacing-md, 16px) var(--spacing-sm, 8px) var(--spacing-xs, 4px);
-        border-bottom: 1px solid var(--color-border, #ddd);
+        border-bottom: 1px solid var(--color-border, #bbbbbb);
         margin-bottom: var(--spacing-xs, 4px);
         position: sticky;
         top: 0;

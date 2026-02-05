@@ -12,7 +12,7 @@ export const hostStyles = css`
  */
 export const typographyStyles = css`
   p {
-    color: var(--color-text-light, #666);
+    color: var(--color-text-light, #333333);
     margin: 0 0 var(--spacing-lg, 24px) 0;
   }
   h2 {
@@ -153,7 +153,7 @@ export const formStyles = css`
   }
   .help-text {
     font-size: var(--font-size-sm, 12px);
-    color: var(--color-text-light, #666);
+    color: var(--color-text-light, #333333);
     margin-top: var(--spacing-xs, 4px);
   }
   .error-text {
@@ -187,6 +187,26 @@ export const alertStyles = css`
     border: 1px solid var(--color-warning, #f76707);
     color: var(--color-warning, #f76707);
   }
+`;
+
+/**
+ * Inline spinner styles (for use inside buttons or inline contexts)
+ */
+export const spinnerStyles = css`
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s linear infinite;
+  }
+  .spinner-dark {
+    border-color: rgba(0,0,0,0.1);
+    border-top-color: var(--color-info, #0078d4);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 `;
 
 /**

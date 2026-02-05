@@ -97,7 +97,7 @@ export class InstallInfo extends LitElement {
       .phpinfo-loading {
         padding: var(--spacing-md, 16px);
         text-align: center;
-        color: var(--color-text-light, #666);
+        color: var(--color-text-light, #333333);
         font-size: 13px;
       }
     `

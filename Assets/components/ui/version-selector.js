@@ -43,7 +43,7 @@ export class VersionSelector extends LitElement {
         border-width: 2px;
         cursor: pointer;
       }
-      .version-info { font-size: 13px; color: var(--color-text-light, #666); }
+      .version-info { font-size: 13px; color: var(--color-text-light, #333333); }
     `
   ];
 
