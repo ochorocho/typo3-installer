@@ -50,6 +50,31 @@ class DatabaseTester
 
             // Test if we can actually query the database
             $pdo->query('SELECT 1');
+
+            // Verify the database is empty (TYPO3 requires a fresh database)
+            $tableCountQuery = match ($driver) {
+                'pdo_mysql' => 'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()',
+                'pdo_pgsql' => "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'",
+                'pdo_sqlite' => "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+                default => null,
+            };
+
+            if ($tableCountQuery !== null) {
+                $stmt = $pdo->query($tableCountQuery);
+                if ($stmt === false) {
+                    throw new \RuntimeException('Failed to query table count');
+                }
+                $tableCount = (int)$stmt->fetchColumn();
+                if ($tableCount > 0) {
+                    throw new \RuntimeException(
+                        sprintf(
+                            'The database is not empty (%d table%s found). Please select an empty database for TYPO3 installation.',
+                            $tableCount,
+                            $tableCount !== 1 ? 's' : ''
+                        )
+                    );
+                }
+            }
         } catch (\PDOException $e) {
             throw new \RuntimeException(
                 sprintf('Database connection failed: %s', $e->getMessage()),

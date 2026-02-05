@@ -68,7 +68,7 @@ export class ErrorHelp extends LitElement {
     if (msg.includes('timeout')) {
       items.push('Database server may be slow or unreachable', 'Try again or check server status');
     }
-    return { title: this.title || 'What you can try:', items: items.length ? items : ['Verify all connection details', 'Ensure database server is running', 'Check database exists', 'Verify user permissions'] };
+    return { title: this.title || 'What you can try:', items: items.length ? items : ['Verify all connection details', 'Ensure database server is running', 'Check database exists', 'Verify user permissions', 'Verify the database is empty'] };
   }
 
   _reqHelp(msg) {
