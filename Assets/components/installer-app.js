@@ -37,6 +37,7 @@ export class InstallerApp extends LitElement {
       background: var(--color-primary-accessible, #b35c00);
       color: white;
       margin-bottom: 0;
+      border-radius: var(--border-radius-lg, 8px) var(--border-radius-lg, 8px) 0 0
     }
 
     .header h1 {
@@ -199,6 +200,7 @@ export class InstallerApp extends LitElement {
     .content {
       background: var(--color-bg-white, white);
       padding: var(--spacing-xl, 32px);
+      border-radius: 0 0 var(--border-radius-lg, 8px) var(--border-radius-lg, 8px);
     }
   `;
 
