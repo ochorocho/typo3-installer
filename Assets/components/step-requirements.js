@@ -295,7 +295,7 @@ export class StepRequirements extends LitElement {
       <p>Checking if your server meets the requirements for the selected TYPO3 packages.</p>
 
       <div class="packages-info">
-        <strong>${selectedPackages.length}</strong> packages selected for installation.
+        <strong>${selectedPackages.length}</strong> TYPO3 packages selected for installation.
       </div>
 
       ${this.error ? html`
