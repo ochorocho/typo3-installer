@@ -54,9 +54,7 @@ installer-app {
 }
 
 .header-controls {
-  position: absolute;
-  top: var(--spacing-sm);
-  right: var(--spacing-md);
+  float: right;
 }
 
 /* =================================
