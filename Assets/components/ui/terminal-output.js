@@ -7,9 +7,6 @@ import { emit } from './shared-styles.js';
  * @element t3-terminal-output
  *
  * @prop {Array} lines - Array of { text, type, timestamp, isStepMarker } objects
- * @prop {Boolean} autoScroll - Whether to auto-scroll to bottom
- * @fires toggle-autoscroll - When autoscroll button is clicked
- * @fires clear-output - When clear button is clicked
  */
 export class TerminalOutput extends LitElement {
   // Disable Shadow DOM - use light DOM for global CSS access
@@ -17,17 +14,15 @@ export class TerminalOutput extends LitElement {
 
   static properties = {
     lines: { type: Array },
-    autoScroll: { type: Boolean, attribute: 'auto-scroll' }
   };
 
   constructor() {
     super();
     this.lines = [];
-    this.autoScroll = true;
   }
 
   updated(changed) {
-    if (changed.has('lines') && this.autoScroll) {
+    if (changed.has('lines')) {
       this._scrollToBottom();
     }
   }
@@ -39,20 +34,11 @@ export class TerminalOutput extends LitElement {
     });
   }
 
-  _toggleAutoScroll() {
-    emit(this, 'toggle-autoscroll');
-  }
-
   render() {
     return html`
       <div class="terminal-container">
         <div class="terminal-header">
           <span class="terminal-title">Installation Output</span>
-          <div class="terminal-controls">
-            <button class="${this.autoScroll ? 'active' : ''}" @click=${this._toggleAutoScroll}>
-              Auto-scroll
-            </button>
-          </div>
         </div>
         <div class="terminal-output" tabindex="0">
           ${this.lines.length === 0
