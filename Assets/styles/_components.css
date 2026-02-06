@@ -152,8 +152,13 @@
   background: var(--color-info-box-bg);
   border: 1px solid var(--color-info-box-border);
   border-radius: var(--border-radius);
-  padding: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
+
+  padding: var(--spacing-sm);
+
+  @media (min-width: 401px) {
+    padding: var(--spacing-md);
+  }
 }
 
 .info-header {

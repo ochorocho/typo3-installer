@@ -39,13 +39,13 @@ export class VersionSelector extends LitElement {
         <select id="typo3-version" @change=${e => emit(this, 'version-change', { version: e.target.value })} .value=${this.selectedVersion}>
           ${this.versions.map(v => html`<option value=${v.version}>${v.version} (Latest: ${v.latest})</option>`)}
         </select>
+        <span class="version-info">Will install typo3/cms-core:^${this.selectedVersion}</span>
         <button class="btn-refresh"
                 ?disabled=${this.refreshing}
                 @click=${this.refreshList}
                 title="Refresh package list">
           ${this.refreshing ? 'Refreshing...' : 'Refresh'}
         </button>
-        <span class="version-info">Will install typo3/cms-core:^${this.selectedVersion}</span>
       </div>
     `;
   }

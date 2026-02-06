@@ -36,7 +36,11 @@ installer-app {
 
 .header {
   position: relative;
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm);
+
+  @media (min-width: 401px) {
+    padding: var(--spacing-md);
+  }
 
   @media (min-width: 601px) {
     padding: var(--spacing-xl);
@@ -59,6 +63,7 @@ installer-app {
 
 [identifier="typo3-logo"] {
   width: 20%;
+  min-width: 100px;
   max-width: 200px;
 }
 
@@ -103,6 +108,7 @@ installer-app {
   }
 
   /* Disabled navigation state */
+
   &.nav-disabled {
     .step-indicator {
       cursor: default;
@@ -257,9 +263,15 @@ installer-app {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-  20%, 40%, 60%, 80% { transform: translateX(4px); }
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px);
+  }
 }
 
 /* =================================
@@ -268,8 +280,12 @@ installer-app {
 
 .content {
   background: var(--color-bg-white);
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm);
   border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+
+  @media (min-width: 401px) {
+    padding: var(--spacing-md);
+  }
 
   @media (min-width: 601px) {
     padding: var(--spacing-xl);

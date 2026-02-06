@@ -43,7 +43,7 @@ ui-spinner {
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 2px solid var(--color-border-light);
+    border: 1px solid var(--color-border);
     border-radius: 50%;
     border-top-color: var(--color-primary-dark);
     animation: spin 1s linear infinite;
@@ -132,25 +132,16 @@ t3-package-list {
   .package {
     display: flex;
     align-items: flex-start;
-    padding: var(--spacing-sm);
+    padding: var(--spacing-sm) 0;
     border-radius: var(--border-radius);
+
+    @media (min-width: 601px) {
+      padding: var(--spacing-sm);
+    }
 
     &:focus-within {
       outline: 2px solid var(--color-primary);
       outline-offset: 2px;
-    }
-
-    input {
-      margin-right: var(--spacing-md);
-      margin-top: 4px;
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-      accent-color: var(--color-primary);
-
-      &:disabled {
-        cursor: not-allowed;
-      }
     }
   }
 
@@ -175,21 +166,27 @@ t3-package-list {
     font-size: 14px;
     margin-top: var(--spacing-xs);
     color: var(--color-text-light);
+    font-weight: normal;
   }
 
   .group-header {
+    display: flex;
+    align-items: center;
     font-size: 14px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--color-text-light);
-    padding: var(--spacing-md) var(--spacing-sm) var(--spacing-xs);
+    padding: var(--spacing-md) 0 var(--spacing-xs);
     border-bottom: 1px solid var(--color-border);
-    margin-bottom: var(--spacing-xs);
     position: sticky;
     top: 0;
     background: var(--color-bg-white);
     z-index: 10;
+
+    @media (min-width: 601px) {
+      padding: var(--spacing-md) var(--spacing-sm) var(--spacing-xs);
+    }
 
     &:not(:first-child) {
       margin-top: var(--spacing-md);
@@ -197,18 +194,22 @@ t3-package-list {
   }
 
   .group-toggle {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
+    flex: 1;
     cursor: pointer;
     font-weight: 600;
+  }
 
-    input {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-      accent-color: var(--color-primary);
-    }
+  label {
+    margin-bottom: 0;
+  }
+
+  input {
+    margin-right: var(--spacing-md);
+    margin-top: 4px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--color-check-bg);
   }
 }
 
@@ -221,12 +222,17 @@ t3-version-selector {
   margin-bottom: var(--spacing-lg);
 
   .version-box {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--spacing-md);
+    align-items: center;
     padding: var(--spacing-md);
     border: 1px solid var(--color-primary);
     border-radius: var(--border-radius);
+
+    @media (min-width: 601px) {
+      grid-template-columns: auto auto 2fr auto;
+    }
 
     label {
       white-space: nowrap;
@@ -236,10 +242,9 @@ t3-version-selector {
 
     select {
       flex: 1;
-      max-width: 200px;
       font-size: 16px;
       font-weight: 600;
-      border-width: 2px;
+      border: 1px solid var(--color-border);
       cursor: pointer;
     }
   }
@@ -266,11 +271,6 @@ t3-version-selector {
     &:disabled {
       opacity: 0.6;
       cursor: not-allowed;
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--color-primary);
-      outline-offset: 2px;
     }
   }
 }
@@ -335,7 +335,6 @@ t3-php-version-warning {
       border: 1px solid var(--color-border);
       border-radius: var(--border-radius);
       font-size: 14px;
-      background: var(--color-input-bg);
 
       &:focus {
         outline: 2px solid var(--color-primary);
@@ -539,6 +538,14 @@ t3-theme-toggle {
     t3-icon {
       width: 14px;
       height: 14px;
+    }
+
+    .btn-text {
+        display: none;
+
+        @media (min-width: 401px) {
+            display: inline-block;
+        }
     }
   }
 }

@@ -60,7 +60,7 @@ export class ThemeToggle extends LitElement {
           title="Light mode"
         >
           <t3-icon identifier="actions-brightness-high"></t3-icon>
-          Light
+          <span class="btn-text">Light</span>
         </button>
         <button
           class="theme-btn ${this.theme === 'dark' ? 'active' : ''}"
@@ -69,7 +69,7 @@ export class ThemeToggle extends LitElement {
           title="Dark mode"
         >
           <t3-icon identifier="actions-moon"></t3-icon>
-          Dark
+          <span class="btn-text">Dark</span>
         </button>
         <button
           class="theme-btn ${this.theme === 'auto' ? 'active' : ''}"
@@ -78,7 +78,7 @@ export class ThemeToggle extends LitElement {
           title="Auto-detect based on system settings"
         >
           <t3-icon identifier="actions-cog"></t3-icon>
-          Auto
+          <span class="btn-text">Auto</span>
         </button>
       </div>
     `;

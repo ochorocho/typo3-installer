@@ -13,7 +13,7 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 # TS/JS-Files
-[*.{ts,js}]
+[*.{ts,js,mjs}]
 indent_size = 2
 
 # JSON-Files
@@ -38,11 +38,6 @@ indent_size = 2
 indent_size = 2
 indent_style = tab
 
-#.eslintrc.json
-[.eslintrc.json]
-indent_size = 2
-indent_style = space
-
 # stylelint
 [.stylelintrc]
 indent_size = 2
@@ -56,8 +51,8 @@ indent_size = 2
 indent_size = 2
 
 # XLF-Files
-[*.xlf]
-indent_style = tab
+[*.{xlf,xliff}]
+indent_size = 2
 
 # SQL-Files
 [*.sql]
@@ -67,3 +62,7 @@ indent_size = 2
 # .htaccess
 [{_.htaccess,.htaccess}]
 indent_style = tab
+
+# CSS-Files
+[*.css]
+indent_size = 2

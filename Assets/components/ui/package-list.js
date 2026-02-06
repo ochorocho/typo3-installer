@@ -75,11 +75,11 @@ export class PackageList extends LitElement {
       <div class="packages" role="group" aria-label="Available TYPO3 packages">
         ${themePkgs.length > 0 ? html`
           <div class="group-header">
+            <input type="checkbox"
+                   .checked=${themeSelected === themePkgs.length}
+                   .indeterminate=${themeSelected > 0 && themeSelected < themePkgs.length}
+                   @change=${(e) => this._toggleAll(themePkgs, e.target.checked)}>
             <label class="group-toggle">
-              <input type="checkbox"
-                     .checked=${themeSelected === themePkgs.length}
-                     .indeterminate=${themeSelected > 0 && themeSelected < themePkgs.length}
-                     @change=${(e) => this._toggleAll(themePkgs, e.target.checked)}>
               Themes (${themeSelected}/${themePkgs.length})
             </label>
           </div>
@@ -87,11 +87,11 @@ export class PackageList extends LitElement {
         ` : ''}
         ${extensionPkgs.length > 0 ? html`
           <div class="group-header">
+            <input type="checkbox"
+                   .checked=${extensionSelected === extensionPkgs.length}
+                   .indeterminate=${extensionSelected > 0 && extensionSelected < extensionPkgs.length}
+                   @change=${(e) => this._toggleAll(extensionPkgs, e.target.checked)}>
             <label class="group-toggle">
-              <input type="checkbox"
-                     .checked=${extensionSelected === extensionPkgs.length}
-                     .indeterminate=${extensionSelected > 0 && extensionSelected < extensionPkgs.length}
-                     @change=${(e) => this._toggleAll(extensionPkgs, e.target.checked)}>
               Core Extensions (${extensionSelected}/${extensionPkgs.length})
             </label>
           </div>
