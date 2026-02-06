@@ -137,8 +137,8 @@ class PackageService
             /** @var array<string, mixed> $packageVersions */
             $packageVersions = $data['package']['versions'];
 
-            // Group versions by major.minor and find latest patch for each
-            /** @var array<string, array{patch: int, full: string}> $versionGroups */
+            // Group versions by major and find latest minor.patch for each
+            /** @var array<string, array{minor: int, patch: int, full: string, majorMinor: string}> $versionGroups */
             $versionGroups = [];
             foreach ($packageVersions as $versionString => $versionData) {
                 $versionStr = (string)$versionString;
@@ -162,19 +162,32 @@ class PackageService
                     continue;
                 }
 
-                // Track the latest patch version for each major.minor
-                if (!isset($versionGroups[$majorMinor]) || $patch > $versionGroups[$majorMinor]['patch']) {
-                    $versionGroups[$majorMinor] = [
+                $majorKey = (string)$major;
+
+                // Track the latest minor.patch version for each major
+                if (!isset($versionGroups[$majorKey])) {
+                    $versionGroups[$majorKey] = [
+                        'minor' => $minor,
                         'patch' => $patch,
                         'full' => $versionStr,
+                        'majorMinor' => $majorMinor,
+                    ];
+                } elseif ($minor > $versionGroups[$majorKey]['minor']
+                    || ($minor === $versionGroups[$majorKey]['minor'] && $patch > $versionGroups[$majorKey]['patch'])
+                ) {
+                    $versionGroups[$majorKey] = [
+                        'minor' => $minor,
+                        'patch' => $patch,
+                        'full' => $versionStr,
+                        'majorMinor' => $majorMinor,
                     ];
                 }
             }
 
             // Convert to output format and sort
-            foreach ($versionGroups as $majorMinor => $info) {
+            foreach ($versionGroups as $majorKey => $info) {
                 $versions[] = [
-                    'version' => $majorMinor,
+                    'version' => $info['majorMinor'],  // e.g., "14.1" (not just "14")
                     'latest' => $info['full'],
                 ];
             }
