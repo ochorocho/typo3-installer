@@ -111,7 +111,7 @@ export class PackageList extends LitElement {
   render() {
     if (!this.versionsReady) return null;
     if (this.loading) return html`<ui-spinner>Loading packages for TYPO3 ${this.typo3Version}...</ui-spinner>`;
-    if (this.error) return html`<t3-section-error title="Failed to Load Packages" message=${this.error.message}></t3-section-error>`;
+    if (this.error) return html`<t3-section-error title="Failed to Load Packages" .message=${this.error.message} context="general"></t3-section-error>`;
 
     // Group packages into categories (exclude required packages from display)
     const entries = Object.entries(this.packages);

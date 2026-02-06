@@ -2,7 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { apiClient } from '../api/client.js';
 import { stepBaseStyles, formStyles, buttonStyles, srOnlyStyles, alertStyles, emit } from './ui/shared-styles.js';
 import { debounce } from '../utils/helpers.js';
-import './ui/error-help.js';
+import './ui/section-error.js';
 import './ui/step-actions.js';
 import './ui/spinner.js';
 
@@ -116,7 +116,7 @@ export class StepDatabase extends LitElement {
       this.testResult = {
         success: false,
         message: error.getUserMessage?.() || error.message || 'Connection failed',
-        error: { message: error.message, details: error.details }
+        error: { message: error.message, details: error.details?.details || null }
       };
       emit(this, 'state-update', { database: { ...this.state.database, tested: true, valid: false } });
     } finally {
@@ -234,13 +234,19 @@ export class StepDatabase extends LitElement {
       ` : ''}
 
       ${this.testResult ? html`
-        <div class="alert ${this.testResult.success ? 'alert-success' : 'alert-error'}" role="alert" aria-live="polite">
-          <span class="sr-only">${this.testResult.success ? 'Success:' : 'Error:'}</span>
-          ${this.testResult.message}
-          ${!this.testResult.success && this.testResult.error ? html`
-            <t3-error-help .error=${this.testResult.error} context="database"></t3-error-help>
-          ` : ''}
-        </div>
+        ${this.testResult.success ? html`
+          <div class="alert alert-success" role="alert" aria-live="polite">
+            <span class="sr-only">Success:</span>
+            ${this.testResult.message}
+          </div>
+        ` : html`
+          <t3-section-error
+            title="Connection Failed"
+            .message=${this.testResult.message}
+            .details=${this.testResult.error?.details || ''}
+            context="database"
+          ></t3-section-error>
+        `}
       ` : ''}
 
       <t3-step-actions .canContinue=${!this.driversLoading && !this.driversError && this.availableDrivers.length > 0 && this.state?.database?.tested && this.state?.database?.valid}>

@@ -69,7 +69,7 @@ export class VersionSelector extends LitElement {
 
   render() {
     if (this.loading) return html`<t3-loading-skeleton height="56px">Loading versions...</t3-loading-skeleton>`;
-    if (this.error) return html`<t3-section-error title="Failed to Load Versions" message=${this.error.message}></t3-section-error>`;
+    if (this.error) return html`<t3-section-error title="Failed to Load Versions" .message=${this.error.message} context="general"></t3-section-error>`;
     if (!this.versions.length) return null;
 
     return html`

@@ -2,7 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { apiClient } from '../api/client.js';
 import { stepBaseStyles, buttonStyles, emit } from './ui/shared-styles.js';
 import { validateInstallationConfig, getIncompleteStepDetails } from '../utils/step-validators.js';
-import './ui/error-help.js';
+import './ui/section-error.js';
 import './ui/terminal-output.js';
 import './ui/task-list.js';
 
@@ -63,43 +63,12 @@ export class StepProgress extends LitElement {
         flex-wrap: wrap;
       }
 
-      .error-message {
-        padding: var(--spacing-lg, 24px);
-        background: var(--color-error-bg, #ffebee);
-        border: 1px solid var(--color-error, #c83c3c);
-        border-radius: var(--border-radius, 4px);
-        margin-bottom: var(--spacing-lg, 24px);
-      }
-
-      .error-message h3 {
-        color: var(--color-error, #c83c3c);
-        margin: 0 0 var(--spacing-md, 16px) 0;
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-sm, 8px);
-      }
-
-      .error-message h3::before { content: '\u26A0'; font-size: 1.25rem; }
-      .error-message .error-description { margin-bottom: var(--spacing-md, 16px); color: var(--color-text, #333); }
-
-      .error-message .error-details {
-        background: var(--color-bg-white, #fff);
-        padding: var(--spacing-md, 16px);
-        border-radius: var(--border-radius, 4px);
-        font-size: 12px;
-        font-family: monospace;
-        color: var(--color-text, #333);
-        margin-bottom: var(--spacing-md, 16px);
-        max-height: 200px;
-        overflow-y: auto;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-
-      .error-message .error-actions {
+      .error-actions {
         display: flex;
         gap: var(--spacing-md, 16px);
         flex-wrap: wrap;
+        margin-top: var(--spacing-md, 16px);
+        margin-bottom: var(--spacing-lg, 24px);
       }
     `
   ];
@@ -279,25 +248,25 @@ export class StepProgress extends LitElement {
       const isValidationError = install.error.isValidationError;
       const incompleteSteps = isValidationError ? getIncompleteStepDetails(this.state) : [];
       return html`
-        <div class="error-message" role="alert">
-          <h3>${isValidationError ? 'Missing Configuration' : 'Installation Failed'}</h3>
-          <p class="error-description">${install.error.message || 'An unexpected error occurred.'}</p>
-          ${install.error.details ? html`<details><summary>Technical details</summary><div class="error-details">${install.error.details}</div></details>` : ''}
-          ${isValidationError && incompleteSteps.length > 0 ? html`
-            <p>The following steps need attention:</p>
-            <div class="error-actions">
-              ${incompleteSteps.map(step => html`
-                <button class="btn-primary" @click=${() => emit(this, 'navigate-to-step', { stepId: step.id })}>${step.name}</button>
-              `)}
-            </div>
-          ` : html`
-            <div class="error-actions">
-              ${isValidationError ? '' : html`<button class="btn-primary" @click=${this._handleRetry}>Retry Installation</button>`}
-              <button class="${isValidationError ? 'btn-primary' : 'btn-outline'}" @click=${this._handleGoBack}>Go Back to Configuration</button>
-            </div>
-          `}
-          ${isValidationError ? '' : html`<t3-error-help .error=${install.error} context="installation"></t3-error-help>`}
-        </div>
+        <t3-section-error
+          title=${isValidationError ? 'Missing Configuration' : 'Installation Failed'}
+          .message=${install.error.message || 'An unexpected error occurred.'}
+          .details=${install.error.details || ''}
+          context=${isValidationError ? '' : 'installation'}
+        ></t3-section-error>
+        ${isValidationError && incompleteSteps.length > 0 ? html`
+          <p>The following steps need attention:</p>
+          <div class="error-actions">
+            ${incompleteSteps.map(step => html`
+              <button class="btn-primary" @click=${() => emit(this, 'navigate-to-step', { stepId: step.id })}>${step.name}</button>
+            `)}
+          </div>
+        ` : html`
+          <div class="error-actions">
+            ${isValidationError ? '' : html`<button class="btn-primary" @click=${this._handleRetry}>Retry Installation</button>`}
+            <button class="${isValidationError ? 'btn-primary' : 'btn-outline'}" @click=${this._handleGoBack}>Go Back to Configuration</button>
+          </div>
+        `}
         ${this.outputLines.length > 0 ? html`
           <t3-terminal-output .lines=${this.outputLines} .autoScroll=${this.autoScroll}
             @toggle-autoscroll=${this._handleToggleAutoScroll} @clear-output=${this._handleClearOutput}></t3-terminal-output>

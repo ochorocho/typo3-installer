@@ -1,8 +1,8 @@
 import { LitElement, html, css } from 'lit';
 import { apiClient } from '../api/client.js';
 import { stepBaseStyles, buttonStyles, srOnlyStyles, emit } from './ui/shared-styles.js';
-import './ui/error-help.js';
 import './ui/php-version-warning.js';
+import './ui/section-error.js';
 import './ui/step-actions.js';
 import './ui/t3-icon.js';
 import './ui/spinner.js';
@@ -108,24 +108,10 @@ export class StepRequirements extends LitElement {
 
       .packages-info strong { color: var(--color-secondary, #1a1a1a); }
 
-      .error-container {
-        background: var(--color-error-bg, #ffebee);
-        border: 1px solid var(--color-error, #c83c3c);
-        border-radius: var(--border-radius, 4px);
-        padding: var(--spacing-lg, 24px);
+      .error-actions {
+        margin-top: var(--spacing-md, 16px);
         margin-bottom: var(--spacing-lg, 24px);
       }
-
-      .error-header {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-sm, 8px);
-        margin-bottom: var(--spacing-md, 16px);
-      }
-
-      .error-icon { color: var(--color-error, #c83c3c); }
-      .error-title { font-weight: 600; color: var(--color-error, #c83c3c); font-size: 16px; }
-      .error-message { color: var(--color-text, #333); margin-bottom: var(--spacing-md, 16px); }
     `
   ];
 
@@ -207,7 +193,7 @@ export class StepRequirements extends LitElement {
     } catch (error) {
       this.error = {
         message: error.getUserMessage?.() || error.message || 'Failed to check requirements',
-        details: error.details || null
+        details: error.details?.details || null
       };
     } finally {
       this.checking = false;
@@ -299,13 +285,13 @@ export class StepRequirements extends LitElement {
       </div>
 
       ${this.error ? html`
-        <div class="error-container" role="alert">
-          <div class="error-header">
-            <t3-icon class="error-icon" identifier="actions-exclamation-circle" size="medium"></t3-icon>
-            <span class="error-title">Requirements Check Failed</span>
-          </div>
-          <p class="error-message">${this.error.message}</p>
-          <t3-error-help .error=${this.error} context="requirements"></t3-error-help>
+        <t3-section-error
+          title="Requirements Check Failed"
+          .message=${this.error.message}
+          .details=${this.error.details || ''}
+          context="requirements"
+        ></t3-section-error>
+        <div class="error-actions">
           <button class="btn-error" @click=${this._checkRequirements}>Try Again</button>
         </div>
       ` : this.checking ? html`

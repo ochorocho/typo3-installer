@@ -126,7 +126,7 @@ export class InstallInfo extends LitElement {
 
   render() {
     if (this.loading) return html`<t3-loading-skeleton height="80px">Loading environment...</t3-loading-skeleton>`;
-    if (this.error) return html`<t3-section-error title="Failed to Load Environment Info" message=${this.error.message}></t3-section-error>`;
+    if (this.error) return html`<t3-section-error title="Failed to Load Environment Info" .message=${this.error.message} context="general"></t3-section-error>`;
     if (!this.info) return null;
 
     const { installPath, webDir, phpVersion, phpBinary, composerPath, validation } = this.info;
