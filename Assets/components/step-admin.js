@@ -1,5 +1,5 @@
-import { LitElement, html, css } from 'lit';
-import { stepBaseStyles, formStyles, emit } from './ui/shared-styles.js';
+import { LitElement, html } from 'lit';
+import { emit } from './ui/shared-styles.js';
 import {
   isValidUsername,
   getUsernameError,
@@ -14,36 +14,18 @@ import './ui/step-actions.js';
 
 /**
  * Admin account configuration step.
+ * Uses global CSS from main.css (no Shadow DOM).
  * @element step-admin
  */
 export class StepAdmin extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     state: { type: Object },
     errors: { type: Object },
     touched: { type: Object }
   };
-
-  static styles = [
-    stepBaseStyles,
-    formStyles,
-    css`
-      .password-strength { margin-top: var(--spacing-sm, 8px); }
-      .password-strength-bar {
-        height: 4px;
-        background: var(--color-border, #bbbbbb);
-        border-radius: 2px;
-        overflow: hidden;
-      }
-      .password-strength-fill { height: 100%; }
-      .password-strength-fill.weak { width: 33%; background: var(--color-error, #c83c3c); }
-      .password-strength-fill.medium { width: 66%; background: var(--color-warning, #f76707); }
-      .password-strength-fill.strong { width: 100%; background: var(--color-success, #1cb841); }
-      .password-strength-label { font-size: 12px; margin-top: var(--spacing-xs, 4px); }
-      .password-strength-label.weak { color: var(--color-error-accessible, #b33636); }
-      .password-strength-label.medium { color: var(--color-warning, #f76707); }
-      .password-strength-label.strong { color: var(--color-success-accessible, #137526); }
-    `
-  ];
 
   constructor() {
     super();

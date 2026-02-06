@@ -1,52 +1,20 @@
-import { LitElement, html, css } from 'lit';
-import { hostStyles, srOnlyStyles } from './shared-styles.js';
+import { LitElement, html } from 'lit';
 import './t3-icon.js';
 
 /**
  * Task list showing installation progress.
+ * Uses global CSS from main.css (no Shadow DOM).
  * @element t3-task-list
  * @prop {Array} tasks - Array of { id, label, status } objects
  *       status: 'pending' | 'running' | 'completed' | 'error'
  */
 export class TaskList extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     tasks: { type: Array }
   };
-
-  static styles = [
-    hostStyles,
-    srOnlyStyles,
-    css`
-      .task-list {
-        margin: 0 0 var(--spacing-md, 16px);
-        padding: 0;
-        list-style: none;
-      }
-      .task {
-        display: flex;
-        align-items: center;
-        padding: var(--spacing-xs, 4px) 0;
-        font-size: 14px;
-      }
-      .task-icon {
-        width: 16px;
-        height: 16px;
-        margin-right: var(--spacing-sm, 8px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
-      .task.pending .task-icon { color: var(--color-text-light, #333333); }
-      .task.running .task-icon { color: var(--color-primary-accessible, #b35c00); }
-      .task.completed .task-icon { color: var(--color-success-accessible, #137526); }
-      .task.error .task-icon { color: var(--color-error-accessible, #b33636); }
-      .task.pending { color: var(--color-text-light, #333333); }
-      .task.running { font-weight: 600; }
-      .task.completed { color: var(--color-success-accessible, #137526); }
-      .task.error { color: var(--color-error-accessible, #b33636); }
-    `
-  ];
 
   constructor() {
     super();

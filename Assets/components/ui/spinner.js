@@ -1,34 +1,17 @@
-import {html, LitElement, css} from "lit";
+import { html, LitElement } from 'lit';
 
+/**
+ * Spinner component for loading states.
+ * Uses global CSS from main.css (no Shadow DOM).
+ * @element ui-spinner
+ */
 class Spinner extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
 
   static properties = {
-      size: {type: String}
-  }
-
-  static styles = css`
-    .wrapper {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5em;
-      line-height: 0;
-      margin: 0;
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid var(--color-border-light);
-      border-radius: 50%;
-      border-top-color: var(--color-primary-dark);
-      animation: spin 1s linear infinite;
-
-      &.small { width: 11px; height: 11px; }
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-  `
+    size: { type: String }
+  };
 
   constructor() {
     super();
@@ -36,7 +19,7 @@ class Spinner extends LitElement {
   }
 
   render() {
-    return html`<p class="wrapper"><span class="spinner ${this.size}"></span><slot></slot></p>`
+    return html`<p class="spinner-wrapper"><span class="spinner-icon ${this.size}"></span><slot></slot></p>`;
   }
 }
 

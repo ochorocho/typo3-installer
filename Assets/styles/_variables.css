@@ -1,0 +1,210 @@
+/**
+ * TYPO3 Installer - CSS Variables
+ * Design tokens for light/dark mode theming
+ */
+
+:root {
+  /* TYPO3 v14.1 Primary Colors */
+  --color-primary: #ff8700;
+  --color-primary-dark: #e67a00;
+  --color-primary-accessible: #b35c00;  /* WCAG AA compliant for white text (4.7:1) */
+  --color-secondary: #1a1a1a;
+
+  /* Status Colors - TYPO3 official palette */
+  --color-success: #1cb841;
+  --color-success-accessible: #137526;
+  --color-error: #c83c3c;
+  --color-error-accessible: #b33636;
+  --color-warning: #f76707;
+  --color-info: #0078d4;
+
+  /* Light mode defaults */
+  --color-bg: #f4f4f4;
+  --color-bg-white: #ffffff;
+  --color-bg-light: #fafafa;
+  --color-text: #1a1a1a;
+  --color-text-light: #333333;
+  --color-text-muted: #555555;
+  --color-border: #bbbbbb;
+  --color-border-light: #dddddd;
+
+  /* Input colors - always black on white for clarity */
+  --color-input-bg: #ffffff;
+  --color-input-text: #1a1a1a;
+  --color-input-border: var(--color-border-light);
+
+  /* Focus indicator color */
+  --color-focus: rgba(255, 135, 0, 0.4);
+
+  /* Alert/message background colors */
+  --color-success-bg: #e8f5e9;
+  --color-error-bg: #ffebee;
+  --color-warning-bg: #fff3e0;
+  --color-info-bg: #e3f2fd;
+
+  /* Accessible warning text color for info boxes */
+  --color-warning-text: #9a4408;
+
+  /* Accessible success heading color */
+  --color-success-heading: #137526;
+
+  /* Button background colors (must have 4.5:1 contrast with white text) */
+  --color-success-btn: #137526;
+  --color-success-btn-hover: #0a6228;
+
+  /* Button hover colors */
+  --color-info-dark: #005a9e;
+  --color-success-dark: #0a6228;
+  --color-error-dark: #a33232;
+
+  /* Terminal colors */
+  --terminal-bg: #1e1e1e;
+  --terminal-header-bg: #2d2d2d;
+  --terminal-text: #d4d4d4;
+  --terminal-text-muted: #aaaaaa;
+  --terminal-border: #555555;
+  --terminal-scrollbar: #555555;
+  --terminal-scrollbar-hover: #777777;
+  --terminal-error: #f14c4c;
+  --terminal-success: #4ec9b0;
+  --terminal-info: #3794ff;
+  --terminal-step-marker: var(--color-primary, #ff8700);
+  --terminal-timestamp: #888888;
+
+  /* Info box colors (for install-info component) */
+  --color-info-box-bg: #e3f2fd;
+  --color-info-box-border: #90caf9;
+  --color-info-box-accent: #1565c0;
+  --color-info-box-label: #424242;
+  --color-info-box-value: #212121;
+  --color-info-box-value-bg: rgba(255, 255, 255, 0.85);
+
+  /* Typography sizes */
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+
+  /* Spacing - 8px grid system */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Border radius - TYPO3 v14.1 uses rounded corners */
+  --border-radius: 4px;
+  --border-radius-lg: 8px;
+
+  /* Box shadow */
+  --shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  --shadow-focus: 0 0 0 3px var(--color-focus);
+
+  /* Responsive container padding */
+  --container-padding: var(--spacing-lg);
+}
+
+/* Dark mode variables */
+[data-theme="dark"] {
+  --color-bg: #1a1a1a;
+  --color-bg-white: #2a2a2a;
+  --color-bg-light: #333333;
+  --color-text: #f0f0f0;
+  --color-text-light: #d4d4d4;
+  --color-text-muted: #b0b0b0;
+  --color-border: #444444;
+  --color-border-light: #555555;
+  --color-secondary: #f0f0f0;
+  --shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+
+  /* Dark mode alert backgrounds */
+  --color-success-bg: #1a3d1a;
+  --color-error-bg: #3d1a1a;
+  --color-warning-bg: #3d2a1a;
+  --color-info-bg: #1a2a3d;
+
+  /* Accessible status colors for dark backgrounds (WCAG AA 4.5:1) */
+  --color-success-accessible: #5cc86a;
+  --color-error-accessible: #f47070;
+
+  /* Accessible warning text for dark mode info boxes */
+  --color-warning-text: #ffb347;
+
+  /* Accessible success heading for dark mode */
+  --color-success-heading: #4ec9a0;
+
+  /* Button backgrounds (dark enough for white text in both modes) */
+  --color-success-btn: #168030;
+  --color-success-btn-hover: #137526;
+
+  /* Button hover colors (slightly lighter for dark mode) */
+  --color-info-dark: #1a8cd8;
+  --color-success-dark: #1cb841;
+  --color-error-dark: #d84a4a;
+
+  /* Dark mode info box colors */
+  --color-info-box-bg: #1a2a3d;
+  --color-info-box-border: #3d5a7a;
+  --color-info-box-accent: #64b5f6;
+  --color-info-box-label: #b0b0b0;
+  --color-info-box-value: #e0e0e0;
+  --color-info-box-value-bg: rgba(0, 0, 0, 0.3);
+
+  /* Input colors - dark mode */
+  --color-input-bg: #444444;
+  --color-input-text: #ffffff;
+  --color-input-border: var(--color-border-light);
+}
+
+/* Auto mode - follows system preference */
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    --color-bg: #1a1a1a;
+    --color-bg-white: #2a2a2a;
+    --color-bg-light: #333333;
+    --color-text: #f0f0f0;
+    --color-text-light: #d4d4d4;
+    --color-text-muted: #b0b0b0;
+    --color-border: #444444;
+    --color-border-light: #555555;
+    --color-secondary: #f0f0f0;
+    --shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+
+    /* Dark mode alert backgrounds */
+    --color-success-bg: #1a3d1a;
+    --color-error-bg: #3d1a1a;
+    --color-warning-bg: #3d2a1a;
+    --color-info-bg: #1a2a3d;
+
+    /* Accessible status colors for dark backgrounds (WCAG AA 4.5:1) */
+    --color-success-accessible: #5cc86a;
+    --color-error-accessible: #f47070;
+
+    /* Button backgrounds (dark enough for white text in both modes) */
+    --color-success-btn: #168030;
+    --color-success-btn-hover: #137526;
+
+    /* Accessible warning text for dark mode info boxes */
+    --color-warning-text: #ffb347;
+
+    /* Accessible success heading for dark mode */
+    --color-success-heading: #4ec9a0;
+
+    /* Button hover colors (slightly lighter for dark mode) */
+    --color-info-dark: #1a8cd8;
+    --color-success-dark: #1cb841;
+    --color-error-dark: #d84a4a;
+
+    /* Dark mode info box colors */
+    --color-info-box-bg: #1a2a3d;
+    --color-info-box-border: #3d5a7a;
+    --color-info-box-accent: #64b5f6;
+    --color-info-box-label: #b0b0b0;
+    --color-info-box-value: #e0e0e0;
+    --color-info-box-value-bg: rgba(0, 0, 0, 0.3);
+
+    /* Input colors - dark mode */
+    --color-input-bg: #444444;
+    --color-input-text: #ffffff;
+    --color-input-border: var(--color-border-light);
+  }
+}

@@ -1,42 +1,22 @@
-import { LitElement, html, css } from 'lit';
-import { hostStyles } from './shared-styles.js';
+import { LitElement, html } from 'lit';
 
 /**
  * Contextual error help with troubleshooting suggestions.
+ * Uses global CSS from main.css (no Shadow DOM).
  * @element t3-error-help
  * @prop {Object} error - Error object with message, details, isNetworkError
  * @prop {String} context - Error context: 'database', 'requirements', 'installation'
  * @prop {String} title - Optional custom title override
  */
 export class ErrorHelp extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     error: { type: Object },
     context: { type: String },
     title: { type: String }
   };
-
-  static styles = [
-    hostStyles,
-    css`
-      .error-help {
-        margin-top: var(--spacing-md, 16px);
-        padding-top: var(--spacing-md, 16px);
-        border-top: 1px solid rgba(200, 60, 60, 0.2);
-        font-size: 13px;
-        color: var(--color-text-light, #555);
-      }
-      .error-help-title {
-        font-weight: 600;
-        color: var(--color-text, #333);
-        margin-bottom: var(--spacing-sm, 8px);
-      }
-      ul {
-        margin: var(--spacing-xs, 4px) 0 0;
-        padding-left: var(--spacing-lg, 24px);
-      }
-      li { margin-bottom: var(--spacing-xs, 4px); }
-    `
-  ];
 
   constructor() {
     super();

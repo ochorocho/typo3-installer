@@ -1,6 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html } from 'lit';
 import { apiClient } from '../api/client.js';
-import { stepBaseStyles, buttonStyles, emit } from './ui/shared-styles.js';
+import { emit } from './ui/shared-styles.js';
 import { validateInstallationConfig, getIncompleteStepDetails } from '../utils/step-validators.js';
 import './ui/section-error.js';
 import './ui/terminal-output.js';
@@ -8,9 +8,13 @@ import './ui/task-list.js';
 
 /**
  * Installation progress step with streaming output.
+ * Uses global CSS from main.css (no Shadow DOM).
  * @element step-progress
  */
 export class StepProgress extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     state: { type: Object },
     tasks: { type: Array },
@@ -19,59 +23,6 @@ export class StepProgress extends LitElement {
     currentStep: { type: String },
     autoScroll: { type: Boolean }
   };
-
-  static styles = [
-    stepBaseStyles,
-    buttonStyles,
-    css`
-      .progress-container { margin-bottom: var(--spacing-md, 16px); }
-
-      .progress-bar {
-        height: 8px;
-        background: var(--color-border, #bbb);
-        border-radius: 4px;
-        overflow: hidden;
-        margin-bottom: var(--spacing-sm, 8px);
-      }
-
-      .progress-fill {
-        height: 100%;
-        background: var(--color-primary, #ff8700);
-        border-radius: 4px;
-      }
-
-      .progress-text {
-        display: flex;
-        justify-content: space-between;
-        font-size: 14px;
-        color: var(--color-text-light, #333);
-      }
-
-      .success-message h3 {
-        color: var(--color-success-heading, #137526);
-        margin: 0 0 var(--spacing-md, 16px) 0;
-        font-size: 1.5rem;
-      }
-
-      .success-message p { margin: 0 0 var(--spacing-md, 16px) 0; color: var(--color-text, #333); }
-      .success-message .admin-info { font-size: 14px; margin-bottom: var(--spacing-lg, 24px); }
-
-      .success-buttons {
-        display: flex;
-        gap: var(--spacing-md, 16px);
-        justify-content: center;
-        flex-wrap: wrap;
-      }
-
-      .error-actions {
-        display: flex;
-        gap: var(--spacing-md, 16px);
-        flex-wrap: wrap;
-        margin-top: var(--spacing-md, 16px);
-        margin-bottom: var(--spacing-lg, 24px);
-      }
-    `
-  ];
 
   constructor() {
     super();
@@ -280,7 +231,7 @@ export class StepProgress extends LitElement {
       ${install.completed ? '' : html`<p>Please wait while TYPO3 is being installed. You can follow the progress below.</p>`}
 
       <div class="progress-container">
-        <div class="progress-bar" role="progressbar" aria-label="Installation progress" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+        <div class="install-progress-bar" role="progressbar" aria-label="Installation progress" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
           <div class="progress-fill" style="width: ${progress}%"></div>
         </div>
         <div class="progress-text">

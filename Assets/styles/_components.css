@@ -1,0 +1,269 @@
+/**
+ * TYPO3 Installer - Component Styles
+ * Terminal, info-box, task-list, spinner, skeleton
+ */
+
+/* =================================
+   Spinner Styles
+   ================================= */
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+.spinner-dark {
+  border-color: rgba(0, 0, 0, 0.1);
+  border-top-color: var(--color-info);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =================================
+   Terminal Styles
+   ================================= */
+
+.terminal-container {
+  margin-top: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.terminal-header {
+  background: var(--terminal-header-bg);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.terminal-title {
+  color: var(--terminal-text-muted);
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.terminal-controls {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.terminal-controls button {
+  background: transparent;
+  border: 1px solid var(--terminal-border);
+  color: var(--terminal-text-muted);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+.terminal-controls button:hover {
+  background: var(--terminal-border);
+  color: #fff;
+}
+
+.terminal-controls button.active {
+  background: var(--color-primary-accessible);
+  border-color: var(--color-primary-accessible);
+  color: #fff;
+}
+
+.terminal-output {
+  background: var(--terminal-bg);
+  color: var(--terminal-text);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: var(--spacing-sm);
+  height: 300px;
+  overflow-y: auto;
+  word-break: break-word;
+}
+
+.terminal-output::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-output::-webkit-scrollbar-track {
+  background: var(--terminal-bg);
+}
+
+.terminal-output::-webkit-scrollbar-thumb {
+  background: var(--terminal-scrollbar);
+  border-radius: var(--border-radius);
+}
+
+.terminal-output::-webkit-scrollbar-thumb:hover {
+  background: var(--terminal-scrollbar-hover);
+}
+
+.output-line {
+  margin: 0;
+  padding: 1px 0;
+}
+
+.output-line.step-marker {
+  color: var(--terminal-step-marker);
+  font-weight: bold;
+  margin-top: 8px;
+  border-top: 1px solid var(--terminal-border);
+  padding-top: 8px;
+}
+
+.output-line.step-marker:first-child {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0;
+}
+
+.output-line .timestamp {
+  color: var(--terminal-timestamp);
+  margin-right: 8px;
+}
+
+.output-line.error {
+  color: var(--terminal-error);
+}
+
+.output-line.success {
+  color: var(--terminal-success);
+}
+
+.output-line.info {
+  color: var(--terminal-info);
+}
+
+/* =================================
+   Info Box Styles
+   ================================= */
+
+.info-box {
+  background: var(--color-info-box-bg);
+  border: 1px solid var(--color-info-box-border);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.info-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.info-header t3-icon {
+  color: var(--color-info-box-accent);
+}
+
+.info-header strong {
+  color: var(--color-info-box-accent);
+  font-size: 14px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--spacing-sm) var(--spacing-md);
+  align-items: baseline;
+}
+
+.info-label {
+  font-size: 13px;
+  color: var(--color-info-box-label);
+  white-space: nowrap;
+}
+
+.info-value {
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--color-info-box-value);
+  background: var(--color-info-box-value-bg);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: 3px;
+  word-break: break-all;
+}
+
+/* =================================
+   Task List Styles
+   ================================= */
+
+.task-list {
+  margin: 0 0 var(--spacing-md);
+  padding: 0;
+  list-style: none;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-xs) 0;
+  font-size: 14px;
+}
+
+.task-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.task.pending .task-icon {
+  color: var(--color-text-light);
+}
+
+.task.running .task-icon {
+  color: var(--color-primary-accessible);
+}
+
+.task.completed .task-icon {
+  color: var(--color-success-accessible);
+}
+
+.task.error .task-icon {
+  color: var(--color-error-accessible);
+}
+
+.task.pending {
+  color: var(--color-text-light);
+}
+
+.task.running {
+  font-weight: 600;
+}
+
+.task.completed {
+  color: var(--color-success-accessible);
+}
+
+.task.error {
+  color: var(--color-error-accessible);
+}
+
+/* =================================
+   Loading Skeleton
+   ================================= */
+
+.skeleton {
+  background: var(--color-bg-light);
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}

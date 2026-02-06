@@ -1,15 +1,19 @@
-import { LitElement, html, css } from 'lit';
-import { hostStyles, buttonStyles, emit } from './shared-styles.js';
+import { LitElement, html } from 'lit';
+import { emit } from './shared-styles.js';
 import './spinner.js';
 
 /**
  * Reusable step navigation actions (Back/Continue buttons).
+ * Uses global CSS from main.css (no Shadow DOM).
  * @element t3-step-actions
  * @fires previous-step - When Back button is clicked
  * @fires next-step - When Continue button is clicked
  * @slot left - Additional content in the left actions area
  */
 export class StepActions extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     showBack: { type: Boolean, attribute: 'show-back' },
     canContinue: { type: Boolean, attribute: 'can-continue' },
@@ -17,24 +21,6 @@ export class StepActions extends LitElement {
     continueText: { type: String, attribute: 'continue-text' },
     continueVariant: { type: String, attribute: 'continue-variant' }
   };
-
-  static styles = [
-    hostStyles,
-    buttonStyles,
-    css`
-      :host { margin-top: var(--spacing-lg, 24px); }
-      .actions {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: var(--spacing-md, 16px);
-      }
-      .actions-left {
-        display: flex;
-        gap: var(--spacing-md, 16px);
-      }
-    `
-  ];
 
   constructor() {
     super();

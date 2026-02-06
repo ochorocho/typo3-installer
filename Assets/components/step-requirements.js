@@ -1,6 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html } from 'lit';
 import { apiClient } from '../api/client.js';
-import { stepBaseStyles, buttonStyles, srOnlyStyles, emit } from './ui/shared-styles.js';
+import { emit } from './ui/shared-styles.js';
 import './ui/php-version-warning.js';
 import './ui/section-error.js';
 import './ui/step-actions.js';
@@ -12,6 +12,9 @@ import './ui/spinner.js';
  * @element step-requirements
  */
 export class StepRequirements extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     state: { type: Object },
     checking: { type: Boolean },
@@ -22,98 +25,6 @@ export class StepRequirements extends LitElement {
     validatingBinary: { type: Boolean },
     _showCustomBinaryInput: { type: Boolean, state: true }
   };
-
-  static styles = [
-    stepBaseStyles,
-    buttonStyles,
-    srOnlyStyles,
-    css`
-      .requirements-list { margin-bottom: var(--spacing-lg, 24px); }
-
-      .requirement {
-        display: flex;
-        align-items: flex-start;
-        padding: var(--spacing-md, 16px);
-        border: 1px solid var(--color-border, #bbbbbb);
-        border-radius: var(--border-radius, 4px);
-        margin-bottom: var(--spacing-sm, 8px);
-        background: var(--color-bg-white, white);
-        color: var(--color-text, #1a1a1a);
-      }
-
-      .requirement.passed { border-left: 4px solid var(--color-success, #4caf50); }
-      .requirement.failed { border-left: 4px solid var(--color-error, #f44336); }
-      .requirement.warning { border-left: 4px solid var(--color-warning, #ff9800); }
-
-      .requirement-icon {
-        width: 24px;
-        height: 24px;
-        margin-right: var(--spacing-md, 16px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
-
-      .requirement-icon t3-icon {
-        width: 20px;
-        height: 20px;
-      }
-
-      .requirement.passed .requirement-icon { color: var(--color-success, #1cb841); }
-      .requirement.failed .requirement-icon { color: var(--color-error, #c83c3c); }
-      .requirement.warning .requirement-icon { color: var(--color-warning, #f76707); }
-
-      .requirement-content { flex: 1; }
-      .requirement-title { font-weight: 600; margin-bottom: var(--spacing-xs, 4px); }
-      .requirement-description { font-size: 14px; color: var(--color-text-light, #333333); }
-
-      .requirement-packages {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--spacing-xs, 4px);
-        margin-top: var(--spacing-xs, 4px);
-      }
-      .package-badge {
-        font-size: 11px;
-        padding: 2px 6px;
-        background: var(--color-bg, #f5f5f5);
-        border-radius: 3px;
-        color: var(--color-text-light, #333333);
-      }
-
-      .summary {
-        display: flex;
-        gap: var(--spacing-lg, 24px);
-        padding: var(--spacing-md, 16px);
-        background: var(--color-bg, #f5f5f5);
-        border-radius: var(--border-radius, 4px);
-        margin-bottom: var(--spacing-lg, 24px);
-      }
-
-      .summary-item { display: flex; align-items: center; gap: var(--spacing-sm, 8px); }
-      .summary-count { font-weight: 600; font-size: 1.25rem; }
-      .summary-count.passed { color: var(--color-success-accessible, #137526); }
-      .summary-count.failed { color: var(--color-error-accessible, #b33636); }
-      .summary-count.warning { color: var(--color-warning, #f76707); }
-
-      .packages-info {
-        font-size: 14px;
-        color: var(--color-text-light, #333333);
-        background: var(--color-bg, #f5f5f5);
-        padding: var(--spacing-md, 16px);
-        border-radius: var(--border-radius, 4px);
-        margin-bottom: var(--spacing-lg, 24px);
-      }
-
-      .packages-info strong { color: var(--color-secondary, #1a1a1a); }
-
-      .error-actions {
-        margin-top: var(--spacing-md, 16px);
-        margin-bottom: var(--spacing-lg, 24px);
-      }
-    `
-  ];
 
   constructor() {
     super();

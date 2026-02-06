@@ -1,63 +1,20 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html } from 'lit';
 import './t3-icon.js';
 
 /**
  * Theme toggle component for switching between light, dark, and auto modes.
+ * Uses global CSS from main.css (no Shadow DOM).
  * @element t3-theme-toggle
  *
  * @fires theme-change - Dispatched when theme is changed, detail: { theme }
  */
 export class ThemeToggle extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     theme: { type: String }
   };
-
-  static styles = css`
-    :host {
-      display: block;
-    }
-
-    .theme-toggle {
-      display: flex;
-      gap: 2px;
-      background: var(--color-bg-light, #f0f0f0);
-      border-radius: var(--border-radius, 4px);
-      padding: 2px;
-    }
-
-    .theme-btn {
-      padding: 4px 8px;
-      border: none;
-      background: transparent;
-      color: var(--color-text-muted, #666);
-      font-size: 12px;
-      font-weight: 500;
-      border-radius: 3px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .theme-btn:hover {
-      color: var(--color-text, #333);
-    }
-
-    .theme-btn.active {
-      color: var(--color-text, #ff8700);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    .theme-btn:focus-visible {
-      outline: 2px solid var(--color-text-white, #ff8700);
-      outline-offset: 1px;
-    }
-
-    .theme-btn t3-icon {
-      width: 14px;
-      height: 14px;
-    }
-  `;
 
   constructor() {
     super();

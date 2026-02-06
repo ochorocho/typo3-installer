@@ -1,9 +1,9 @@
-import { LitElement, html, css } from 'lit';
-import { hostStyles, buttonStyles, spinnerStyles } from './shared-styles.js';
+import { LitElement, html } from 'lit';
 
 /**
+ * PHP version mismatch warning with binary selector.
+ * Uses global CSS from main.css (no Shadow DOM).
  * @element t3-php-version-warning
- * @description Component for displaying PHP version mismatch warning with binary selector
  *
  * @property {Object} phpDetection - PHP detection data (fpmVersion, cliVersion, mismatch, availableVersions, selectedBinary, customBinaryValid, customBinaryVersion, customBinaryError, customBinaryMatchesFpm)
  * @property {String} customBinaryPath - Current custom path input value
@@ -16,124 +16,15 @@ import { hostStyles, buttonStyles, spinnerStyles } from './shared-styles.js';
  * @fires toggle-custom-input - Toggle link clicked
  */
 export class PhpVersionWarning extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     phpDetection: { type: Object },
     customBinaryPath: { type: String },
     validatingBinary: { type: Boolean },
     showCustomInput: { type: Boolean }
   };
-
-  static styles = [
-    hostStyles,
-    buttonStyles,
-    spinnerStyles,
-    css`
-    .php-version-warning {
-      background: var(--color-warning-bg, #fff3e0);
-      border: 1px solid var(--color-warning, #f76707);
-      border-radius: var(--border-radius, 4px);
-      padding: var(--spacing-lg, 24px);
-      margin-bottom: var(--spacing-lg, 24px);
-    }
-
-    .php-version-warning h3 {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm, 8px);
-      color: var(--color-warning, #f76707);
-      margin: 0 0 var(--spacing-md, 16px) 0;
-      font-size: 16px;
-    }
-
-    .php-version-warning h3::before {
-      content: '\u26A0';
-      font-size: 1.25rem;
-    }
-
-    .php-version-info {
-      margin-bottom: var(--spacing-md, 16px);
-      color: var(--color-text, #333);
-    }
-
-    .php-version-info p {
-      margin: 0 0 var(--spacing-sm, 8px) 0;
-    }
-
-    .php-version-info strong {
-      color: var(--color-secondary, #1a1a1a);
-    }
-
-    .php-selector {
-      margin-top: var(--spacing-md, 16px);
-    }
-
-    .php-selector label {
-      display: block;
-      margin-bottom: var(--spacing-sm, 8px);
-      font-weight: 500;
-      color: var(--color-text, #333);
-    }
-
-    .php-selector select,
-    .php-selector input[type="text"] {
-      width: 100%;
-      max-width: 400px;
-      padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
-      border: 1px solid var(--color-border, #bbbbbb);
-      border-radius: var(--border-radius, 4px);
-      font-size: 14px;
-      background: var(--color-input-bg, #ffffff);
-    }
-
-    .php-selector select:focus,
-    .php-selector input[type="text"]:focus {
-      outline: 2px solid var(--color-primary, #ff8700);
-      outline-offset: 2px;
-    }
-
-    .php-selector-row {
-      display: flex;
-      gap: var(--spacing-sm, 8px);
-      align-items: center;
-      margin-bottom: var(--spacing-sm, 8px);
-    }
-
-    .php-selector-row input[type="text"] {
-      flex: 1;
-    }
-
-    .custom-binary-toggle {
-      font-size: 13px;
-      color: var(--color-info, #0078d4);
-      background: none;
-      border: none;
-      cursor: pointer;
-      text-decoration: underline;
-      padding: 0;
-      margin-top: var(--spacing-sm, 8px);
-    }
-
-    .custom-binary-toggle:hover {
-      color: var(--color-primary, #ff8700);
-    }
-
-    .validation-result {
-      margin-top: var(--spacing-sm, 8px);
-      padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
-      border-radius: var(--border-radius, 4px);
-      font-size: 13px;
-    }
-
-    .validation-result.success {
-      background: var(--color-success-bg, #e8f5e9);
-      color: var(--color-success-accessible, #137526);
-    }
-
-    .validation-result.error {
-      background: var(--color-error-bg, #ffebee);
-      color: var(--color-error, #c83c3c);
-    }
-  `];
 
   constructor() {
     super();

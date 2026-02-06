@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html } from 'lit';
 import { ContextProvider } from '@lit/context';
 import { installerContext, initialState, STEPS } from '../context/installer-context.js';
 import { isStepComplete, canStartInstallation } from '../utils/index.js';
@@ -8,205 +8,13 @@ import './ui/t3-icon.js'
 const STORAGE_KEY = 'typo3-installer-state';
 
 export class InstallerApp extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     state: { type: Object },
     invalidSteps: { type: Array }
   };
-
-  static styles = css`
-    :host {
-      display: block;
-      min-height: 100vh;
-      background: var(--color-bg, #f5f5f5);
-    }
-
-    .installer {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: var(--spacing-lg, 24px);
-    }
-
-    .shadow-radius {
-      border-radius: var(--border-radius-lg, 8px);
-      box-shadow: var(--shadow, 0 0 8px rgba(0,0,0,0.1));
-      background: var(--color-bg-white, white);
-    }
-
-    .header {
-      position: relative;
-      padding: var(--spacing-xl, 32px);
-      //border-radius: var(--border-radius-lg, 8px) var(--border-radius-lg, 8px) 0 0
-    }
-
-    [identifier="typo3-logo"] {
-      width: 20%;
-      max-width: 200px;
-    }
-
-    .header h1 {
-      margin: 0 0 var(--spacing-sm, 8px) 0;
-      font-size: 2rem;
-      font-weight: 600;
-    }
-
-    .header p {
-      margin: 0;
-    }
-
-    .header-controls {
-      position: absolute;
-      top: var(--spacing-sm, 8px);
-      right: var(--spacing-md, 16px);
-    }
-
-    .progress-bar {
-      display: flex;
-      justify-content: space-between;
-      padding: var(--spacing-lg, 24px);
-      background: var(--color-bg-white, white);
-      border-top: 1px solid var(--color-border, #bbbbbb);
-      border-bottom: 1px solid var(--color-border, #bbbbbb);
-      position: relative;
-    }
-
-    .progress-bar::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: var(--spacing-lg, 24px);
-      right: var(--spacing-lg, 24px);
-      height: 2px;
-      background: var(--color-border, #bbbbbb);
-      transform: translateY(-50%);
-      z-index: 0;
-    }
-
-    .step-indicator {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      position: relative;
-      z-index: 1;
-      background: var(--color-bg-white, white);
-      padding: 0 var(--spacing-sm, 8px);
-    }
-
-    .step-number {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      font-size: 14px;
-      border: 2px solid var(--color-border, #bbb);
-      background: var(--color-bg-white, white);
-      color: var(--color-text-light, #333);
-    }
-
-    .step-indicator.active .step-number {
-      border-color: var(--color-primary, #ff8700);
-      background: var(--color-primary, #ff8700);
-      color: white;
-    }
-
-    .step-indicator.completed .step-number {
-      border-color: var(--color-success, #4caf50);
-      background: var(--color-success, #4caf50);
-      color: white;
-    }
-
-    .step-indicator.completed .step-number::after {
-      content: '\\2713';
-    }
-
-    .step-title {
-      margin-top: var(--spacing-xs, 4px);
-      font-size: 12px;
-      color: var(--color-text-light, #333333);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .step-indicator.active .step-title {
-      color: var(--color-primary, #ff8700);
-      font-weight: 600;
-    }
-
-    .step-indicator {
-      cursor: pointer;
-    }
-
-    .step-indicator:hover {
-      transform: scale(1.05);
-    }
-
-    .step-indicator.completed:hover .step-number {
-      box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
-    }
-
-    .step-indicator:not(.completed):not(.active):hover .step-number {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-
-    .step-indicator.incomplete .step-number {
-      border-color: var(--color-warning, #f76707);
-    }
-
-    .step-indicator.incomplete .step-title {
-      color: var(--color-warning, #f76707);
-    }
-
-    .step-indicator.has-error .step-number {
-      border-color: var(--color-error, #c83c3c);
-      background: var(--color-error-bg, #ffebee);
-      color: var(--color-error, #c83c3c);
-    }
-
-    .step-indicator.has-error .step-title {
-      color: var(--color-error, #c83c3c);
-      font-weight: 600;
-    }
-
-    .step-indicator.shake {
-      animation: shake 0.6s ease-in-out;
-    }
-
-    .step-indicator.shake .step-number {
-      border-color: var(--color-error, #c83c3c);
-      box-shadow: 0 0 0 3px rgba(200, 60, 60, 0.3);
-    }
-
-    .step-indicator.shake .step-title {
-      color: var(--color-error, #c83c3c);
-      font-weight: 600;
-    }
-
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-      20%, 40%, 60%, 80% { transform: translateX(4px); }
-    }
-
-    .progress-bar.nav-disabled .step-indicator {
-      cursor: default;
-    }
-
-    .progress-bar.nav-disabled .step-indicator:hover {
-      transform: none;
-    }
-
-    .progress-bar.nav-disabled .step-indicator:hover .step-number {
-      box-shadow: none;
-    }
-
-    .content {
-      background: var(--color-bg-white, white);
-      padding: var(--spacing-xl, 32px);
-      border-radius: 0 0 var(--border-radius-lg, 8px) var(--border-radius-lg, 8px);
-    }
-  `;
 
   constructor() {
     super();
@@ -321,8 +129,8 @@ export class InstallerApp extends LitElement {
     // Set persistent error state on incomplete steps
     this.invalidSteps = [...incompleteIndices];
 
-    // Get step indicators and add shake class
-    const indicators = this.shadowRoot.querySelectorAll('.step-indicator');
+    // Get step indicators and add shake class (light DOM, use this directly)
+    const indicators = this.querySelectorAll('.step-indicator');
     incompleteIndices.forEach(index => {
       const indicator = indicators[index];
       if (indicator) {
@@ -404,7 +212,7 @@ export class InstallerApp extends LitElement {
             <t3-icon identifier="typo3-logo" size="auto"></t3-icon>
           </div>
 
-          <div class="progress-bar ${this._isOnProgressStep() ? 'nav-disabled' : ''}">
+          <div class="installer-progress-bar ${this._isOnProgressStep() ? 'nav-disabled' : ''}">
             ${STEPS.map((step, index) => {
               const isActive = index === this.state.currentStep;
               const isCompleted = this._isStepComplete(index);

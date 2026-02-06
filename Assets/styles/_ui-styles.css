@@ -1,0 +1,542 @@
+/**
+ * TYPO3 Installer - UI Component Styles
+ * Styles for t3-step-actions, ui-spinner, t3-section-error, t3-package-list,
+ * t3-version-selector, t3-php-version-warning, t3-install-info, t3-error-help, t3-theme-toggle
+ */
+
+/* =================================
+   Step Actions
+   ================================= */
+
+t3-step-actions {
+  display: block;
+  margin-top: var(--spacing-lg);
+}
+
+t3-step-actions .actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+t3-step-actions .actions-left {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+/* =================================
+   UI Spinner
+   ================================= */
+
+ui-spinner .spinner-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  line-height: 0;
+  margin: 0;
+}
+
+ui-spinner .spinner-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-border-light);
+  border-radius: 50%;
+  border-top-color: var(--color-primary-dark);
+  animation: spin 1s linear infinite;
+}
+
+ui-spinner .spinner-icon.small {
+  width: 11px;
+  height: 11px;
+}
+
+/* =================================
+   Section Error
+   ================================= */
+
+t3-section-error {
+  display: block;
+}
+
+t3-section-error .error-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+t3-section-error .error-header t3-icon {
+  color: var(--color-error);
+}
+
+t3-section-error .error-title {
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+t3-section-error .error-message {
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+t3-section-error details {
+  margin-top: var(--spacing-md);
+  background: var(--color-bg-white);
+  border-radius: var(--border-radius);
+  border: 1px solid rgba(200, 60, 60, 0.2);
+}
+
+t3-section-error summary {
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-light);
+  user-select: none;
+}
+
+t3-section-error summary:hover {
+  background: rgba(200, 60, 60, 0.05);
+}
+
+t3-section-error summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+t3-section-error .details-content {
+  padding: var(--spacing-md);
+  padding-top: 0;
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--color-text);
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* =================================
+   Package List
+   ================================= */
+
+t3-package-list {
+  display: block;
+  margin-bottom: var(--spacing-lg);
+}
+
+t3-package-list .package {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius);
+}
+
+t3-package-list .package:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+t3-package-list .package input {
+  margin-right: var(--spacing-md);
+  margin-top: 4px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+t3-package-list .package input:disabled {
+  cursor: not-allowed;
+}
+
+t3-package-list .package-info {
+  flex: 1;
+  cursor: pointer;
+}
+
+t3-package-list .package-name {
+  font-weight: 600;
+  color: var(--color-secondary);
+}
+
+t3-package-list .package-id {
+  font-size: 12px;
+  font-family: monospace;
+  margin-left: var(--spacing-sm);
+  color: var(--color-text-light);
+}
+
+t3-package-list .package-desc {
+  font-size: 14px;
+  margin-top: var(--spacing-xs);
+  color: var(--color-text-light);
+}
+
+t3-package-list .group-header {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-light);
+  padding: var(--spacing-md) var(--spacing-sm) var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-xs);
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-white);
+  z-index: 10;
+}
+
+t3-package-list .group-header:not(:first-child) {
+  margin-top: var(--spacing-md);
+}
+
+t3-package-list .group-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+t3-package-list .group-toggle input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+/* =================================
+   Version Selector
+   ================================= */
+
+t3-version-selector {
+  display: block;
+  margin-bottom: var(--spacing-lg);
+}
+
+t3-version-selector .version-box {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--border-radius);
+}
+
+t3-version-selector .version-box label {
+  white-space: nowrap;
+  font-weight: 500;
+  margin-bottom: 0;
+}
+
+t3-version-selector .version-box select {
+  flex: 1;
+  max-width: 200px;
+  font-size: 16px;
+  font-weight: 600;
+  border-width: 2px;
+  cursor: pointer;
+}
+
+t3-version-selector .version-info {
+  font-size: 13px;
+  color: var(--color-text-light);
+}
+
+t3-version-selector .btn-refresh {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 13px;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+t3-version-selector .btn-refresh:hover:not(:disabled) {
+  background: var(--color-bg-light);
+}
+
+t3-version-selector .btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+t3-version-selector .btn-refresh:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* =================================
+   PHP Version Warning
+   ================================= */
+
+t3-php-version-warning {
+  display: block;
+}
+
+t3-php-version-warning .php-version-warning {
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+t3-php-version-warning .php-version-warning h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--color-warning);
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: 16px;
+}
+
+t3-php-version-warning .php-version-warning h3::before {
+  content: '\26A0';
+  font-size: 1.25rem;
+}
+
+t3-php-version-warning .php-version-info {
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text);
+}
+
+t3-php-version-warning .php-version-info p {
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+t3-php-version-warning .php-version-info strong {
+  color: var(--color-secondary);
+}
+
+t3-php-version-warning .php-selector {
+  margin-top: var(--spacing-md);
+}
+
+t3-php-version-warning .php-selector label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+t3-php-version-warning .php-selector select,
+t3-php-version-warning .php-selector input[type="text"] {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  background: var(--color-input-bg);
+}
+
+t3-php-version-warning .php-selector select:focus,
+t3-php-version-warning .php-selector input[type="text"]:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+t3-php-version-warning .php-selector-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+t3-php-version-warning .php-selector-row input[type="text"] {
+  flex: 1;
+}
+
+t3-php-version-warning .custom-binary-toggle {
+  font-size: 13px;
+  color: var(--color-info);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  margin-top: var(--spacing-sm);
+}
+
+t3-php-version-warning .custom-binary-toggle:hover {
+  color: var(--color-primary);
+}
+
+t3-php-version-warning .validation-result {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+}
+
+t3-php-version-warning .validation-result.success {
+  background: var(--color-success-bg);
+  color: var(--color-success-accessible);
+}
+
+t3-php-version-warning .validation-result.error {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+/* =================================
+   Install Info
+   ================================= */
+
+t3-install-info {
+  display: block;
+  margin-bottom: var(--spacing-lg);
+}
+
+t3-install-info .warnings {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid rgba(144, 202, 249, 0.5);
+}
+
+t3-install-info .warnings ul {
+  margin: 0;
+  padding-left: var(--spacing-md);
+  font-size: 12px;
+  color: var(--color-warning-text);
+}
+
+t3-install-info .collapsible {
+  margin-top: var(--spacing-md);
+  border-top: 1px solid rgba(144, 202, 249, 0.5);
+  padding-top: var(--spacing-sm);
+}
+
+t3-install-info .collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  padding: var(--spacing-xs) 0;
+  user-select: none;
+}
+
+t3-install-info .collapsible-header:hover {
+  opacity: 0.8;
+}
+
+t3-install-info .collapsible-header t3-icon {
+  color: var(--color-info-box-accent);
+}
+
+t3-install-info .collapsible-header span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-info-box-accent);
+}
+
+t3-install-info .collapsible-content {
+  display: none;
+  margin-top: var(--spacing-sm);
+}
+
+t3-install-info .collapsible-content.expanded {
+  display: block;
+}
+
+t3-install-info .phpinfo-frame {
+  width: 100%;
+  height: 400px;
+  border: 1px solid var(--color-info-box-border);
+  border-radius: var(--border-radius);
+  background: white;
+}
+
+t3-install-info .phpinfo-loading {
+  padding: var(--spacing-md);
+  text-align: center;
+  color: var(--color-text-light);
+  font-size: 13px;
+}
+
+/* =================================
+   Error Help
+   ================================= */
+
+t3-error-help {
+  display: block;
+}
+
+t3-error-help .error-help {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid rgba(200, 60, 60, 0.2);
+  font-size: 13px;
+  color: var(--color-text-light);
+}
+
+t3-error-help .error-help-title {
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+}
+
+t3-error-help ul {
+  margin: var(--spacing-xs) 0 0;
+  padding-left: var(--spacing-lg);
+}
+
+t3-error-help li {
+  margin-bottom: var(--spacing-xs);
+}
+
+/* =================================
+   Theme Toggle
+   ================================= */
+
+t3-theme-toggle {
+  display: block;
+}
+
+t3-theme-toggle .theme-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--color-bg-light);
+  border-radius: var(--border-radius);
+  padding: 2px;
+}
+
+t3-theme-toggle .theme-btn {
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+t3-theme-toggle .theme-btn:hover {
+  color: var(--color-text);
+}
+
+t3-theme-toggle .theme-btn.active {
+  color: var(--color-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+t3-theme-toggle .theme-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+t3-theme-toggle .theme-btn t3-icon {
+  width: 14px;
+  height: 14px;
+}

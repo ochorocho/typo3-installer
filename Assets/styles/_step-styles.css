@@ -1,0 +1,350 @@
+/**
+ * TYPO3 Installer - Step Component Styles
+ * Styles for step-admin, step-packages, step-progress, step-requirements, step-site
+ */
+
+/* =================================
+   Step Admin
+   ================================= */
+
+step-admin {
+  display: block;
+}
+
+step-admin .password-strength {
+  margin-top: var(--spacing-sm);
+}
+
+step-admin .password-strength-bar {
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+step-admin .password-strength-fill {
+  height: 100%;
+}
+
+step-admin .password-strength-fill.weak {
+  width: 33%;
+  background: var(--color-error);
+}
+
+step-admin .password-strength-fill.medium {
+  width: 66%;
+  background: var(--color-warning);
+}
+
+step-admin .password-strength-fill.strong {
+  width: 100%;
+  background: var(--color-success);
+}
+
+step-admin .password-strength-label {
+  font-size: 12px;
+  margin-top: var(--spacing-xs);
+}
+
+step-admin .password-strength-label.weak {
+  color: var(--color-error-accessible);
+}
+
+step-admin .password-strength-label.medium {
+  color: var(--color-warning);
+}
+
+step-admin .password-strength-label.strong {
+  color: var(--color-success-accessible);
+}
+
+/* =================================
+   Step Packages
+   ================================= */
+
+step-packages {
+  display: block;
+}
+
+step-packages .heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+step-packages .heading-row h2 {
+  margin-bottom: 0;
+}
+
+/* =================================
+   Step Progress
+   ================================= */
+
+step-progress {
+  display: block;
+}
+
+step-progress .progress-container {
+  margin-bottom: var(--spacing-md);
+}
+
+step-progress .install-progress-bar {
+  height: 8px;
+  background: var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: var(--spacing-sm);
+}
+
+step-progress .progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 4px;
+}
+
+step-progress .progress-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--color-text-light);
+}
+
+step-progress .success-message h3 {
+  color: var(--color-success-heading);
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: 1.5rem;
+}
+
+step-progress .success-message p {
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--color-text);
+}
+
+step-progress .success-message .admin-info {
+  font-size: 14px;
+  margin-bottom: var(--spacing-lg);
+}
+
+step-progress .success-buttons {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+step-progress .error-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* =================================
+   Step Requirements
+   ================================= */
+
+step-requirements {
+  display: block;
+}
+
+step-requirements .requirements-list {
+  margin-bottom: var(--spacing-lg);
+}
+
+step-requirements .requirement {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-sm);
+  background: var(--color-bg-white);
+  color: var(--color-text);
+}
+
+step-requirements .requirement.passed {
+  border-left: 4px solid var(--color-success);
+}
+
+step-requirements .requirement.failed {
+  border-left: 4px solid var(--color-error);
+}
+
+step-requirements .requirement.warning {
+  border-left: 4px solid var(--color-warning);
+}
+
+step-requirements .requirement-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+step-requirements .requirement-icon t3-icon {
+  width: 20px;
+  height: 20px;
+}
+
+step-requirements .requirement.passed .requirement-icon {
+  color: var(--color-success);
+}
+
+step-requirements .requirement.failed .requirement-icon {
+  color: var(--color-error);
+}
+
+step-requirements .requirement.warning .requirement-icon {
+  color: var(--color-warning);
+}
+
+step-requirements .requirement-content {
+  flex: 1;
+}
+
+step-requirements .requirement-title {
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+step-requirements .requirement-description {
+  font-size: 14px;
+  color: var(--color-text-light);
+}
+
+step-requirements .requirement-packages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+step-requirements .package-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--color-bg);
+  border-radius: 3px;
+  color: var(--color-text-light);
+}
+
+step-requirements .summary {
+  display: flex;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--color-bg);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-lg);
+}
+
+step-requirements .summary-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+step-requirements .summary-count {
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+step-requirements .summary-count.passed {
+  color: var(--color-success-accessible);
+}
+
+step-requirements .summary-count.failed {
+  color: var(--color-error-accessible);
+}
+
+step-requirements .summary-count.warning {
+  color: var(--color-warning);
+}
+
+step-requirements .packages-info {
+  font-size: 14px;
+  color: var(--color-text-light);
+  background: var(--color-bg);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-lg);
+}
+
+step-requirements .packages-info strong {
+  color: var(--color-secondary);
+}
+
+step-requirements .error-actions {
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* =================================
+   Step Site
+   ================================= */
+
+step-site {
+  display: block;
+}
+
+step-site .validation-summary ul {
+  margin: var(--spacing-sm) 0 0;
+  padding-left: var(--spacing-lg);
+}
+
+step-site .validation-summary a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+step-site .validation-summary a:hover {
+  text-decoration: none;
+}
+
+step-site .site-summary h3 {
+  margin: 0 0 var(--spacing-md);
+}
+
+step-site .summary-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+step-site .summary-item:last-child {
+  border-bottom: none;
+}
+
+step-site .summary-label {
+  width: 150px;
+  min-width: 100px;
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--color-text-light);
+}
+
+step-site .summary-value {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  color: var(--color-secondary);
+}
+
+@media (max-width: 600px) {
+  step-site .summary-label {
+    width: 100%;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+
+  step-site .summary-value {
+    width: 100%;
+  }
+}

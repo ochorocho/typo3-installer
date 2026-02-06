@@ -1,13 +1,20 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html } from 'lit';
 import { apiClient } from '../api/client.js';
 import { emit } from './ui/shared-styles.js';
-import './ui/heading.js';
 import './ui/install-info.js';
 import './ui/version-selector.js';
 import './ui/package-list.js';
 import './ui/step-actions.js';
 
+/**
+ * Package selection step.
+ * Uses global CSS from main.css (no Shadow DOM).
+ * @element step-packages
+ */
 export class StepPackages extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     state: { type: Object },
     // Per-section loading states
@@ -28,28 +35,6 @@ export class StepPackages extends LitElement {
     // Background prefetching
     _prefetchingRequirements: { type: Boolean, state: true }
   };
-
-  static styles = css`
-    :host {
-      display: block;
-    }
-
-    p {
-      color: var(--color-text-light, #333333);
-      margin-bottom: var(--spacing-lg, 24px);
-    }
-
-    .heading-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--spacing-md, 16px);
-    }
-
-    .heading-row h2 {
-      margin-bottom: 0;
-    }
-  `;
 
   constructor() {
     super();

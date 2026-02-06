@@ -1,6 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html } from 'lit';
 import { apiClient } from '../api/client.js';
-import { stepBaseStyles, formStyles, buttonStyles, srOnlyStyles, alertStyles, emit } from './ui/shared-styles.js';
+import { emit } from './ui/shared-styles.js';
 import { debounce } from '../utils/helpers.js';
 import './ui/section-error.js';
 import './ui/step-actions.js';
@@ -8,9 +8,13 @@ import './ui/spinner.js';
 
 /**
  * Database configuration step.
+ * Uses global CSS from main.css (no Shadow DOM).
  * @element step-database
  */
 export class StepDatabase extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     state: { type: Object },
     testing: { type: Boolean },
@@ -19,14 +23,6 @@ export class StepDatabase extends LitElement {
     driversLoading: { type: Boolean },
     driversError: { type: Object }
   };
-
-  static styles = [
-    stepBaseStyles,
-    formStyles,
-    buttonStyles,
-    srOnlyStyles,
-    alertStyles
-  ];
 
   constructor() {
     super();

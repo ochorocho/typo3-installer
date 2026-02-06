@@ -1,17 +1,21 @@
-import { LitElement, html, css } from 'lit';
-import { hostStyles, emit } from './shared-styles.js';
+import { LitElement, html } from 'lit';
+import { emit } from './shared-styles.js';
 import './loading-skeleton.js';
 import './section-error.js';
 import './spinner.js';
 
 /**
  * Package list with checkboxes for selection.
+ * Uses global CSS from main.css (no Shadow DOM).
  * @element t3-package-list
  * @fires package-toggle - When checkbox toggled, detail: { packageId, selected }
  * @fires packages-toggle-all - When group toggle-all changed, detail: { packageIds, selected }
  * @fires retry - When retry button is clicked after error
  */
 export class PackageList extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     packages: { type: Object },
     selectedPackages: { type: Array, attribute: 'selected-packages' },
@@ -21,75 +25,6 @@ export class PackageList extends LitElement {
     error: { type: Object },
     versionsReady: { type: Boolean, attribute: 'versions-ready' }
   };
-
-  static styles = [
-    hostStyles,
-    css`
-      :host { margin-bottom: var(--spacing-lg, 24px); }
-      .package {
-        display: flex;
-        align-items: flex-start;
-        padding: var(--spacing-sm, 8px);
-        border-radius: var(--border-radius, 4px);
-      }
-      .package:focus-within {
-        outline: 2px solid var(--color-primary, #ff8700);
-        outline-offset: 2px;
-      }
-      .package input {
-        margin-right: var(--spacing-md, 16px);
-        margin-top: 4px;
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
-        accent-color: var(--color-primary, #ff8700);
-      }
-      .package input:disabled { cursor: not-allowed; }
-      .package-info { flex: 1; cursor: pointer; }
-      .package-name { font-weight: 600; color: var(--color-secondary, #1a1a1a); }
-      .package-id {
-        font-size: 12px;
-        font-family: monospace;
-        margin-left: var(--spacing-sm, 8px);
-        color: var(--color-text-light, #333333);
-      }
-      .package-desc {
-        font-size: 14px;
-        margin-top: var(--spacing-xs, 4px);
-        color: var(--color-text-light, #333333);
-      }
-      .group-header {
-        font-size: 14px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--color-text-light, #333333);
-        padding: var(--spacing-md, 16px) var(--spacing-sm, 8px) var(--spacing-xs, 4px);
-        border-bottom: 1px solid var(--color-border, #bbbbbb);
-        margin-bottom: var(--spacing-xs, 4px);
-        position: sticky;
-        top: 0;
-        background: var(--color-bg-white, white);
-        z-index: 10;
-      }
-      .group-header:not(:first-child) {
-        margin-top: var(--spacing-md, 16px);
-      }
-      .group-toggle {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-sm, 8px);
-        cursor: pointer;
-        font-weight: 600;
-      }
-      .group-toggle input {
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
-        accent-color: var(--color-primary, #ff8700);
-      }
-    `
-  ];
 
   constructor() {
     super();

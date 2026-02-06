@@ -1,50 +1,24 @@
-import { LitElement, html, css } from 'lit';
-import { stepBaseStyles, formStyles, alertStyles, emit } from './ui/shared-styles.js';
+import { LitElement, html } from 'lit';
+import { emit } from './ui/shared-styles.js';
 import { isValidUrl, isValidSiteName, getSiteNameError, getUrlError } from '../utils/validators.js';
 import { canStartInstallation, getIncompleteStepDetails } from '../utils/step-validators.js';
 import './ui/step-actions.js';
 
 /**
  * Site configuration step with installation summary.
+ * Uses global CSS from main.css (no Shadow DOM).
  * @element step-site
  */
 export class StepSite extends LitElement {
+  // Disable Shadow DOM - use light DOM for global CSS access
+  createRenderRoot() { return this; }
+
   static properties = {
     state: { type: Object },
     errors: { type: Object },
     touched: { type: Object },
     showValidationSummary: { type: Boolean }
   };
-
-  static styles = [
-    stepBaseStyles,
-    formStyles,
-    alertStyles,
-    css`
-      .validation-summary ul {
-        margin: var(--spacing-sm, 8px) 0 0;
-        padding-left: var(--spacing-lg, 24px);
-      }
-      .validation-summary a {
-        color: inherit;
-        font-weight: 600;
-        text-decoration: underline;
-        cursor: pointer;
-      }
-      .validation-summary a:hover {
-        text-decoration: none;
-      }
-      .summary h3 { margin: 0 0 var(--spacing-md, 16px); }
-      .summary-item {
-        display: flex;
-        padding: var(--spacing-sm, 8px) 0;
-        border-bottom: 1px solid var(--color-border, #bbbbbb);
-      }
-      .summary-item:last-child { border-bottom: none; }
-      .summary-label { width: 150px; font-weight: 600; color: var(--color-text-light, #333333); }
-      .summary-value { flex: 1; color: var(--color-secondary, #1a1a1a); }
-    `
-  ];
 
   constructor() {
     super();
@@ -166,7 +140,7 @@ export class StepSite extends LitElement {
           : html`<span id="baseUrl-desc" class="help-text">The URL where your site will be accessible</span>`}
       </div>
 
-      <div class="summary">
+      <div class="site-summary">
         <h3>Installation Summary</h3>
         ${[
           ['Packages', `${packages.selected?.length || 0} packages selected`],

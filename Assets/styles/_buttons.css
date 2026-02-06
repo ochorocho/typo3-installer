@@ -1,0 +1,113 @@
+/**
+ * TYPO3 Installer - Button Styles
+ * All button variants and states
+ */
+
+button,
+a.btn-primary,
+a.btn-secondary,
+a.btn-outline,
+a.btn-success,
+a.btn-error {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+a.btn-primary,
+a.btn-secondary,
+a.btn-outline,
+a.btn-success,
+a.btn-error {
+  text-decoration: none;
+  display: inline-block;
+}
+
+button:focus-visible,
+a.btn-primary:focus-visible,
+a.btn-secondary:focus-visible,
+a.btn-outline:focus-visible,
+a.btn-success:focus-visible,
+a.btn-error:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(30%);
+}
+
+.btn-primary {
+  background: var(--color-primary-accessible);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+a.btn-primary:hover {
+  background: var(--color-primary-dark);
+}
+
+.btn-secondary {
+  background: var(--color-info);
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-info-dark);
+}
+
+a.btn-secondary:hover {
+  background: var(--color-info-dark);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--color-bg-light);
+}
+
+a.btn-outline:hover {
+  background: var(--color-bg-light);
+}
+
+.btn-success {
+  background: var(--color-success-btn);
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: var(--color-success-btn-hover);
+}
+
+a.btn-success:hover {
+  background: var(--color-success-btn-hover);
+}
+
+.btn-error {
+  background: var(--color-error);
+  color: white;
+}
+
+.btn-error:hover:not(:disabled) {
+  background: var(--color-error-dark);
+}
+
+a.btn-error:hover {
+  background: var(--color-error-dark);
+}
+
+.btn-small {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 13px;
+}

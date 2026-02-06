@@ -1,18 +1,15 @@
 /**
  * Reusable UI Components
+ * All components use light DOM (no Shadow DOM) for global CSS access.
  */
 
-// Shared style exports
-export * from './shared-styles.js';
+// Shared utilities (emit function)
+export { emit } from './shared-styles.js';
 
 // Icon component
 export { T3Icon } from './t3-icon.js';
 
-// Form components
-export { FormField } from './form-field.js';
-
 // Display components
-export { Heading } from './heading.js';
 export { LoadingSkeleton } from './loading-skeleton.js';
 export { TerminalOutput } from './terminal-output.js';
 export { TaskList } from './task-list.js';
