@@ -31,6 +31,8 @@ t3-step-actions {
    ================================= */
 
 ui-spinner {
+  display: flex;
+
   .spinner-wrapper {
     display: inline-flex;
     align-items: center;
