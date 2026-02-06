@@ -44,8 +44,7 @@ async function fillDatabaseForm(page) {
 async function completeDatabaseStep(page) {
   await fillDatabaseForm(page);
   // Wait for auto-validation or click Test Connection manually
-  await page.locator('button:has-text("Test Connection")').click();
-  await page.getByText('Success: Database connection').waitFor({ state: 'visible', timeout: 15000 });
+  await page.locator('.alert-error:has-text("Database connection successful")').waitFor({ state: 'visible', timeout: 15000 });
   await page.locator('button.btn-primary:has-text("Continue")').click();
 }
 

@@ -241,7 +241,7 @@ export class StepDatabase extends LitElement {
           </div>
         ` : html`
           <t3-section-error
-            title="Connection Failed"
+            title="Database error"
             .message=${this.testResult.message}
             .details=${this.testResult.error?.details || ''}
             context="database"
@@ -249,11 +249,7 @@ export class StepDatabase extends LitElement {
         `}
       ` : ''}
 
-      <t3-step-actions .canContinue=${!this.driversLoading && !this.driversError && this.availableDrivers.length > 0 && this.state?.database?.tested && this.state?.database?.valid}>
-        <button slot="left" class="btn-secondary" @click=${this._testConnection} ?disabled=${this.testing || this.driversLoading || this.driversError || this.availableDrivers.length === 0}>
-          ${this.testing ? html`<ui-spinner size="small">Test Connection</ui-spinner>` : 'Test Connection'}
-        </button>
-      </t3-step-actions>
+      <t3-step-actions .canContinue=${!this.driversLoading && !this.driversError && this.availableDrivers.length > 0 && this.state?.database?.tested && this.state?.database?.valid}></t3-step-actions>
     `;
   }
 }
