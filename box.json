@@ -8,11 +8,9 @@
         "src",
         "public",
         "vendor/symfony/console/Resources",
-        "vendor/composer/composer/res",
         "vendor/composer/spdx-licenses/res"
     ],
     "files": [
-        "vendor/composer/composer/LICENSE",
         "resources/composer.phar"
     ],
     "finder": [

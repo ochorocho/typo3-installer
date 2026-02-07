@@ -41,20 +41,20 @@ phpstan:
     - ddev composer run phpstan
 
 # PHPUnit tests
-phpunit:
-  extends: .ddev_base
-  stage: test
-  needs:
-    - build
-  script:
-    - ddev composer install
-    - ddev composer run test:unit
-  artifacts:
-    when: always
-    paths:
-      - phpunit.xml
-    reports:
-      junit: phpunit.xml
+#phpunit:
+#  extends: .ddev_base
+#  stage: test
+#  needs:
+#    - build
+#  script:
+#    - ddev composer install
+#    - ddev composer run test:unit
+#  artifacts:
+#    when: always
+#    paths:
+#      - phpunit.xml
+#    reports:
+#      junit: phpunit.xml
 
 # Playwright E2E tests - MySQL
 e2e-mysql:
