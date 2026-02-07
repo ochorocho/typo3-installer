@@ -29,33 +29,8 @@ build:
   artifacts:
     paths:
       - typo3-installer.phar
-    expire_in: 1 day
-
-# PHPStan static analysis
-#phpstan:
-#  extends: .ddev_base
-#  stage: test
-#  needs:
-#    - build
-#  script:
-#    - ddev composer install
-#    - ddev composer run phpstan
-
-# PHPUnit tests
-#phpunit:
-#  extends: .ddev_base
-#  stage: test
-#  needs:
-#    - build
-#  script:
-#    - ddev composer install
-#    - ddev composer run test:unit
-#  artifacts:
-#    when: always
-#    paths:
-#      - phpunit.xml
-#    reports:
-#      junit: phpunit.xml
+      - test-installer-root/public/typo3-installer.phar
+    expire_in: 1 hour
 
 # Playwright E2E tests - MySQL
 e2e-mysql:
