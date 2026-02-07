@@ -5,7 +5,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 1,
+  workers: process.env.CI ? 1 : 4,
   reporter: 'html',
   timeout: 60000,
   globalSetup: './global-setup.js',
@@ -22,7 +22,7 @@ export default defineConfig({
 
   projects: [
     // ============================================
-    // Group 2: UI Tests (can run in parallel)
+    // Group 1: UI Tests (can run in parallel)
     // These tests don't depend on database state
     // ============================================
     {
@@ -52,7 +52,7 @@ export default defineConfig({
     },
 
     // ============================================
-    // Group 3: API Tests
+    // Group 2: API Tests
     // ============================================
     {
       name: 'api',
@@ -61,7 +61,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
     // ============================================
-    // Group 1: Full Flow Tests (one per database driver)
+    // Group 3: Full Flow Tests (one per database driver)
     // Each project runs its own database installation test
     // Run separately: npx playwright test --project=mysql
     // ============================================
@@ -76,6 +76,7 @@ export default defineConfig({
     },
     {
       name: 'postgresql',
+      dependencies: ['mysql'],
       testDir: './tests/full-flows',
       testMatch: ['postgresql.spec.js'],
       fullyParallel: false,
@@ -85,6 +86,7 @@ export default defineConfig({
     },
     {
       name: 'sqlite',
+      dependencies: ['postgresql'],
       testDir: './tests/full-flows',
       testMatch: ['sqlite.spec.js'],
       fullyParallel: false,

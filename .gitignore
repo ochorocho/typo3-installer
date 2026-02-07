@@ -12,6 +12,7 @@
 /public/assets/
 /typo3-installer.php
 /typo3-installer.phar
+/typo3-installer.phar.zip
 /.env
 /.env.local
 /test-installer-root/*
