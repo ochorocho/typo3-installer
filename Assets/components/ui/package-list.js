@@ -76,10 +76,11 @@ export class PackageList extends LitElement {
         ${themePkgs.length > 0 ? html`
           <div class="group-header">
             <input type="checkbox"
+                   id="select-all-themes"
                    .checked=${themeSelected === themePkgs.length}
                    .indeterminate=${themeSelected > 0 && themeSelected < themePkgs.length}
                    @change=${(e) => this._toggleAll(themePkgs, e.target.checked)}>
-            <label class="group-toggle">
+            <label class="group-toggle" for="select-all-themes">
               Themes (${themeSelected}/${themePkgs.length})
             </label>
           </div>
@@ -88,10 +89,11 @@ export class PackageList extends LitElement {
         ${extensionPkgs.length > 0 ? html`
           <div class="group-header">
             <input type="checkbox"
+                   id="select-all-extensions"
                    .checked=${extensionSelected === extensionPkgs.length}
                    .indeterminate=${extensionSelected > 0 && extensionSelected < extensionPkgs.length}
                    @change=${(e) => this._toggleAll(extensionPkgs, e.target.checked)}>
-            <label class="group-toggle">
+            <label class="group-toggle" for="select-all-extensions">
               Core Extensions (${extensionSelected}/${extensionPkgs.length})
             </label>
           </div>

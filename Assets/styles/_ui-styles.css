@@ -77,7 +77,7 @@ t3-section-error {
 
   .error-title {
     font-weight: 600;
-    color: var(--color-error);
+    color: var(--color-error-accessible);  /* WCAG AA compliant for error-bg */
   }
 
   .error-message {

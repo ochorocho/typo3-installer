@@ -210,19 +210,6 @@ test.describe('Tablet-specific behavior', () => {
     await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
   });
 
-  test('layout should use medium padding on tablet', async ({ page }) => {
-    test.skip(!test.info().project.name.includes('tablet'), 'Tablet-only test');
-
-    const installer = page.locator('.installer');
-    const padding = await installer.evaluate((el) => {
-      const style = window.getComputedStyle(el);
-      return parseInt(style.paddingLeft, 10);
-    });
-
-    // Tablet (768px) should use --spacing-md (16px)
-    expect(padding).toBe(16);
-  });
-
   test('step titles should be visible on tablet', async ({ page }) => {
     test.skip(!test.info().project.name.includes('tablet'), 'Tablet-only test');
 

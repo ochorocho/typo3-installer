@@ -1,4 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { execSync } from 'node:child_process';
+
+// Reset TYPO3 test environment before running API tests
+test.beforeAll(async () => {
+  console.log('Running TYPO3 reset before API tests...');
+  execSync('/mnt/ddev_config/commands/web/typo3-test-reset.sh', { stdio: 'inherit' });
+});
 
 /**
  * API Tests for TYPO3 Installer Backend

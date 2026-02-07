@@ -22,39 +22,6 @@ export default defineConfig({
 
   projects: [
     // ============================================
-    // Group 1: Full Flow Tests (one per database driver)
-    // Each project runs its own database installation test
-    // Run separately: npx playwright test --project=mysql
-    // ============================================
-    {
-      name: 'mysql',
-      testDir: './tests/full-flows',
-      testMatch: ['mysql.spec.js'],
-      fullyParallel: false,
-      workers: 1,
-      timeout: 300000, // 5 minutes for full installations
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'postgresql',
-      testDir: './tests/full-flows',
-      testMatch: ['postgresql.spec.js'],
-      fullyParallel: false,
-      workers: 1,
-      timeout: 300000,
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'sqlite',
-      testDir: './tests/full-flows',
-      testMatch: ['sqlite.spec.js'],
-      fullyParallel: false,
-      workers: 1,
-      timeout: 300000,
-      use: { ...devices['Desktop Chrome'] },
-    },
-
-    // ============================================
     // Group 2: UI Tests (can run in parallel)
     // These tests don't depend on database state
     // ============================================
@@ -91,6 +58,38 @@ export default defineConfig({
       name: 'api',
       testMatch: ['api.spec.js'],
       fullyParallel: true,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // ============================================
+    // Group 1: Full Flow Tests (one per database driver)
+    // Each project runs its own database installation test
+    // Run separately: npx playwright test --project=mysql
+    // ============================================
+    {
+      name: 'mysql',
+      testDir: './tests/full-flows',
+      testMatch: ['mysql.spec.js'],
+      fullyParallel: false,
+      workers: 1,
+      timeout: 300000, // 5 minutes for full installations
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'postgresql',
+      testDir: './tests/full-flows',
+      testMatch: ['postgresql.spec.js'],
+      fullyParallel: false,
+      workers: 1,
+      timeout: 300000,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'sqlite',
+      testDir: './tests/full-flows',
+      testMatch: ['sqlite.spec.js'],
+      fullyParallel: false,
+      workers: 1,
+      timeout: 300000,
       use: { ...devices['Desktop Chrome'] },
     },
   ],

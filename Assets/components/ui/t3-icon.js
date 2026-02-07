@@ -79,7 +79,9 @@ export class T3Icon extends LitElement {
       console.warn(`T3Icon: Icon not found: ${this.identifier}`);
       return html`<slot></slot>`;
     }
-    return html`${unsafeHTML(svgContent)}`;
+    // Add aria-hidden to SVG for screen reader compatibility (decorative icons)
+    const accessibleSvg = svgContent.replace('<svg', '<svg aria-hidden="true" role="img"');
+    return html`${unsafeHTML(accessibleSvg)}`;
   }
 }
 

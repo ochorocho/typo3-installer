@@ -36,9 +36,33 @@ a.btn-error:focus-visible {
 }
 
 button:disabled {
-  opacity: 0.6;
   cursor: not-allowed;
-  filter: grayscale(30%);
+}
+
+.btn-primary:disabled {
+  background: #6a6a6a;  /* Contrast ratio 5.9:1 with white */
+  color: white;
+}
+
+.btn-secondary:disabled {
+  background: #6a6a6a;
+  color: white;
+}
+
+.btn-success:disabled {
+  background: #6a6a6a;
+  color: white;
+}
+
+.btn-error:disabled {
+  background: #6a6a6a;
+  color: white;
+}
+
+.btn-outline:disabled {
+  background: transparent;
+  border-color: #888888;
+  color: #6a6a6a;
 }
 
 .btn-primary {
