@@ -22,6 +22,7 @@ build:
   stage: build
   script:
     - ddev composer install
+    - ddev composer run phpstan
     - ddev npm install
     - ddev npm run build
     - ddev composer run build
@@ -31,14 +32,14 @@ build:
     expire_in: 1 day
 
 # PHPStan static analysis
-phpstan:
-  extends: .ddev_base
-  stage: test
-  needs:
-    - build
-  script:
-    - ddev composer install
-    - ddev composer run phpstan
+#phpstan:
+#  extends: .ddev_base
+#  stage: test
+#  needs:
+#    - build
+#  script:
+#    - ddev composer install
+#    - ddev composer run phpstan
 
 # PHPUnit tests
 #phpunit:
@@ -64,8 +65,7 @@ e2e-mysql:
     - build
   timeout: 15 minutes
   script:
-    - ddev composer run install:playwright
-    - ddev exec "cd tests/e2e && npx playwright test --project=mysql"
+    - ddev playwright
   artifacts:
     when: always
     paths:
@@ -81,8 +81,7 @@ e2e-postgresql:
     - build
   timeout: 15 minutes
   script:
-    - ddev composer run install:playwright
-    - ddev exec "cd tests/e2e && npx playwright test --project=postgresql"
+    - ddev playwright
   artifacts:
     when: always
     paths:
@@ -98,8 +97,7 @@ e2e-sqlite:
     - build
   timeout: 15 minutes
   script:
-    - ddev composer run install:playwright
-    - ddev exec "cd tests/e2e && npx playwright test --project=sqlite"
+    - ddev playwright
   artifacts:
     when: always
     paths:
