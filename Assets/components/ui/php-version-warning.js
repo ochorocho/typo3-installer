@@ -146,10 +146,19 @@ export class PhpVersionWarning extends LitElement {
                 <div class="validation-result success">
                   Valid PHP ${this.phpDetection.customBinaryVersion}
                   ${this.phpDetection.customBinaryMatchesFpm ? ' - Matches web server version' : ''}
+                  ${this.phpDetection.customBinaryResolvedPath && this.phpDetection.customBinaryResolvedPath !== this.customBinaryPath ? html`
+                    <div class="resolved-path">Resolves to: ${this.phpDetection.customBinaryResolvedPath}</div>
+                  ` : ''}
                 </div>
               ` : this.phpDetection.customBinaryValid === false ? html`
                 <div class="validation-result error">
                   ${this.phpDetection.customBinaryError}
+                  ${this.phpDetection.customBinaryDebugInfo ? html`
+                    <details class="debug-details">
+                      <summary>Technical details</summary>
+                      <code>${this.phpDetection.customBinaryDebugInfo}</code>
+                    </details>
+                  ` : ''}
                 </div>
               ` : ''}
             </div>

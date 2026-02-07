@@ -133,11 +133,20 @@ export class StepRequirements extends LitElement {
           selectedBinary: this.customBinaryPath.trim(),
           customBinaryValid: true,
           customBinaryVersion: response.version,
-          customBinaryMatchesFpm: response.matchesFpm
+          customBinaryMatchesFpm: response.matchesFpm,
+          customBinaryResolvedPath: response.resolvedPath || null,
+          customBinaryDebugInfo: null,
+          customBinaryError: null
         };
         this._updatePhpDetectionState();
       } else {
-        this.phpDetection = { ...this.phpDetection, customBinaryValid: false, customBinaryError: response.error || 'Invalid PHP binary' };
+        this.phpDetection = {
+          ...this.phpDetection,
+          customBinaryValid: false,
+          customBinaryError: response.error || 'Invalid PHP binary',
+          customBinaryDebugInfo: response.debugInfo || null,
+          customBinaryResolvedPath: response.resolvedPath || null
+        };
       }
     } catch (error) {
       this.phpDetection = { ...this.phpDetection, customBinaryValid: false, customBinaryError: error.message || 'Failed to validate binary' };

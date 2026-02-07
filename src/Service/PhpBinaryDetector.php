@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace TYPO3\Installer\Service;
 
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
+use TYPO3\Installer\Model\BinaryValidationResult;
 
 /**
  * Service to detect PHP CLI binaries matching the FPM version
@@ -233,14 +235,106 @@ class PhpBinaryDetector
      */
     public function validateBinary(string $path): ?string
     {
-        // Skip if path doesn't exist (for absolute paths)
-        if (str_starts_with($path, '/') && !file_exists($path)) {
-            return null;
+        $result = $this->validateBinaryWithDetails($path);
+        return $result->valid ? $result->version : null;
+    }
+
+    /**
+     * Validate a PHP binary with detailed error information
+     *
+     * Uses multiple validation methods to support various binary types:
+     * - Direct PHP binaries
+     * - Shell script wrappers
+     * - Symlinks
+     */
+    public function validateBinaryWithDetails(string $path): BinaryValidationResult
+    {
+        // For absolute paths, check existence and permissions
+        if (str_starts_with($path, '/')) {
+            // Check if path exists at all (file, symlink, or directory)
+            if (!file_exists($path) && !is_link($path)) {
+                return BinaryValidationResult::notFound($path);
+            }
+
+            // Check for broken symlink
+            if (is_link($path)) {
+                $target = readlink($path);
+                if ($target === false || !file_exists($path)) {
+                    return BinaryValidationResult::symlinkBroken($path, $target ?: 'unknown');
+                }
+            }
+
+            // Resolve symlinks for debugging
+            $resolvedPath = realpath($path);
+            if ($resolvedPath === false) {
+                $resolvedPath = $path;
+            }
+
+            // Check if file is executable
+            if (!is_executable($path)) {
+                return BinaryValidationResult::notExecutable($path, $resolvedPath !== $path ? $resolvedPath : null);
+            }
+        } else {
+            $resolvedPath = null;
         }
 
+        // Try multiple validation methods
+        $debugMessages = [];
+
+        // Method 1: Inline PHP code (fastest, but may fail with some wrappers)
+        $version = $this->tryValidationMethod(
+            $path,
+            ['-r', 'echo PHP_VERSION;'],
+            $debugMessages,
+            'inline'
+        );
+        if ($version !== null) {
+            return BinaryValidationResult::success($version, $resolvedPath ?? null);
+        }
+
+        // Method 2: --version flag (works with most wrappers)
+        $version = $this->tryVersionFlag($path, $debugMessages);
+        if ($version !== null) {
+            return BinaryValidationResult::success($version, $resolvedPath ?? null);
+        }
+
+        // Method 3: php -i (last resort, parses phpinfo output)
+        $version = $this->tryPhpInfo($path, $debugMessages);
+        if ($version !== null) {
+            return BinaryValidationResult::success($version, $resolvedPath ?? null);
+        }
+
+        // All methods failed - determine the best error to return
+        $debugInfo = implode('; ', $debugMessages);
+
+        // Check if there was a timeout
+        if (str_contains($debugInfo, 'timed out')) {
+            return BinaryValidationResult::timeout(
+                $path,
+                self::PROCESS_TIMEOUT_SECONDS,
+                $resolvedPath ?? null
+            );
+        }
+
+        // Check if execution failed vs invalid output
+        if (str_contains($debugInfo, 'Exit code')) {
+            return BinaryValidationResult::executionFailed($path, $debugInfo, $resolvedPath ?? null);
+        }
+
+        return BinaryValidationResult::invalidOutput($path, $debugInfo, $resolvedPath ?? null);
+    }
+
+    /**
+     * Try validation with inline PHP code
+     *
+     * @param array<string> $args
+     * @param array<string> $debugMessages
+     */
+    private function tryValidationMethod(string $path, array $args, array &$debugMessages, string $methodName): ?string
+    {
         try {
             $process = new Process(
-                [$path, '-r', 'echo PHP_VERSION;'],
+                array_merge([$path], $args),
                 null,
                 null,
                 null,
@@ -250,18 +344,110 @@ class PhpBinaryDetector
             $process->run();
 
             if (!$process->isSuccessful()) {
+                $debugMessages[] = sprintf(
+                    'Method %s: Exit code %d',
+                    $methodName,
+                    $process->getExitCode()
+                );
                 return null;
             }
 
-            $version = trim($process->getOutput());
+            $output = trim($process->getOutput());
 
-            // Validate version format (e.g., 8.3.0, 8.2.15)
-            if (!preg_match('/^\d+\.\d+\.\d+/', $version)) {
-                return null;
+            // Validate version format
+            if (preg_match('/^\d+\.\d+\.\d+/', $output)) {
+                return $output;
             }
 
-            return $version;
+            $debugMessages[] = sprintf('Method %s: Invalid output format', $methodName);
+            return null;
+        } catch (ProcessTimedOutException $e) {
+            $debugMessages[] = sprintf('Method %s: Process timed out', $methodName);
+            return null;
         } catch (\Throwable $e) {
+            $debugMessages[] = sprintf('Method %s: %s', $methodName, $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Try validation using --version flag
+     *
+     * @param array<string> $debugMessages
+     */
+    private function tryVersionFlag(string $path, array &$debugMessages): ?string
+    {
+        try {
+            $process = new Process(
+                [$path, '--version'],
+                null,
+                null,
+                null,
+                self::PROCESS_TIMEOUT_SECONDS
+            );
+
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                $debugMessages[] = sprintf('Method version: Exit code %d', $process->getExitCode());
+                return null;
+            }
+
+            $output = $process->getOutput();
+
+            // Parse "PHP 8.3.0 (cli)" format
+            if (preg_match('/PHP\s+(\d+\.\d+\.\d+)/', $output, $matches)) {
+                return $matches[1];
+            }
+
+            $debugMessages[] = 'Method version: Could not parse version from output';
+            return null;
+        } catch (ProcessTimedOutException $e) {
+            $debugMessages[] = 'Method version: Process timed out';
+            return null;
+        } catch (\Throwable $e) {
+            $debugMessages[] = sprintf('Method version: %s', $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Try validation using php -i (phpinfo)
+     *
+     * @param array<string> $debugMessages
+     */
+    private function tryPhpInfo(string $path, array &$debugMessages): ?string
+    {
+        try {
+            $process = new Process(
+                [$path, '-i'],
+                null,
+                null,
+                null,
+                self::PROCESS_TIMEOUT_SECONDS
+            );
+
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                $debugMessages[] = sprintf('Method phpinfo: Exit code %d', $process->getExitCode());
+                return null;
+            }
+
+            $output = $process->getOutput();
+
+            // Parse "PHP Version => 8.3.0" format
+            if (preg_match('/PHP Version\s*=>\s*(\d+\.\d+\.\d+)/', $output, $matches)) {
+                return $matches[1];
+            }
+
+            $debugMessages[] = 'Method phpinfo: Could not parse version from output';
+            return null;
+        } catch (ProcessTimedOutException $e) {
+            $debugMessages[] = 'Method phpinfo: Process timed out';
+            return null;
+        } catch (\Throwable $e) {
+            $debugMessages[] = sprintf('Method phpinfo: %s', $e->getMessage());
             return null;
         }
     }

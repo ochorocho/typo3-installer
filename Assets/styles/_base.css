@@ -139,7 +139,7 @@ textarea {
   padding: 6px 8px;
   border: 1px solid var(--color-input-border);
   border-radius: var(--border-radius);
-  background-color: transparent;
+  background-color: var(--color-input-bg);
   color: var(--color-input-text);
 
   &:focus {

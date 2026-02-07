@@ -88,25 +88,29 @@ class PhpDetectionController extends AbstractController
             return $this->errorResponse('Invalid characters in binary path');
         }
 
-        $version = $this->detector->validateBinary($binaryPath);
+        $result = $this->detector->validateBinaryWithDetails($binaryPath);
 
-        if ($version === null) {
+        if (!$result->valid) {
             return $this->successResponse([
                 'valid' => false,
                 'version' => null,
                 'matchesFpm' => false,
-                'error' => 'Binary not found or is not a valid PHP executable',
+                'error' => $result->error ?? 'Binary not found or is not a valid PHP executable',
+                'errorCode' => $result->errorCode,
+                'debugInfo' => $result->debugInfo,
+                'resolvedPath' => $result->resolvedPath,
             ]);
         }
 
         // Check if it matches the FPM version
         $fpmVersion = $this->detector->getFpmVersion();
-        $matchesFpm = $this->versionsMatch($fpmVersion, $version);
+        $matchesFpm = $this->versionsMatch($fpmVersion, $result->version ?? '');
 
         return $this->successResponse([
             'valid' => true,
-            'version' => $version,
+            'version' => $result->version,
             'matchesFpm' => $matchesFpm,
+            'resolvedPath' => $result->resolvedPath,
         ]);
     }
 

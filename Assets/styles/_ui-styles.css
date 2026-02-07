@@ -386,6 +386,38 @@ t3-php-version-warning {
       background: var(--color-error-bg);
       color: var(--color-error);
     }
+
+    .resolved-path {
+      margin-top: var(--spacing-xs);
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .debug-details {
+      margin-top: var(--spacing-sm);
+      font-size: 12px;
+
+      summary {
+        cursor: pointer;
+        opacity: 0.8;
+
+        &:hover {
+          opacity: 1;
+        }
+      }
+
+      code {
+        display: block;
+        margin-top: var(--spacing-xs);
+        padding: var(--spacing-sm);
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: var(--border-radius);
+        font-family: monospace;
+        font-size: 11px;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+    }
   }
 }
 
