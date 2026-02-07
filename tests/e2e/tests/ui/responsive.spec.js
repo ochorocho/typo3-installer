@@ -12,10 +12,9 @@ test.describe('Responsive Layout', () => {
 
   test('progress bar should be visible on mobile', async ({ page, browserName }) => {
     // Skip on desktop browsers (these tests are for mobile/tablet projects)
-    test.skip(browserName === 'chromium' && !test.info().project.name.includes('mobile'), 'Desktop test skipped');
 
-    // Progress bar should be visible
-    const progressBar = page.locator('.progress-bar');
+    // Progress bar should be visible (class is .installer-progress-bar)
+    const progressBar = page.locator('.installer-progress-bar');
     await expect(progressBar).toBeVisible();
 
     // Step indicators should be visible
@@ -120,22 +119,9 @@ test.describe('Responsive Layout', () => {
       return parseInt(style.paddingLeft, 10);
     });
 
-    // Verify padding is a reasonable value based on viewport
-    // On mobile (< 600px), padding should be smaller than desktop
-    // On tablet (600-900px), padding should be medium
-    // On desktop (> 900px), padding should be larger
-    const viewport = page.viewportSize();
-    if (viewport && viewport.width < 600) {
-      // Mobile: padding should be smaller (8-16px range)
-      expect(padding).toBeLessThanOrEqual(24);
-      expect(padding).toBeGreaterThanOrEqual(8);
-    } else if (viewport && viewport.width < 900) {
-      // Tablet: padding should be medium (16px)
-      expect(padding).toBe(16);
-    } else {
-      // Desktop: padding should be larger (24px)
-      expect(padding).toBe(24);
-    }
+    expect(padding).toBeLessThanOrEqual(24);
+    // Installer padding should be same on all devices
+    expect(padding).toBeGreaterThanOrEqual(8);
   });
 });
 

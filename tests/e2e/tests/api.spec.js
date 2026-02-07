@@ -186,6 +186,63 @@ test.describe('API: Database Connection Test', () => {
     // Should succeed even without explicit port
     expect(response.ok()).toBeTruthy();
   });
+
+  test('should validate PostgreSQL connection with DDEV credentials', async ({ request }) => {
+    const response = await request.post('/typo3-installer.phar/api/test-database', {
+      data: {
+        driver: 'pdo_pgsql',
+        host: 'postgres',
+        port: 5432,
+        name: 'db',
+        user: 'db',
+        password: 'db'
+      }
+    });
+
+    expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
+
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.message).toContain('successful');
+  });
+
+  test('should validate SQLite connection with file path', async ({ request }) => {
+    const response = await request.post('/typo3-installer.phar/api/test-database', {
+      data: {
+        driver: 'pdo_sqlite',
+        host: '',
+        port: 0,
+        name: '/tmp/typo3-test.sqlite',
+        user: '',
+        password: ''
+      }
+    });
+
+    expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
+
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.message).toContain('successful');
+  });
+
+  test('should return error for invalid PostgreSQL credentials', async ({ request }) => {
+    const response = await request.post('/typo3-installer.phar/api/test-database', {
+      data: {
+        driver: 'pdo_pgsql',
+        host: 'postgres',
+        port: 5432,
+        name: 'db',
+        user: 'invalid_user',
+        password: 'invalid_password'
+      }
+    });
+
+    expect(response.status()).toBe(400);
+    const data = await response.json();
+    expect(data.error).toBe(true);
+  });
 });
 
 test.describe('API: Installation', () => {

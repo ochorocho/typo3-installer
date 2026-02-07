@@ -4,9 +4,18 @@
 ## Usage: typo3:reset
 ## Example: "ddev typo3:reset"
 
+# MySQL/MariaDB reset
 mysql -udb -h db -pdb db -e "DROP DATABASE db; CREATE DATABASE db;"
 
-# Porject root
+# PostgreSQL reset (ignore if container not running)
+# Note: Each -c runs outside a transaction block, required for DROP DATABASE
+PGPASSWORD=db psql -h postgres -U db -d postgres -c "DROP DATABASE IF EXISTS db;" -c "CREATE DATABASE db;" 2>/dev/null || echo "PostgreSQL not available, skipping..."
+
+# SQLite directory - create and clean
+mkdir -p /var/www/html/test-installer-root/var/sqlite
+rm -f /var/www/html/test-installer-root/var/sqlite/*.sqlite
+
+# Project root
 rm -Rf /var/www/html/test-installer-root/config
 rm -Rf /var/www/html/test-installer-root/var
 rm -Rf /var/www/html/test-installer-root/vendor

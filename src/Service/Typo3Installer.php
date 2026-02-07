@@ -420,33 +420,27 @@ class Typo3Installer
 
         $dbConfig = $config->database;
         $admin = $config->admin;
+        $isSqlite = $dbConfig->driver === 'pdo_sqlite';
 
-        // Validate all user inputs before passing to CLI
-        $host = $this->validateInput($dbConfig->host, 'database.host');
+        // Map driver names to TYPO3 connection types
+        $driver = match ($dbConfig->driver) {
+            'pdo_mysql' => 'mysqli',
+            'pdo_pgsql' => 'postgres',
+            'pdo_sqlite' => 'sqlite',
+            default => 'mysqli'
+        };
+
+        // Validate inputs - SQLite only needs database name (file path)
         $dbName = $this->validateInput($dbConfig->name, 'database.name');
-        $dbUser = $this->validateInput($dbConfig->user, 'database.user');
-        $dbPassword = $this->validateInput($dbConfig->password, 'database.password', true);
         $adminUsername = $this->validateInput($admin->username, 'admin.username');
         $adminPassword = $this->validateInput($admin->password, 'admin.password');
         $adminEmail = $this->validateInput($admin->email ?? '', 'admin.email', true);
         $siteName = $this->validateInput($config->site->name, 'site.name');
         $baseUrl = $this->validateInput($config->site->baseUrl, 'site.baseUrl');
 
-        // Map driver names: pdo_mysql -> mysqli for TYPO3
-        $driver = match ($dbConfig->driver) {
-            'pdo_mysql' => 'mysqli',
-            'pdo_pgsql' => 'pdo_pgsql',
-            default => 'mysqli'
-        };
-
         // Build base CLI arguments
         $cliArgs = [
             '--driver=' . $driver,
-            '--host=' . $host,
-            '--port=' . $dbConfig->port,
-            '--dbname=' . $dbName,
-            '--username=' . $dbUser,
-            '--password=' . $dbPassword,
             '--admin-username=' . $adminUsername,
             '--admin-user-password=' . $adminPassword,
             '--project-name=' . $siteName,
@@ -455,6 +449,23 @@ class Typo3Installer
             '--no-interaction',
             '--force',
         ];
+
+        // Add database-specific arguments
+        if ($isSqlite) {
+            // SQLite uses file path as database name
+            $cliArgs[] = '--dbname=' . $dbName;
+        } else {
+            // MySQL/PostgreSQL need host, port, user, password
+            $host = $this->validateInput($dbConfig->host, 'database.host');
+            $dbUser = $this->validateInput($dbConfig->user, 'database.user');
+            $dbPassword = $this->validateInput($dbConfig->password, 'database.password', true);
+
+            $cliArgs[] = '--host=' . $host;
+            $cliArgs[] = '--port=' . $dbConfig->port;
+            $cliArgs[] = '--dbname=' . $dbName;
+            $cliArgs[] = '--username=' . $dbUser;
+            $cliArgs[] = '--password=' . $dbPassword;
+        }
 
         // Only add email if provided
         if ($adminEmail !== '') {
