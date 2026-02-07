@@ -21,9 +21,9 @@ build:
   extends: .ddev_base
   stage: build
   script:
+    - ddev composer install
     - ddev npm install
     - ddev npm run build
-    - ddev composer install
     - ddev composer run build
   artifacts:
     paths:
