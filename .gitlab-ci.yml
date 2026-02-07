@@ -1,0 +1,108 @@
+stages:
+  - build
+  - test
+
+# Base configuration for DDEV jobs
+.ddev_base:
+  image: ghcr.io/ddev/ddev-gitlab-ci:stable
+  services:
+    - docker:dind
+  variables:
+    FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR: 1
+    DOCKER_TLS_CERTDIR: ""
+    FF_NETWORK_PER_BUILD: 0
+  before_script:
+    - ddev start
+  after_script:
+    - ddev stop
+
+# Build job - builds frontend and PHAR
+build:
+  extends: .ddev_base
+  stage: build
+  script:
+    - ddev npm install
+    - ddev npm run build
+    - ddev composer install
+    - ddev composer run build
+  artifacts:
+    paths:
+      - typo3-installer.phar
+    expire_in: 1 day
+
+# PHPStan static analysis
+phpstan:
+  extends: .ddev_base
+  stage: test
+  needs:
+    - build
+  script:
+    - ddev composer install
+    - ddev composer run phpstan
+
+# PHPUnit tests
+phpunit:
+  extends: .ddev_base
+  stage: test
+  needs:
+    - build
+  script:
+    - ddev composer install
+    - ddev composer run test:unit
+  artifacts:
+    when: always
+    paths:
+      - phpunit.xml
+    reports:
+      junit: phpunit.xml
+
+# Playwright E2E tests - MySQL
+e2e-mysql:
+  extends: .ddev_base
+  stage: test
+  needs:
+    - build
+  timeout: 15 minutes
+  script:
+    - ddev composer run install:playwright
+    - ddev exec "cd tests/e2e && npx playwright test --project=mysql"
+  artifacts:
+    when: always
+    paths:
+      - tests/e2e/playwright-report/
+      - tests/e2e/test-results/
+    expire_in: 7 days
+
+# Playwright E2E tests - PostgreSQL
+e2e-postgresql:
+  extends: .ddev_base
+  stage: test
+  needs:
+    - build
+  timeout: 15 minutes
+  script:
+    - ddev composer run install:playwright
+    - ddev exec "cd tests/e2e && npx playwright test --project=postgresql"
+  artifacts:
+    when: always
+    paths:
+      - tests/e2e/playwright-report/
+      - tests/e2e/test-results/
+    expire_in: 7 days
+
+# Playwright E2E tests - SQLite
+e2e-sqlite:
+  extends: .ddev_base
+  stage: test
+  needs:
+    - build
+  timeout: 15 minutes
+  script:
+    - ddev composer run install:playwright
+    - ddev exec "cd tests/e2e && npx playwright test --project=sqlite"
+  artifacts:
+    when: always
+    paths:
+      - tests/e2e/playwright-report/
+      - tests/e2e/test-results/
+    expire_in: 7 days
