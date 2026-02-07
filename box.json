@@ -7,8 +7,7 @@
     "directories": [
         "src",
         "public",
-        "vendor/symfony/console/Resources",
-        "vendor/composer/spdx-licenses/res"
+        "vendor/symfony/console/Resources"
     ],
     "files": [
         "resources/composer.phar"
