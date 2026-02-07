@@ -4,7 +4,7 @@ stages:
 
 # Base configuration for DDEV jobs
 .ddev_base:
-  image: ghcr.io/ddev/ddev-gitlab-ci:stable
+  image: ghcr.io/ddev/ddev-gitlab-ci:v1.24
   services:
     - docker:dind
   variables:
