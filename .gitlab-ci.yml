@@ -46,6 +46,9 @@ e2e-mysql:
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
+      - tests/e2e
+    reports:
+      junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
 
 # Playwright E2E tests - PostgreSQL
@@ -62,6 +65,8 @@ e2e-postgresql:
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
+    reports:
+      junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
 
 # Playwright E2E tests - SQLite
@@ -78,4 +83,6 @@ e2e-sqlite:
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
+    reports:
+      junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
