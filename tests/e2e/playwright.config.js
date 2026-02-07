@@ -21,16 +21,61 @@ export default defineConfig({
   },
 
   projects: [
+    // ============================================
+    // Group 1: Full Flow Tests (one per database driver)
+    // Each project runs its own database installation test
+    // Run separately: npx playwright test --project=mysql
+    // ============================================
     {
-      name: 'chromium',
+      name: 'mysql',
+      testDir: './tests/full-flows',
+      testMatch: ['mysql.spec.js'],
+      fullyParallel: false,
+      workers: 1,
+      timeout: 300000, // 5 minutes for full installations
       use: { ...devices['Desktop Chrome'] },
     },
     {
-      name: 'mobile-chrome',
+      name: 'postgresql',
+      testDir: './tests/full-flows',
+      testMatch: ['postgresql.spec.js'],
+      fullyParallel: false,
+      workers: 1,
+      timeout: 300000,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'sqlite',
+      testDir: './tests/full-flows',
+      testMatch: ['sqlite.spec.js'],
+      fullyParallel: false,
+      workers: 1,
+      timeout: 300000,
+      use: { ...devices['Desktop Chrome'] },
+    },
+
+    // ============================================
+    // Group 2: UI Tests (can run in parallel)
+    // These tests don't depend on database state
+    // ============================================
+    {
+      name: 'ui-desktop',
+      testDir: './tests/ui',
+      fullyParallel: true,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'ui-mobile',
+      testDir: './tests/ui',
+      testMatch: ['responsive.spec.js'],
+      fullyParallel: true,
       use: { ...devices['Pixel 5'] },
     },
     {
-      name: 'tablet',
+      name: 'ui-tablet',
+      testDir: './tests/ui',
+      testMatch: ['responsive.spec.js'],
+      fullyParallel: true,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 768, height: 1024 },
@@ -38,12 +83,17 @@ export default defineConfig({
         hasTouch: true,
       },
     },
+
+    // ============================================
+    // Group 3: API Tests
+    // ============================================
+    {
+      name: 'api',
+      testMatch: ['api.spec.js'],
+      fullyParallel: true,
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
 
-  webServer: {
-    // command: 'cd ../.. && ddev start',
-    url: 'https://typo3-installer.ddev.site',
-    reuseExistingServer: true,
-    ignoreHTTPSErrors: true,
-  },
+  // webServer not needed - DDEV is already running
 });
