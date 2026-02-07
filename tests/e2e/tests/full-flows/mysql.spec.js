@@ -3,7 +3,10 @@ import {
   checkAccessibility,
   fillMySQLForm,
   fillAdminForm,
-  fillSiteForm
+  fillSiteForm,
+  verifyTYPO3Backend,
+  resetMySQLDatabase,
+  resetTYPO3Installation
 } from '../helpers.js';
 
 /**
@@ -22,6 +25,11 @@ test.describe.serial('MySQL Full Installation Flow', () => {
   // Accessibility checks log violations but don't fail tests
   // This allows installation flow to complete while tracking a11y issues
   const a11yOptions = { failOnViolation: false };
+
+  test.beforeAll(() => {
+    resetMySQLDatabase();
+    resetTYPO3Installation();
+  });
 
   test('complete installation with MySQL and WCAG checks', async ({ page }) => {
     await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
@@ -135,5 +143,10 @@ test.describe.serial('MySQL Full Installation Flow', () => {
         await page.waitForTimeout(500);
       }
     }
+
+    // ============================================
+    // Verify TYPO3 Backend Works
+    // ============================================
+    await verifyTYPO3Backend(page);
   });
 });

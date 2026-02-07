@@ -3,7 +3,10 @@ import {
   checkAccessibility,
   fillSQLiteForm,
   fillAdminForm,
-  fillSiteForm
+  fillSiteForm,
+  verifyTYPO3Backend,
+  resetSQLiteDatabase,
+  resetTYPO3Installation
 } from '../helpers.js';
 
 /**
@@ -22,6 +25,11 @@ test.describe.serial('SQLite Full Installation Flow', () => {
 
   // Accessibility checks log violations but don't fail tests
   const a11yOptions = { failOnViolation: false };
+
+  test.beforeAll(() => {
+    resetSQLiteDatabase();
+    resetTYPO3Installation();
+  });
 
   test('complete installation with SQLite and WCAG checks', async ({ page }) => {
     await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
@@ -128,5 +136,10 @@ test.describe.serial('SQLite Full Installation Flow', () => {
 
     // Assert terminal output is still visible
     await expect(page.locator('t3-terminal-output')).toBeVisible();
+
+    // ============================================
+    // Verify TYPO3 Backend Works
+    // ============================================
+    await verifyTYPO3Backend(page);
   });
 });

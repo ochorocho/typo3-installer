@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect } from '@playwright/test';
+import { execSync } from 'node:child_process';
 
 /**
  * Shared test helpers for TYPO3 Installer E2E tests
@@ -215,4 +216,101 @@ export async function waitForDatabaseTestResult(page, timeout = 15000) {
 
   const successAlert = page.locator('.alert-success');
   return await successAlert.isVisible();
+}
+
+/**
+ * Verify TYPO3 Backend is accessible and login works.
+ * @param {import('@playwright/test').Page} page
+ * @param {Object} [options] - Optional credentials override
+ * @param {string} [options.username='admin'] - Admin username
+ * @param {string} [options.password='SecurePass123!'] - Admin password
+ */
+export async function verifyTYPO3Backend(page, options = {}) {
+  const {
+    username = 'admin',
+    password = 'SecurePass123!'
+  } = options;
+
+  // Get the backend URL from the success button
+  const backendLink = page.locator('.success-buttons a.btn-success');
+  const backendUrl = await backendLink.getAttribute('href');
+
+  // Navigate to backend (same tab, not new window for testing)
+  await page.goto(backendUrl, { waitUntil: 'networkidle' });
+
+  // Wait for TYPO3 login form
+  await page.getByRole('textbox', { name: 'Password' }).waitFor({ state: 'visible', timeout: 30000 });
+
+  // Fill login credentials
+  await page.getByRole('textbox', { name: 'Username' }).fill(username);
+  await page.getByRole('textbox', { name: 'Password' }).fill(password);
+
+  // Submit login form
+  await page.locator('button[type="submit"]').click();
+
+  // Verify successful login - TYPO3 backend shows module menu
+  await page.getByRole('navigation', { name: 'Module Menu' })
+    .waitFor({ state: 'visible', timeout: 30000 });
+}
+
+/**
+ * Reset MySQL/MariaDB database for testing.
+ * Drops and recreates the 'db' database.
+ */
+export function resetMySQLDatabase() {
+  console.log('Resetting MySQL database...');
+  execSync('mysql -udb -h db -pdb -e "DROP DATABASE IF EXISTS db; CREATE DATABASE db;"', {
+    stdio: 'inherit'
+  });
+}
+
+/**
+ * Reset PostgreSQL database for testing.
+ * Drops and recreates the 'db' database.
+ */
+export function resetPostgreSQLDatabase() {
+  console.log('Resetting PostgreSQL database...');
+  execSync('PGPASSWORD=db psql -h postgres -U db -d postgres -c "DROP DATABASE IF EXISTS db;" -c "CREATE DATABASE db;"', {
+    stdio: 'inherit'
+  });
+}
+
+/**
+ * Reset SQLite database for testing.
+ * Removes all SQLite files from the var/sqlite directory.
+ */
+export function resetSQLiteDatabase() {
+  console.log('Resetting SQLite database...');
+  try {
+    execSync('rm -f /var/www/html/test-installer-root/var/sqlite/*.sqlite', {
+      stdio: 'inherit'
+    });
+  } catch {
+    // Ignore errors if directory or files don't exist
+  }
+}
+
+/**
+ * Reset TYPO3 installation files (shared across all DB types).
+ * Removes config, var, vendor, and other generated files.
+ */
+export function resetTYPO3Installation() {
+  console.log('Resetting TYPO3 installation files...');
+  const commands = [
+    'rm -Rf /var/www/html/test-installer-root/config',
+    'rm -Rf /var/www/html/test-installer-root/var',
+    'rm -Rf /var/www/html/test-installer-root/vendor',
+    'rm -Rf /var/www/html/test-installer-root/composer*',
+    'rm -Rf /var/www/html/test-installer-root/public/_assets',
+    'rm -Rf /var/www/html/test-installer-root/public/fileadmin',
+    'rm -Rf /var/www/html/test-installer-root/public/typo3temp',
+    'rm -Rf /var/www/html/test-installer-root/public/index.php',
+  ];
+  commands.forEach(cmd => {
+    try {
+      execSync(cmd, { stdio: 'inherit' });
+    } catch {
+      // Ignore errors if files don't exist
+    }
+  });
 }
