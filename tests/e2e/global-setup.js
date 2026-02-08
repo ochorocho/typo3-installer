@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default function globalSetup() {
   console.log('Running TYPO3 reset...');
 
-  if (process.env.CI === 'true') {
+  if (process.env.CI) {
     // CI environment: use portable reset script
     const resetScript = resolve(__dirname, '../../scripts/ci/reset-test-installation.sh');
     execSync(`bash "${resetScript}"`, { stdio: 'inherit' });
