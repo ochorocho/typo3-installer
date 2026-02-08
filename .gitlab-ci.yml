@@ -1,23 +1,6 @@
 stages:
   - build
   - test
-  - maintenance
-
-# =============================================================================
-# Docker Image Caching Setup
-# =============================================================================
-# To enable persistent Docker image caching across jobs, configure your
-# GitLab Runner's config.toml to mount a persistent volume for Docker data:
-#
-#   [[runners]]
-#     [runners.docker]
-#       volumes = ["/cache", "typo3-installer-docker:/var/lib/docker"]
-#
-# This allows the docker:dind service to reuse cached images between jobs,
-# significantly reducing pipeline time by avoiding repeated image pulls.
-#
-# See: https://docs.gitlab.com/ci/docker/docker_layer_caching/
-# =============================================================================
 
 # Base configuration for DDEV jobs
 .ddev_base:
@@ -103,25 +86,3 @@ e2e-sqlite:
     reports:
       junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
-
-# =============================================================================
-# Maintenance Jobs
-# =============================================================================
-
-# Periodic Docker cache cleanup (runs weekly on schedule)
-# Prevents the persistent Docker volume from growing indefinitely.
-# Configure a scheduled pipeline in GitLab CI/CD > Schedules with:
-#   - Interval: Weekly (e.g., "0 3 * * 0" for Sundays at 3 AM)
-#   - Variables: CLEANUP=true
-docker-cleanup:
-  stage: maintenance
-  image: docker:cli
-  services:
-    - docker:dind
-  variables:
-    DOCKER_TLS_CERTDIR: ""
-  rules:
-    - if: $CLEANUP == "true"
-  script:
-    - docker system prune -af --volumes
-    - docker system df
