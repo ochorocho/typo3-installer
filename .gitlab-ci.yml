@@ -141,10 +141,6 @@ e2e-mysql:
     reports:
       junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
-  services:
-    - *database
-    - *php
-    - *webserver
 
 e2e-postgresql:
   image: mcr.microsoft.com/playwright:v1.58.0-noble
@@ -174,10 +170,6 @@ e2e-postgresql:
     reports:
       junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
-  services:
-    - *database
-    - *php
-    - *webserver
 
 e2e-sqlite:
   image: mcr.microsoft.com/playwright:v1.58.0-noble
@@ -207,6 +199,3 @@ e2e-sqlite:
     reports:
       junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
-  services:
-    - *php
-    - *webserver
