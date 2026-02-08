@@ -249,7 +249,7 @@ class PackageService
             // Filter and collect package names for batch metadata fetching
             $packageNames = [];
             foreach ($allResults as $package) {
-                if (!is_array($package) || !isset($package['name'], $package['description'])) {
+                if (!isset($package['name'], $package['description'])) {
                     continue;
                 }
 

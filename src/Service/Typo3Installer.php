@@ -162,7 +162,8 @@ class Typo3Installer
      */
     private function detectServerType(): string
     {
-        $serverSoftware = $_SERVER['SERVER_SOFTWARE'] ?? '';
+        $serverSoftware = $_SERVER['SERVER_SOFTWARE'] ?? null;
+        $serverSoftware = is_string($serverSoftware) ? $serverSoftware : '';
 
         if (stripos($serverSoftware, 'apache') !== false) {
             return 'apache';

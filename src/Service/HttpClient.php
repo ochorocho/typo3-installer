@@ -283,9 +283,6 @@ class HttpClient
 
         // Cache successful responses
         foreach ($results as $url => $result) {
-            if (!is_string($url)) {
-                continue;
-            }
             if ($result['state'] === 'fulfilled' && isset($result['value'])) {
                 /** @var Response $response */
                 $response = $result['value'];

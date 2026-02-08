@@ -123,7 +123,7 @@ class PhpDetectionController extends AbstractController
         $parts2 = explode('.', $version2);
 
         // Compare major and minor versions
-        return ($parts1[0] ?? '0') === ($parts2[0] ?? '0')
+        return $parts1[0] === $parts2[0]
             && ($parts1[1] ?? '0') === ($parts2[1] ?? '0');
     }
 }

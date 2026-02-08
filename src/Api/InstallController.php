@@ -398,7 +398,8 @@ class InstallController extends AbstractController
      */
     private function computeBackendUrl(): string
     {
-        $documentUri = $_SERVER['DOCUMENT_URI'] ?? $_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? '/';
+        $documentUri = $_SERVER['DOCUMENT_URI'] ?? $_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? null;
+        $documentUri = is_string($documentUri) ? $documentUri : '/';
         $basePath = dirname(explode('.phar', $documentUri)[0]);
         if ($basePath === '.' || $basePath === '') {
             $basePath = '/';
