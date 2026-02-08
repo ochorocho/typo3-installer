@@ -26,7 +26,8 @@ npm-build:
   stage: build
   image: node:22-slim
   script:
-    - cd Assets && npm ci && npm run build
+    - npm ci
+    - npm run build
   artifacts:
     paths:
       - public/
