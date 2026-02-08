@@ -164,7 +164,7 @@ e2e-postgresql:
   script:
     - apt-get update && apt-get install -y postgresql-client default-mysql-client
     - cd tests/e2e && npm ci
-    - npx playwright test --project=postgresql
+    - npx playwright test --project=postgresql --project=api-postgresql
   artifacts:
     when: always
     paths:

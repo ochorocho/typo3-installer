@@ -64,6 +64,12 @@ export default defineConfig({
       fullyParallel: true,
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      name: 'api-postgresql',
+      testMatch: ['api-postgresql.spec.js'],
+      fullyParallel: true,
+      use: { ...devices['Desktop Chrome'] },
+    },
     // ============================================
     // Group 3: Full Flow Tests (one per database driver)
     // Each project runs its own database installation test
