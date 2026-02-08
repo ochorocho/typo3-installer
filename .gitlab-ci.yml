@@ -73,8 +73,7 @@ build-phar:
     - composer run build:phar
   artifacts:
     paths:
-      - typo3-installer.phar
-      - test-installer-root/public/typo3-installer.phar
+      - test-installer-root/public/typo3-installer.php
     expire_in: 1 hour
 
 # =============================================================================
