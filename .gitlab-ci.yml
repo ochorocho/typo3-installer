@@ -72,6 +72,7 @@ build-phar:
     - chmod +x /usr/local/bin/box
     - composer run build:phar
   artifacts:
+    name: TYPO3-Installer
     paths:
       - test-installer-root/public/typo3-installer.php
     expire_in: 1 hour
@@ -137,11 +138,12 @@ e2e-mysql:
     - npx playwright test --project=ui-desktop --project=api --project=mysql
   artifacts:
     when: always
+    name: e2e-mysql-results
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
     reports:
-      junit: tests/e2e/test-results/junit.xml
+      junit: tests/e2e/playwright-report/e2e-mysql-playwright.xunit.xml
     expire_in: 7 days
 
 e2e-postgresql:
@@ -166,11 +168,12 @@ e2e-postgresql:
     - npx playwright test --project=postgresql --project=api-postgresql
   artifacts:
     when: always
+    name: e2e-postgresql-results
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
     reports:
-      junit: tests/e2e/test-results/junit.xml
+      junit: tests/e2e/playwright-report/e2e-postgresql-playwright.xunit.xml
     expire_in: 7 days
 
 e2e-sqlite:
@@ -196,9 +199,10 @@ e2e-sqlite:
     - npx playwright test --project=sqlite
   artifacts:
     when: always
+    name: e2e-sqlite-results
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
     reports:
-      junit: tests/e2e/test-results/junit.xml
+      junit: tests/e2e/playwright-report/e2e-sqlite-playwright.xunit.xml
     expire_in: 7 days

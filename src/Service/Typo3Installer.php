@@ -455,6 +455,7 @@ class Typo3Installer
         // Add database-specific arguments
         if ($isSqlite) {
             // SQLite uses file path as database name
+            // @todo: Does this actually work? Verify!
             $cliArgs[] = '--dbname=' . $dbName;
         } else {
             // MySQL/PostgreSQL need host, port, user, password
@@ -476,25 +477,6 @@ class Typo3Installer
 
         // Run TYPO3 setup command with all parameters non-interactively
         $this->runTypo3Command('setup', $cliArgs, $installDir, $config->phpBinary, $outputCallback);
-
-        // Create additional configuration for trusted hosts and other settings
-        $additionalConfig = $installDir . '/config/system/additional.php';
-        $configDir = dirname($additionalConfig);
-
-        if (!file_exists($configDir)) {
-            $this->filesystem->mkdir($configDir, self::DEFAULT_DIR_PERMISSIONS);
-        }
-
-        $configContent = <<<PHP
-<?php
-
-// Additional TYPO3 configuration
-\$GLOBALS['TYPO3_CONF_VARS']['BE']['lockSSL'] = false;
-\$GLOBALS['TYPO3_CONF_VARS']['SYS']['trustedHostsPattern'] = '.*';
-
-PHP;
-
-        file_put_contents($additionalConfig, $configContent);
     }
 
     /**
