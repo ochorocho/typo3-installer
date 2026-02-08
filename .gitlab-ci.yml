@@ -50,7 +50,7 @@ phpstan:
 php-cs-fixer:
   stage: analysis
   image:
-    name: ghcr.io/php-cs-fixer/php-cs-fixer:3-php8.2
+    name: ghcr.io/php-cs-fixer/php-cs-fixer:3-php8.3
     entrypoint: [""]
   needs:
     - composer-install
