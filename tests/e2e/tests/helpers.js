@@ -34,19 +34,19 @@ export async function navigateToDatabaseStep(page) {
  * Fill database form with MySQL/MariaDB credentials.
  * @param {import('@playwright/test').Page} page
  * @param {Object} [options] - Optional credentials override
- * @param {string} [options.host='db'] - Database host
+ * @param {string} [options.host] - Database host (default: env.DB_HOST or 'db')
  * @param {string} [options.port='3306'] - Database port
- * @param {string} [options.name='db'] - Database name
- * @param {string} [options.user='db'] - Database user
- * @param {string} [options.password='db'] - Database password
+ * @param {string} [options.name] - Database name (default: env.DB_NAME or 'db')
+ * @param {string} [options.user] - Database user (default: env.DB_USER or 'db')
+ * @param {string} [options.password] - Database password (default: env.DB_PASSWORD or 'db')
  */
 export async function fillMySQLForm(page, options = {}) {
   const {
-    host = 'db',
+    host = process.env.DB_HOST || 'db',
     port = '3306',
-    name = 'db',
-    user = 'db',
-    password = 'db'
+    name = process.env.DB_NAME || 'db',
+    user = process.env.DB_USER || 'db',
+    password = process.env.DB_PASSWORD || 'db'
   } = options;
 
   await page.locator('#driver').selectOption('pdo_mysql');
@@ -61,19 +61,19 @@ export async function fillMySQLForm(page, options = {}) {
  * Fill database form with PostgreSQL credentials.
  * @param {import('@playwright/test').Page} page
  * @param {Object} [options] - Optional credentials override
- * @param {string} [options.host='postgres'] - Database host
+ * @param {string} [options.host] - Database host (default: env.DB_HOST or 'postgres')
  * @param {string} [options.port='5432'] - Database port
- * @param {string} [options.name='db'] - Database name
- * @param {string} [options.user='db'] - Database user
- * @param {string} [options.password='db'] - Database password
+ * @param {string} [options.name] - Database name (default: env.DB_NAME or 'db')
+ * @param {string} [options.user] - Database user (default: env.DB_USER or 'db')
+ * @param {string} [options.password] - Database password (default: env.DB_PASSWORD or 'db')
  */
 export async function fillPostgreSQLForm(page, options = {}) {
   const {
-    host = 'postgres',
+    host = process.env.DB_HOST || 'postgres',
     port = '5432',
-    name = 'db',
-    user = 'db',
-    password = 'db'
+    name = process.env.DB_NAME || 'db',
+    user = process.env.DB_USER || 'db',
+    password = process.env.DB_PASSWORD || 'db'
   } = options;
 
   await page.locator('#driver').selectOption('pdo_pgsql');
@@ -255,22 +255,32 @@ export async function verifyTYPO3Backend(page, options = {}) {
 
 /**
  * Reset MySQL/MariaDB database for testing.
- * Drops and recreates the 'db' database.
+ * Drops and recreates the database.
+ * Uses environment variables: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
  */
 export function resetMySQLDatabase() {
-  console.log('Resetting MySQL database...');
-  execSync('mysql -udb -h db -pdb -e "DROP DATABASE IF EXISTS db; CREATE DATABASE db;"', {
+  const host = process.env.DB_HOST || 'db';
+  const user = process.env.DB_USER || 'db';
+  const password = process.env.DB_PASSWORD || 'db';
+  const name = process.env.DB_NAME || 'db';
+  console.log(`Resetting MySQL database at ${host}...`);
+  execSync(`mysql -u${user} -h ${host} -p${password} -e "DROP DATABASE IF EXISTS ${name}; CREATE DATABASE ${name};"`, {
     stdio: 'inherit'
   });
 }
 
 /**
  * Reset PostgreSQL database for testing.
- * Drops and recreates the 'db' database.
+ * Drops and recreates the database.
+ * Uses environment variables: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
  */
 export function resetPostgreSQLDatabase() {
-  console.log('Resetting PostgreSQL database...');
-  execSync('PGPASSWORD=db psql -h postgres -U db -d postgres -c "DROP DATABASE IF EXISTS db;" -c "CREATE DATABASE db;"', {
+  const host = process.env.DB_HOST || 'postgres';
+  const user = process.env.DB_USER || 'db';
+  const password = process.env.DB_PASSWORD || 'db';
+  const name = process.env.DB_NAME || 'db';
+  console.log(`Resetting PostgreSQL database at ${host}...`);
+  execSync(`PGPASSWORD=${password} psql -h ${host} -U ${user} -d postgres -c "DROP DATABASE IF EXISTS ${name};" -c "CREATE DATABASE ${name};"`, {
     stdio: 'inherit'
   });
 }
@@ -278,11 +288,13 @@ export function resetPostgreSQLDatabase() {
 /**
  * Reset SQLite database for testing.
  * Removes all SQLite files from the var/sqlite directory.
+ * Uses environment variable: INSTALL_DIR
  */
 export function resetSQLiteDatabase() {
+  const installDir = process.env.INSTALL_DIR || '/var/www/html/test-installer-root';
   console.log('Resetting SQLite database...');
   try {
-    execSync('rm -f /var/www/html/test-installer-root/var/sqlite/*.sqlite', {
+    execSync(`rm -f "${installDir}/var/sqlite"/*.sqlite`, {
       stdio: 'inherit'
     });
   } catch {
@@ -293,18 +305,20 @@ export function resetSQLiteDatabase() {
 /**
  * Reset TYPO3 installation files (shared across all DB types).
  * Removes config, var, vendor, and other generated files.
+ * Uses environment variable: INSTALL_DIR
  */
 export function resetTYPO3Installation() {
+  const installDir = process.env.INSTALL_DIR || '/var/www/html/test-installer-root';
   console.log('Resetting TYPO3 installation files...');
   const commands = [
-    'rm -Rf /var/www/html/test-installer-root/config',
-    'rm -Rf /var/www/html/test-installer-root/var',
-    'rm -Rf /var/www/html/test-installer-root/vendor',
-    'rm -Rf /var/www/html/test-installer-root/composer*',
-    'rm -Rf /var/www/html/test-installer-root/public/_assets',
-    'rm -Rf /var/www/html/test-installer-root/public/fileadmin',
-    'rm -Rf /var/www/html/test-installer-root/public/typo3temp',
-    'rm -Rf /var/www/html/test-installer-root/public/index.php',
+    `rm -Rf "${installDir}/config"`,
+    `rm -Rf "${installDir}/var"`,
+    `rm -Rf "${installDir}/vendor"`,
+    `rm -Rf "${installDir}/composer"*`,
+    `rm -Rf "${installDir}/public/_assets"`,
+    `rm -Rf "${installDir}/public/fileadmin"`,
+    `rm -Rf "${installDir}/public/typo3temp"`,
+    `rm -Rf "${installDir}/public/index.php"`,
   ];
   commands.forEach(cmd => {
     try {

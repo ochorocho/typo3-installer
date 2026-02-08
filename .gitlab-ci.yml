@@ -2,64 +2,107 @@ stages:
   - build
   - test
 
-# Base configuration for DDEV jobs
-.ddev_base:
-  image: ghcr.io/ddev/ddev-gitlab-ci:v1.24
-  services:
-    - docker:dind
-  variables:
-    FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR: 1
-    DOCKER_TLS_CERTDIR: ""
-    FF_NETWORK_PER_BUILD: 0
-  before_script:
-    - ddev start
-  after_script:
-    - ddev stop
+variables:
+  # Shared variables for all jobs
+  COMPOSER_PUBLIC_DIR: test-installer-root/public/
 
 # Build job - builds frontend and PHAR
+# Uses Playwright image which has Node.js, adds PHP for Composer
 build:
-  extends: .ddev_base
   stage: build
+  image: mcr.microsoft.com/playwright:v1.47.2-noble
+  before_script:
+    # Install PHP and required extensions
+    - apt-get update && apt-get install -y php php-cli php-zip php-mbstring php-xml php-curl unzip
+    # Install Composer
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
   script:
-    - ddev composer install
-    - ddev composer run phpstan
-    - ddev npm install
-    - ddev npm run build
-    - ddev composer run build
+    - composer install --no-interaction
+    - composer run phpstan
+    - cd Assets && npm ci && npm run build && cd ..
+    - composer run build
   artifacts:
     paths:
       - typo3-installer.phar
       - test-installer-root/public/typo3-installer.phar
     expire_in: 1 hour
 
-# Playwright E2E tests - MySQL
+# Include LAMP testing component for each database type
+include:
+  # MySQL/MariaDB E2E tests
+  - component: gitlab.com/ochorocho/lamp-acceptance-testing/lamp@main
+    inputs:
+      name: e2e-mysql
+      stage: test
+      php_image: php:8.3-fpm
+      php_additional_command: "docker-php-ext-install pdo_mysql"
+      database_image: mariadb:10.11
+      database_host: db
+
+  # PostgreSQL E2E tests
+  - component: gitlab.com/ochorocho/lamp-acceptance-testing/lamp@main
+    inputs:
+      name: e2e-postgresql
+      stage: test
+      php_image: php:8.3-fpm
+      php_additional_command: "apt-get update && apt-get install -y libpq-dev && docker-php-ext-install pdo_pgsql"
+      database_image: postgres:16
+      database_host: postgres
+
+  # SQLite E2E tests (uses placeholder DB, actual SQLite is in PHP)
+  - component: gitlab.com/ochorocho/lamp-acceptance-testing/lamp@main
+    inputs:
+      name: e2e-sqlite
+      stage: test
+      php_image: php:8.3-fpm
+      php_additional_command: ""
+      database_image: mariadb:10.11
+      database_host: db
+
+# Override the generated jobs to add our specific configuration
 e2e-mysql:
-  extends: .ddev_base
-  stage: test
   needs:
     - build
   timeout: 15 minutes
+  variables:
+    BASE_URL: http://webserver
+    DB_DRIVER: pdo_mysql
+    DB_HOST: db
+    DB_USER: db
+    DB_PASSWORD: db
+    DB_NAME: db
+    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
+    CI: "true"
   script:
-    - ddev playwright
+    - npx playwright install chromium --with-deps
+    - cd tests/e2e && npm ci
+    - cd tests/e2e && npx playwright test --project=ui-desktop --project=api --project=mysql
   artifacts:
     when: always
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
-      - tests/e2e
     reports:
       junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
 
-# Playwright E2E tests - PostgreSQL
 e2e-postgresql:
-  extends: .ddev_base
-  stage: test
   needs:
     - build
   timeout: 15 minutes
+  variables:
+    BASE_URL: http://webserver
+    DB_DRIVER: pdo_pgsql
+    DB_HOST: postgres
+    DB_USER: db
+    DB_PASSWORD: db
+    DB_NAME: db
+    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
+    CI: "true"
   script:
-    - ddev playwright
+    - npx playwright install chromium --with-deps
+    - cd tests/e2e && npm ci
+    - cd tests/e2e && npx playwright test --project=postgresql
   artifacts:
     when: always
     paths:
@@ -69,15 +112,23 @@ e2e-postgresql:
       junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
 
-# Playwright E2E tests - SQLite
 e2e-sqlite:
-  extends: .ddev_base
-  stage: test
   needs:
     - build
   timeout: 15 minutes
+  variables:
+    BASE_URL: http://webserver
+    DB_DRIVER: pdo_sqlite
+    DB_HOST: db
+    DB_USER: db
+    DB_PASSWORD: db
+    DB_NAME: db
+    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
+    CI: "true"
   script:
-    - ddev playwright
+    - npx playwright install chromium --with-deps
+    - cd tests/e2e && npm ci
+    - cd tests/e2e && npx playwright test --project=sqlite
   artifacts:
     when: always
     paths:

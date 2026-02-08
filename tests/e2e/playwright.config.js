@@ -14,7 +14,7 @@ export default defineConfig({
   globalSetup: './global-setup.js',
 
   use: {
-    baseURL: 'https://typo3-installer.ddev.site',
+    baseURL: process.env.BASE_URL || 'https://typo3-installer.ddev.site',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     ignoreHTTPSErrors: true,  // Required for DDEV self-signed SSL certificates
