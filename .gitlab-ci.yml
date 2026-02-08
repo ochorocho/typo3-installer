@@ -129,6 +129,7 @@ e2e-mysql:
     INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
     CI: "true"
   script:
+    - apt-get update && apt-get install -y default-mysql-client
     - cd tests/e2e && npm ci
     - npx playwright test --project=ui-desktop --project=api --project=mysql
   artifacts:
@@ -155,6 +156,7 @@ e2e-postgresql:
     INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
     CI: "true"
   script:
+    - apt-get update && apt-get install -y postgresql-client
     - cd tests/e2e && npm ci
     - npx playwright test --project=postgresql
   artifacts:
