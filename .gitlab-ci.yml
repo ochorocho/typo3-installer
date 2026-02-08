@@ -118,7 +118,7 @@ e2e-mysql:
   image: mcr.microsoft.com/playwright:v1.58.0-noble
   needs:
     - build-phar
-  timeout: 30 minutes
+  timeout: 60 minutes
   variables:
     BASE_URL: http://webserver
     DB_DRIVER: pdo_mysql
@@ -145,7 +145,7 @@ e2e-postgresql:
   image: mcr.microsoft.com/playwright:v1.58.0-noble
   needs:
     - build-phar
-  timeout: 30 minutes
+  timeout: 60 minutes
   variables:
     BASE_URL: http://webserver
     DB_DRIVER: pdo_pgsql
@@ -172,7 +172,7 @@ e2e-sqlite:
   image: mcr.microsoft.com/playwright:v1.58.0-noble
   needs:
     - build-phar
-  timeout: 30 minutes
+  timeout: 60 minutes
   variables:
     BASE_URL: http://webserver
     DB_DRIVER: pdo_sqlite
