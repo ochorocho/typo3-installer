@@ -63,14 +63,14 @@ php-cs-fixer:
 
 build-phar:
   stage: package
-  image: boxproject/box
+  image: composer:2
   needs:
     - composer-install
     - npm-build
   script:
-    - box compile --composer-bin=resources/composer.phar
-    - mkdir -p test-installer-root/public/
-    - cp typo3-installer.phar test-installer-root/public/
+    - curl -LSs https://github.com/box-project/box/releases/download/4.6.6/box.phar -o /usr/local/bin/box
+    - chmod +x /usr/local/bin/box
+    - composer run build:phar
   artifacts:
     paths:
       - typo3-installer.phar
