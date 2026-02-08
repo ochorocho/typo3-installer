@@ -425,10 +425,11 @@ class Typo3Installer
 
         // Map driver names to TYPO3 connection types
         $driver = match ($dbConfig->driver) {
-            'pdo_mysql' => 'mysqli',
+            'mysqli' => 'mysqli',
+            'pdo_mysql' => 'pdoMysql',
             'pdo_pgsql' => 'postgres',
             'pdo_sqlite' => 'sqlite',
-            default => 'mysqli'
+            default => throw new \RuntimeException(sprintf('Unsupported database driver: %s', $dbConfig->driver))
         };
 
         // Validate inputs - SQLite only needs database name (file path)

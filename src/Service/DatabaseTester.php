@@ -87,7 +87,7 @@ class DatabaseTester
     private function buildDsn(string $driver, string $host, int $port, string $name): string
     {
         return match ($driver) {
-            'pdo_mysql' => sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $host, $port, $name),
+            'mysqli', 'pdo_mysql' => sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $host, $port, $name),
             'pdo_pgsql' => sprintf('pgsql:host=%s;port=%d;dbname=%s', $host, $port, $name),
             'pdo_sqlite' => sprintf('sqlite:%s', $name),
             default => throw new \InvalidArgumentException(sprintf('Unsupported database driver: %s', $driver)),
