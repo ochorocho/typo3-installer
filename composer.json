@@ -10,6 +10,7 @@
     ],
     "require": {
         "php": "^8.2",
+        "composer/semver": "^3.3",
         "ext-fileinfo": "*",
         "ext-json": "*",
         "ext-pdo": "*",
