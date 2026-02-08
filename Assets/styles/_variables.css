@@ -6,8 +6,8 @@
 :root {
   /* TYPO3 v14.1 Primary Colors */
   --color-primary: #ff8700;
-  --color-primary-dark: #e67a00;
-  --color-primary-accessible: #b35c00;  /* WCAG AA compliant for white text (4.7:1) */
+  --color-primary-dark: #904a00;  /* WCAG AA compliant hover for white text (6.6:1) */
+  --color-primary-accessible: #a35500;  /* WCAG AA compliant for white text (5.4:1) */
   --color-secondary: #1a1a1a;
 
   /* Status Colors - TYPO3 official palette */
