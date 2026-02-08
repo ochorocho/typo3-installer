@@ -88,7 +88,7 @@ include:
       name: e2e-mysql
       stage: test
       php_image: php:8.3-fpm
-      php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip && docker-php-ext-install pdo_mysql pdo_pgsql intl zip"
+      php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip && docker-php-ext-install mysqli pdo pdo_mysql pdo_pgsql intl zip"
       database_image: mariadb:10.11
       database_host: db
 
