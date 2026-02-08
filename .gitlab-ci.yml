@@ -30,7 +30,7 @@ build:
 # Include LAMP testing component for each database type
 include:
   # MySQL/MariaDB E2E tests
-  - component: gitlab.com/ochorocho/lamp-acceptance-testing/lamp@main
+  - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
     inputs:
       name: e2e-mysql
       stage: test
@@ -40,7 +40,7 @@ include:
       database_host: db
 
   # PostgreSQL E2E tests
-  - component: gitlab.com/ochorocho/lamp-acceptance-testing/lamp@main
+  - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
     inputs:
       name: e2e-postgresql
       stage: test
@@ -50,7 +50,7 @@ include:
       database_host: postgres
 
   # SQLite E2E tests (uses placeholder DB, actual SQLite is in PHP)
-  - component: gitlab.com/ochorocho/lamp-acceptance-testing/lamp@main
+  - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
     inputs:
       name: e2e-sqlite
       stage: test
