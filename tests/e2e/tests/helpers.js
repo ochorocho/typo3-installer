@@ -247,6 +247,7 @@ export async function verifyTYPO3Backend(page, options = {}) {
 
   // Submit login form
   await page.locator('button[type="submit"]').click();
+  await page.waitForLoadState('networkidle');
 
   // Verify successful login - TYPO3 backend shows module menu
   await page.getByRole('navigation', { name: 'Module Menu' })
