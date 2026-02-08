@@ -1,31 +1,82 @@
 stages:
-  - build
-  - test
+  - build      # composer + npm (parallel)
+  - analysis   # phpstan + php-cs-fixer (parallel)
+  - package    # build PHAR
+  - test       # E2E tests
 
 variables:
   # Shared variables for all jobs
   COMPOSER_PUBLIC_DIR: test-installer-root/public/
 
-# Build job - builds frontend and PHAR
-# Uses Playwright image which has Node.js, adds PHP for Composer
-build:
+# =============================================================================
+# BUILD STAGE - parallel jobs for dependencies
+# =============================================================================
+
+composer-install:
   stage: build
-  image: mcr.microsoft.com/playwright:v1.47.2-noble
-  before_script:
-    # Install PHP and required extensions
-    - apt-get update && apt-get install -y php php-cli php-zip php-mbstring php-xml php-curl unzip
-    # Install Composer
-    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+  image: composer:2
   script:
-    - composer install --no-interaction
-    - composer run phpstan
-    - cd Assets && npm ci && npm run build && cd ..
-    - composer run build
+    - composer install --no-interaction --no-dev
+  artifacts:
+    paths:
+      - vendor/
+    expire_in: 1 hour
+
+npm-build:
+  stage: build
+  image: node:22-slim
+  script:
+    - cd Assets && npm ci && npm run build
+  artifacts:
+    paths:
+      - public/
+    expire_in: 1 hour
+
+# =============================================================================
+# ANALYSIS STAGE - parallel code quality checks
+# =============================================================================
+
+phpstan:
+  stage: analysis
+  image: ghcr.io/phpstan/phpstan:2-php8.3
+  needs:
+    - composer-install
+  entrypoint: [""]
+  script:
+    - phpstan analyse src --level=9
+
+php-cs-fixer:
+  stage: analysis
+  image: ghcr.io/php-cs-fixer/php-cs-fixer:3-php8.3
+  needs:
+    - composer-install
+  entrypoint: [""]
+  script:
+    - php-cs-fixer fix --dry-run --diff
+
+# =============================================================================
+# PACKAGE STAGE - build the PHAR
+# =============================================================================
+
+build-phar:
+  stage: package
+  image: boxproject/box
+  needs:
+    - composer-install
+    - npm-build
+  script:
+    - box compile --composer-bin=resources/composer.phar
+    - mkdir -p test-installer-root/public/
+    - cp typo3-installer.phar test-installer-root/public/
   artifacts:
     paths:
       - typo3-installer.phar
       - test-installer-root/public/typo3-installer.phar
     expire_in: 1 hour
+
+# =============================================================================
+# TEST STAGE - E2E tests
+# =============================================================================
 
 # Include LAMP testing component for each database type
 include:
@@ -62,7 +113,7 @@ include:
 # Override the generated jobs to add our specific configuration
 e2e-mysql:
   needs:
-    - build
+    - build-phar
   timeout: 15 minutes
   variables:
     BASE_URL: http://webserver
@@ -88,7 +139,7 @@ e2e-mysql:
 
 e2e-postgresql:
   needs:
-    - build
+    - build-phar
   timeout: 15 minutes
   variables:
     BASE_URL: http://webserver
@@ -114,7 +165,7 @@ e2e-postgresql:
 
 e2e-sqlite:
   needs:
-    - build
+    - build-phar
   timeout: 15 minutes
   variables:
     BASE_URL: http://webserver

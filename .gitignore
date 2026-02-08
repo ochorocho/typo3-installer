@@ -5,7 +5,6 @@
 /tests/e2e/playwright-report/
 /tests/e2e/test-results/
 /.phpunit.cache/
-/composer.lock
 /package-lock.json
 /frontend/package-lock.json
 /tests/e2e/package-lock.json

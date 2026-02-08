@@ -42,6 +42,8 @@ class PackageService
         'typo3/cms-extensionmanager',
         // No v14.1 version as of today, leads to stability issues with composer
         'typo3/cms-base-distribution',
+        // Not working in v13.4/v14.1
+        'typo3/cms-introduction'
     ];
 
     /**
