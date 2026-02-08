@@ -16,7 +16,7 @@ test.describe('Accessibility - Light Mode', () => {
   test.setTimeout(120000);
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
   });
 
   test('packages step should be accessible', async ({ page }) => {
@@ -44,7 +44,7 @@ test.describe('Accessibility - Dark Mode', () => {
   test.setTimeout(120000);
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
   });
 
   test('packages step should be accessible in dark mode', async ({ page }) => {
@@ -82,7 +82,7 @@ test.describe('Accessibility - Error States', () => {
   test.setTimeout(120000);
 
   test('database error state should be accessible', async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
 
     await navigateToDatabaseStep(page);
 
@@ -104,7 +104,7 @@ test.describe('Accessibility - Error States', () => {
 
 test.describe('Accessibility - Theme Toggle', () => {
   test('theme toggle should switch modes correctly', async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
     await page.waitForSelector('h2:has-text("Select Packages")');
 
     // Light mode first

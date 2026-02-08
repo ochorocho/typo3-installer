@@ -128,7 +128,7 @@ e2e-mysql:
     DB_NAME: db
     INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
     CI: "true"
-    COMPOSER_PUBLIC_DIR: test-installer-root/
+    COMPOSER_PUBLIC_DIR: test-installer-root/public/
   script:
     - apt-get update && apt-get install -y postgresql-client default-mysql-client
     - cd tests/e2e && npm ci
@@ -156,7 +156,7 @@ e2e-postgresql:
     DB_NAME: db
     INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
     CI: "true"
-    COMPOSER_PUBLIC_DIR: test-installer-root/
+    COMPOSER_PUBLIC_DIR: test-installer-root/public/
   script:
     - apt-get update && apt-get install -y postgresql-client default-mysql-client
     - cd tests/e2e && npm ci
@@ -184,7 +184,7 @@ e2e-sqlite:
     DB_NAME: db
     INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
     CI: "true"
-    COMPOSER_PUBLIC_DIR: test-installer-root/
+    COMPOSER_PUBLIC_DIR: test-installer-root/public/
   script:
     - apt-get update && apt-get install -y postgresql-client default-mysql-client
     - cd tests/e2e && npm ci

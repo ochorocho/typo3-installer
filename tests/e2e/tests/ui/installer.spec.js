@@ -10,7 +10,7 @@ import { navigateToRequirements, navigateToDatabaseStep } from '../helpers.js';
 
 test.describe('Installer UI', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
   });
 
   test('should load the installer interface', async ({ page }) => {
@@ -48,7 +48,7 @@ test.describe('Step Navigation', () => {
   test.setTimeout(120000);
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
   });
 
   test('should show requirement status indicators', async ({ page }) => {
@@ -105,7 +105,7 @@ test.describe('Step Indicator States', () => {
   test.setTimeout(120000);
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
   });
 
   test('completed steps show checkmark indicator', async ({ page }) => {

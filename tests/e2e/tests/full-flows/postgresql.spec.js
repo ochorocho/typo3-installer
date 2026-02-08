@@ -31,7 +31,7 @@ test.describe.serial('PostgreSQL Full Installation Flow', () => {
   });
 
   test('complete installation with PostgreSQL and WCAG checks', async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
 
     // ============================================
     // Step 1: Packages Selection

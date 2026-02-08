@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Responsive Layout', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
   });
 
   test('progress bar should be visible on mobile', async ({ page, browserName }) => {
@@ -127,7 +127,7 @@ test.describe('Responsive Layout', () => {
 
 test.describe('Mobile-specific behavior', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
   });
 
   // Only run on mobile project
@@ -207,7 +207,7 @@ test.describe('Mobile-specific behavior', () => {
 
 test.describe('Tablet-specific behavior', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
   });
 
   test('step titles should be visible on tablet', async ({ page }) => {

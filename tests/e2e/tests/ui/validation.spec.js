@@ -12,7 +12,7 @@ test.describe('Database Form Validation', () => {
   test.setTimeout(120000);
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
   });
 
   test('should show error with invalid database credentials', async ({ page }) => {
@@ -87,7 +87,7 @@ test.describe('Admin Form Validation', () => {
   test.setTimeout(120000);
 
   test('should show password strength indicator', async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
 
     // Navigate to packages step
     await page.waitForSelector('h2:has-text("Select Packages")');
@@ -113,7 +113,7 @@ test.describe('Admin Form Validation', () => {
   });
 
   test('should validate email format', async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
 
     // Navigate to packages step
     await page.waitForSelector('h2:has-text("Select Packages")');
@@ -145,7 +145,7 @@ test.describe('Site Form Validation', () => {
   test.setTimeout(120000);
 
   test('should require site name', async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
 
     // Navigate to packages step
     await page.waitForSelector('h2:has-text("Select Packages")');
@@ -167,7 +167,7 @@ test.describe('Site Form Validation', () => {
   });
 
   test('should auto-fill base URL', async ({ page }) => {
-    await page.goto('/typo3-installer.phar', { waitUntil: 'networkidle' });
+    await page.goto('/typo3-installer.php', { waitUntil: 'networkidle' });
 
     // Navigate to packages step
     await page.waitForSelector('h2:has-text("Select Packages")');
