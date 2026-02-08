@@ -38,19 +38,21 @@ npm-build:
 
 phpstan:
   stage: analysis
-  image: ghcr.io/phpstan/phpstan:2-php8.3
+  image:
+    name: ghcr.io/phpstan/phpstan:2-php8.3
+    entrypoint: [""]
   needs:
     - composer-install
-  entrypoint: [""]
   script:
     - phpstan analyse src --level=9
 
 php-cs-fixer:
   stage: analysis
-  image: ghcr.io/php-cs-fixer/php-cs-fixer:3-php8.3
+  image:
+    name: ghcr.io/php-cs-fixer/php-cs-fixer:3-php8.3
+    entrypoint: [""]
   needs:
     - composer-install
-  entrypoint: [""]
   script:
     - php-cs-fixer fix --dry-run --diff
 
