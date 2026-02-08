@@ -101,6 +101,7 @@ include:
       php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip && docker-php-ext-install pdo_mysql pdo_pgsql intl zip"
       database_image: postgres:16
       database_host: postgres
+      database_port: 5432
 
   # SQLite E2E tests (uses placeholder DB, actual SQLite is in PHP)
   - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
