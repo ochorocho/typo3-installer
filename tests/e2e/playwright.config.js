@@ -79,7 +79,6 @@ export default defineConfig({
     },
     {
       name: 'postgresql',
-      dependencies: ['mysql'],
       testDir: './tests/full-flows',
       testMatch: ['postgresql.spec.js'],
       fullyParallel: false,
@@ -89,7 +88,6 @@ export default defineConfig({
     },
     {
       name: 'sqlite',
-      dependencies: ['postgresql'],
       testDir: './tests/full-flows',
       testMatch: ['sqlite.spec.js'],
       fullyParallel: false,
