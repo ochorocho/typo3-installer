@@ -130,7 +130,7 @@ e2e-mysql:
     CI: "true"
   script:
     - cd tests/e2e && npm ci
-    - cd tests/e2e && npx playwright test --project=ui-desktop --project=api --project=mysql
+    - npx playwright test --project=ui-desktop --project=api --project=mysql
   artifacts:
     when: always
     paths:
@@ -156,7 +156,7 @@ e2e-postgresql:
     CI: "true"
   script:
     - cd tests/e2e && npm ci
-    - cd tests/e2e && npx playwright test --project=postgresql
+    - npx playwright test --project=postgresql
   artifacts:
     when: always
     paths:
@@ -182,7 +182,7 @@ e2e-sqlite:
     CI: "true"
   script:
     - cd tests/e2e && npm ci
-    - cd tests/e2e && npx playwright test --project=sqlite
+    - npx playwright test --project=sqlite
   artifacts:
     when: always
     paths:
