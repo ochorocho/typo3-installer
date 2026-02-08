@@ -5,8 +5,6 @@
 /tests/e2e/playwright-report/
 /tests/e2e/test-results/
 /.phpunit.cache/
-/frontend/package-lock.json
-/tests/e2e/package-lock.json
 /public/assets/
 /typo3-installer.php
 /typo3-installer.phar

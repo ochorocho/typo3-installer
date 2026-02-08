@@ -115,6 +115,7 @@ include:
 
 # Override the generated jobs to add our specific configuration
 e2e-mysql:
+  image: mcr.microsoft.com/playwright:v1.58.0-noble
   needs:
     - build-phar
   timeout: 30 minutes
@@ -128,7 +129,6 @@ e2e-mysql:
     INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
     CI: "true"
   script:
-    - npx playwright install chromium --with-deps
     - cd tests/e2e && npm ci
     - cd tests/e2e && npx playwright test --project=ui-desktop --project=api --project=mysql
   artifacts:
@@ -141,6 +141,7 @@ e2e-mysql:
     expire_in: 7 days
 
 e2e-postgresql:
+  image: mcr.microsoft.com/playwright:v1.58.0-noble
   needs:
     - build-phar
   timeout: 30 minutes
@@ -154,7 +155,6 @@ e2e-postgresql:
     INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
     CI: "true"
   script:
-    - npx playwright install chromium --with-deps
     - cd tests/e2e && npm ci
     - cd tests/e2e && npx playwright test --project=postgresql
   artifacts:
@@ -167,6 +167,7 @@ e2e-postgresql:
     expire_in: 7 days
 
 e2e-sqlite:
+  image: mcr.microsoft.com/playwright:v1.58.0-noble
   needs:
     - build-phar
   timeout: 30 minutes
@@ -180,7 +181,6 @@ e2e-sqlite:
     INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
     CI: "true"
   script:
-    - npx playwright install chromium --with-deps
     - cd tests/e2e && npm ci
     - cd tests/e2e && npx playwright test --project=sqlite
   artifacts:
