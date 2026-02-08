@@ -102,7 +102,7 @@ include:
       php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
       database_image: postgres:16
       database_host: postgres
-      database_port: 5432
+      database_port: 3333
 
   # SQLite E2E tests (uses placeholder DB, actual SQLite is in PHP)
   - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
@@ -153,7 +153,6 @@ e2e-postgresql:
     BASE_URL: http://webserver
     DB_DRIVER: pdo_pgsql
     DB_HOST: postgres
-    DB_PORT: "3333"
     DB_USER: db
     DB_PASSWORD: db
     DB_NAME: db
