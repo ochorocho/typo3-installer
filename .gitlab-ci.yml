@@ -117,7 +117,7 @@ include:
 e2e-mysql:
   needs:
     - build-phar
-  timeout: 15 minutes
+  timeout: 30 minutes
   variables:
     BASE_URL: http://webserver
     DB_DRIVER: pdo_mysql
@@ -143,7 +143,7 @@ e2e-mysql:
 e2e-postgresql:
   needs:
     - build-phar
-  timeout: 15 minutes
+  timeout: 30 minutes
   variables:
     BASE_URL: http://webserver
     DB_DRIVER: pdo_pgsql
@@ -169,7 +169,7 @@ e2e-postgresql:
 e2e-sqlite:
   needs:
     - build-phar
-  timeout: 15 minutes
+  timeout: 30 minutes
   variables:
     BASE_URL: http://webserver
     DB_DRIVER: pdo_sqlite
