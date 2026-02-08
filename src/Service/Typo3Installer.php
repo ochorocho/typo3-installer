@@ -350,10 +350,6 @@ class Typo3Installer
             ],
         ];
 
-        // @todo: Add scripts section, see whats needed.
-        //        $composerJson['scripts'] = [
-        //        ];
-
         file_put_contents(
             $composerJsonPath,
             json_encode($composerJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n"
