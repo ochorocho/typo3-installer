@@ -35,15 +35,26 @@ class ApiError extends Error {
 class ApiClient {
     constructor(baseUrl = '') {
         const url = new URL(window.location.href);
-        this.baseUrl = url.origin + url.pathname.replace(/\/$/, '');
+        // Strip any existing query string from pathname
+        this.baseUrl = url.origin + url.pathname.split('?')[0].replace(/\/$/, '');
         this.defaultTimeout = 30000; // 30 seconds
+    }
+
+    /**
+     * Build URL with route query parameter
+     * @param {string} route - The API route (e.g., '/api/versions')
+     * @returns {string} Full URL with route query parameter
+     */
+    buildUrl(route) {
+        const cleanRoute = route.startsWith('/') ? route.substring(1) : route;
+        return `${this.baseUrl}?route=${cleanRoute}`;
     }
 
     /**
      * Make an API request with timeout and error handling
      */
     async request(endpoint, options = {}) {
-        const url = `${this.baseUrl}${endpoint}`;
+        const url = this.buildUrl(endpoint);
         const timeout = options.timeout || this.defaultTimeout;
         const externalSignal = options.signal;
 
@@ -221,7 +232,7 @@ class ApiClient {
     }
 
     async getPhpInfo() {
-        const url = `${this.baseUrl}/api/phpinfo`;
+        const url = this.buildUrl('/api/phpinfo');
         const response = await fetch(url);
         if (!response.ok) {
             throw new ApiError('Failed to load PHP info', { statusCode: response.status });
@@ -259,7 +270,7 @@ class ApiClient {
      */
     installWithStreaming(config, callbacks = {}) {
         const STALL_TIMEOUT_MS = 10000;
-        const url = `${this.baseUrl}/api/install-stream`;
+        const url = this.buildUrl('/api/install-stream');
 
         // Use fetch with POST to send config, then read as stream
         const controller = new AbortController();

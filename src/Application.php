@@ -38,7 +38,25 @@ class Application
 
     public function handle(Request $request): Response
     {
-        $path = $request->getPathInfo();
+        // Priority 1: Query parameter routing (webserver-independent)
+        $route = $request->query->get('route');
+
+        // Priority 2: Fall back to PATH_INFO (legacy support)
+        if ($route === null || $route === '') {
+            $route = $request->getPathInfo();
+        }
+
+        // Normalize: ensure route starts with /
+        if ($route !== '' && $route[0] !== '/') {
+            $route = '/' . $route;
+        }
+
+        // Remove trailing slash for consistent matching
+        $path = rtrim($route, '/');
+        if ($path === '') {
+            $path = '/';
+        }
+
         $method = $request->getMethod();
 
         // API routes

@@ -16,7 +16,7 @@ test.beforeAll(async () => {
 
 test.describe('API: Requirements Check', () => {
   test('POST /api/check-requirements - should return requirements list', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/check-requirements');
+    const response = await request.post('/typo3-installer.php?route=api/check-requirements');
 
     expect(response.ok()).toBeTruthy();
     expect(response.status()).toBe(200);
@@ -28,7 +28,7 @@ test.describe('API: Requirements Check', () => {
   });
 
   test('should return proper requirement structure', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/check-requirements');
+    const response = await request.post('/typo3-installer.php?route=api/check-requirements');
     const data = await response.json();
 
     // Check first requirement has all required fields
@@ -40,7 +40,7 @@ test.describe('API: Requirements Check', () => {
   });
 
   test('should check PHP version requirement', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/check-requirements');
+    const response = await request.post('/typo3-installer.php?route=api/check-requirements');
     const data = await response.json();
 
     const phpCheck = data.requirements.find(r => r.title === 'PHP Version');
@@ -50,7 +50,7 @@ test.describe('API: Requirements Check', () => {
   });
 
   test('should check required PHP extensions', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/check-requirements');
+    const response = await request.post('/typo3-installer.php?route=api/check-requirements');
     const data = await response.json();
 
     const requiredExtensions = ['pdo', 'json', 'mbstring', 'openssl'];
@@ -66,7 +66,7 @@ test.describe('API: Requirements Check', () => {
   });
 
   test('should check file permissions', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/check-requirements');
+    const response = await request.post('/typo3-installer.php?route=api/check-requirements');
     const data = await response.json();
 
     const permCheck = data.requirements.find(r => r.title === 'File Permissions');
@@ -76,7 +76,7 @@ test.describe('API: Requirements Check', () => {
   });
 
   test('should check memory limit', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/check-requirements');
+    const response = await request.post('/typo3-installer.php?route=api/check-requirements');
     const data = await response.json();
 
     const memCheck = data.requirements.find(r => r.title === 'Memory Limit');
@@ -87,7 +87,7 @@ test.describe('API: Requirements Check', () => {
 
 test.describe('API: Database Connection Test', () => {
   test('POST /api/test-database - should validate database config with DDEV credentials', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/test-database', {
+    const response = await request.post('/typo3-installer.php?route=api/test-database', {
       data: {
         driver: 'pdo_mysql',
         host: 'db',
@@ -107,7 +107,7 @@ test.describe('API: Database Connection Test', () => {
   });
 
   test('should return error for invalid database host', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/test-database', {
+    const response = await request.post('/typo3-installer.php?route=api/test-database', {
       data: {
         driver: 'pdo_mysql',
         host: 'invalid-host-that-does-not-exist',
@@ -125,7 +125,7 @@ test.describe('API: Database Connection Test', () => {
   });
 
   test('should return error for invalid credentials', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/test-database', {
+    const response = await request.post('/typo3-installer.php?route=api/test-database', {
       data: {
         driver: 'pdo_mysql',
         host: 'db',
@@ -143,7 +143,7 @@ test.describe('API: Database Connection Test', () => {
   });
 
   test('should return error for invalid database name', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/test-database', {
+    const response = await request.post('/typo3-installer.php?route=api/test-database', {
       data: {
         driver: 'pdo_mysql',
         host: 'db',
@@ -160,7 +160,7 @@ test.describe('API: Database Connection Test', () => {
   });
 
   test('should return 400 for missing request data', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/test-database', {
+    const response = await request.post('/typo3-installer.php?route=api/test-database', {
       data: null
     });
 
@@ -171,7 +171,7 @@ test.describe('API: Database Connection Test', () => {
   });
 
   test('should handle empty request body', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/test-database', {
+    const response = await request.post('/typo3-installer.php?route=api/test-database', {
       data: {}
     });
 
@@ -179,7 +179,7 @@ test.describe('API: Database Connection Test', () => {
   });
 
   test('should support default port parameter', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/test-database', {
+    const response = await request.post('/typo3-installer.php?route=api/test-database', {
       data: {
         driver: 'pdo_mysql',
         host: 'db',
@@ -195,7 +195,7 @@ test.describe('API: Database Connection Test', () => {
   });
 
   test('should validate PostgreSQL connection with DDEV credentials', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/test-database', {
+    const response = await request.post('/typo3-installer.php?route=api/test-database', {
       data: {
         driver: 'pdo_pgsql',
         host: 'postgres',
@@ -215,7 +215,7 @@ test.describe('API: Database Connection Test', () => {
   });
 
   test('should validate SQLite connection with file path', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/test-database', {
+    const response = await request.post('/typo3-installer.php?route=api/test-database', {
       data: {
         driver: 'pdo_sqlite',
         host: '',
@@ -235,7 +235,7 @@ test.describe('API: Database Connection Test', () => {
   });
 
   test('should return error for invalid PostgreSQL credentials', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/test-database', {
+    const response = await request.post('/typo3-installer.php?route=api/test-database', {
       data: {
         driver: 'pdo_pgsql',
         host: 'postgres',
@@ -254,7 +254,7 @@ test.describe('API: Database Connection Test', () => {
 
 test.describe('API: Installation', () => {
   test('POST /api/install - should accept valid installation config', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/install', {
+    const response = await request.post('/typo3-installer.php?route=api/install', {
       data: {
         typo3Version: '14.1',
         database: {
@@ -288,7 +288,7 @@ test.describe('API: Installation', () => {
   });
 
   test('should return 400 for null request data', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/install', {
+    const response = await request.post('/typo3-installer.php?route=api/install', {
       data: null
     });
 
@@ -299,7 +299,7 @@ test.describe('API: Installation', () => {
   });
 
   test('should accept empty config with defaults', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/install', {
+    const response = await request.post('/typo3-installer.php?route=api/install', {
       data: {}
     });
 
@@ -310,7 +310,7 @@ test.describe('API: Installation', () => {
 
   test('should validate config structure', async ({ request }) => {
     // Missing admin section
-    const response = await request.post('/typo3-installer.php/api/install', {
+    const response = await request.post('/typo3-installer.php?route=api/install', {
       data: {
         database: {
           driver: 'pdo_mysql',
@@ -335,7 +335,7 @@ test.describe('API: Installation', () => {
 
 test.describe('API: Installation Status', () => {
   test('GET /api/status - should return status object', async ({ request }) => {
-    const response = await request.get('/typo3-installer.php/api/status');
+    const response = await request.get('/typo3-installer.php?route=api/status');
 
     expect(response.ok()).toBeTruthy();
     expect(response.status()).toBe(200);
@@ -348,7 +348,7 @@ test.describe('API: Installation Status', () => {
   });
 
   test('should return initial status before installation starts', async ({ request }) => {
-    const response = await request.get('/typo3-installer.php/api/status');
+    const response = await request.get('/typo3-installer.php?route=api/status');
     const data = await response.json();
 
     expect(data.progress).toBeGreaterThanOrEqual(0);
@@ -358,7 +358,7 @@ test.describe('API: Installation Status', () => {
   });
 
   test('should have error property in response', async ({ request }) => {
-    const response = await request.get('/typo3-installer.php/api/status');
+    const response = await request.get('/typo3-installer.php?route=api/status');
     const data = await response.json();
 
     // Error property should exist (can be null or undefined when no errors)
@@ -366,7 +366,7 @@ test.describe('API: Installation Status', () => {
   });
 
   test('progress should be a valid percentage', async ({ request }) => {
-    const response = await request.get('/typo3-installer.php/api/status');
+    const response = await request.get('/typo3-installer.php?route=api/status');
     const data = await response.json();
 
     expect(typeof data.progress).toBe('number');
@@ -377,7 +377,7 @@ test.describe('API: Installation Status', () => {
 
 test.describe('API: Error Handling', () => {
   test('should return 404 for unknown endpoints', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/unknown-endpoint-xyz');
+    const response = await request.post('/typo3-installer.php?route=api/unknown-endpoint-xyz');
 
     expect(response.status()).toBe(404);
 
@@ -386,13 +386,13 @@ test.describe('API: Error Handling', () => {
   });
 
   test('should return 404 for invalid API paths', async ({ request }) => {
-    const response = await request.get('/typo3-installer.php/api/does-not-exist');
+    const response = await request.get('/typo3-installer.php?route=api/does-not-exist');
 
     expect(response.status()).toBe(404);
   });
 
   test('should handle GET request to POST-only endpoints', async ({ request }) => {
-    const response = await request.get('/typo3-installer.php/api/check-requirements');
+    const response = await request.get('/typo3-installer.php?route=api/check-requirements');
 
     // The Application.php might handle GET gracefully or return an error
     // Just verify we get a valid HTTP response (not a server error 5xx)
@@ -403,7 +403,7 @@ test.describe('API: Error Handling', () => {
 
 test.describe('API: Response Headers', () => {
   test('should return JSON content type', async ({ request }) => {
-    const response = await request.post('/typo3-installer.php/api/check-requirements');
+    const response = await request.post('/typo3-installer.php?route=api/check-requirements');
 
     const contentType = response.headers()['content-type'];
     expect(contentType).toContain('application/json');
@@ -411,9 +411,9 @@ test.describe('API: Response Headers', () => {
 
   test('all endpoints should return JSON', async ({ request }) => {
     const endpoints = [
-      { method: 'POST', path: '/typo3-installer.php/api/check-requirements' },
-      { method: 'POST', path: '/typo3-installer.php/api/test-database', data: { driver: 'pdo_mysql', host: 'db', name: 'db', user: 'db', password: 'db' } },
-      { method: 'GET', path: '/typo3-installer.php/api/status' }
+      { method: 'POST', path: '/typo3-installer.php?route=api/check-requirements' },
+      { method: 'POST', path: '/typo3-installer.php?route=api/test-database', data: { driver: 'pdo_mysql', host: 'db', name: 'db', user: 'db', password: 'db' } },
+      { method: 'GET', path: '/typo3-installer.php?route=api/status' }
     ];
 
     for (const endpoint of endpoints) {
@@ -433,14 +433,14 @@ test.describe('API: Response Headers', () => {
 test.describe('API: Integration Tests', () => {
   test('full workflow - requirements → database test → status check', async ({ request }) => {
     // Step 1: Check requirements
-    const reqResponse = await request.post('/typo3-installer.php/api/check-requirements');
+    const reqResponse = await request.post('/typo3-installer.php?route=api/check-requirements');
     expect(reqResponse.ok()).toBeTruthy();
 
     const reqData = await reqResponse.json();
     expect(reqData.success).toBe(true);
 
     // Step 2: Test database connection
-    const dbResponse = await request.post('/typo3-installer.php/api/test-database', {
+    const dbResponse = await request.post('/typo3-installer.php?route=api/test-database', {
       data: {
         driver: 'pdo_mysql',
         host: 'db',
@@ -453,7 +453,7 @@ test.describe('API: Integration Tests', () => {
     expect(dbResponse.ok()).toBeTruthy();
 
     // Step 3: Check installation status
-    const statusResponse = await request.get('/typo3-installer.php/api/status');
+    const statusResponse = await request.get('/typo3-installer.php?route=api/status');
     expect(statusResponse.ok()).toBeTruthy();
 
     const statusData = await statusResponse.json();
