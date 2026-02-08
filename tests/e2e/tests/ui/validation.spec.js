@@ -21,7 +21,7 @@ test.describe('Database Form Validation', () => {
     // Fill form with invalid credentials
     await page.locator('#driver').selectOption('pdo_mysql');
     await page.locator('#host').fill('db');
-    await page.locator('#port').fill('3306');
+    await page.locator('#port').fill(process.env.DB_PORT || process.env.DATABASE_PORT || '3306');
     await page.locator('#name').fill('db');
     await page.locator('#user').fill('invalid_user');
     await page.locator('#password').fill('invalid_password');

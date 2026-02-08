@@ -35,7 +35,7 @@ export async function navigateToDatabaseStep(page) {
  * @param {import('@playwright/test').Page} page
  * @param {Object} [options] - Optional credentials override
  * @param {string} [options.host] - Database host (default: env.DB_HOST or 'db')
- * @param {string} [options.port='3306'] - Database port
+ * @param {string} [options.port] - Database port (default: env DB_PORT/DATABASE_PORT or '3306')
  * @param {string} [options.name] - Database name (default: env.DB_NAME or 'db')
  * @param {string} [options.user] - Database user (default: env.DB_USER or 'db')
  * @param {string} [options.password] - Database password (default: env.DB_PASSWORD or 'db')
@@ -43,7 +43,7 @@ export async function navigateToDatabaseStep(page) {
 export async function fillMySQLForm(page, options = {}) {
   const {
     host = process.env.DB_HOST || 'db',
-    port = '3306',
+    port = process.env.DB_PORT || process.env.DATABASE_PORT || '3306',
     name = process.env.DB_NAME || 'db',
     user = process.env.DB_USER || 'db',
     password = process.env.DB_PASSWORD || 'db'
@@ -62,7 +62,7 @@ export async function fillMySQLForm(page, options = {}) {
  * @param {import('@playwright/test').Page} page
  * @param {Object} [options] - Optional credentials override
  * @param {string} [options.host] - Database host (default: env.DB_HOST or 'postgres')
- * @param {string} [options.port='5432'] - Database port
+ * @param {string} [options.port] - Database port (default: env DB_PORT/DATABASE_PORT or '5432')
  * @param {string} [options.name] - Database name (default: env.DB_NAME or 'db')
  * @param {string} [options.user] - Database user (default: env.DB_USER or 'db')
  * @param {string} [options.password] - Database password (default: env.DB_PASSWORD or 'db')
@@ -70,7 +70,7 @@ export async function fillMySQLForm(page, options = {}) {
 export async function fillPostgreSQLForm(page, options = {}) {
   const {
     host = process.env.DB_HOST || 'postgres',
-    port = '5432',
+    port = process.env.DB_PORT || process.env.DATABASE_PORT || '5432',
     name = process.env.DB_NAME || 'db',
     user = process.env.DB_USER || 'db',
     password = process.env.DB_PASSWORD || 'db'

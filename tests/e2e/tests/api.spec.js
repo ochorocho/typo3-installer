@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { resetMySQLDatabase, resetTYPO3Installation } from './helpers.js';
 
+const DB_PORT = parseInt(process.env.DB_PORT || process.env.DATABASE_PORT || '3306', 10);
+const DB_PORT_PGSQL = parseInt(process.env.DB_PORT || process.env.DATABASE_PORT || '5432', 10);
+
 // Reset TYPO3 test environment before running API tests
 test.beforeAll(async () => {
   console.log('Running TYPO3 reset before API tests...');
@@ -92,7 +95,7 @@ test.describe('API: Database Connection Test', () => {
       data: {
         driver: 'pdo_mysql',
         host: 'db',
-        port: 3306,
+        port: DB_PORT,
         name: 'db',
         user: 'db',
         password: 'db'
@@ -130,7 +133,7 @@ test.describe('API: Database Connection Test', () => {
       data: {
         driver: 'pdo_mysql',
         host: 'db',
-        port: 3306,
+        port: DB_PORT,
         name: 'db',
         user: 'invalid_user',
         password: 'invalid_password'
@@ -148,7 +151,7 @@ test.describe('API: Database Connection Test', () => {
       data: {
         driver: 'pdo_mysql',
         host: 'db',
-        port: 3306,
+        port: DB_PORT,
         name: 'nonexistent_database_12345',
         user: 'db',
         password: 'db'
@@ -200,7 +203,7 @@ test.describe('API: Database Connection Test', () => {
       data: {
         driver: 'pdo_pgsql',
         host: 'postgres',
-        port: 5432,
+        port: DB_PORT_PGSQL,
         name: 'db',
         user: 'db',
         password: 'db'
@@ -240,7 +243,7 @@ test.describe('API: Database Connection Test', () => {
       data: {
         driver: 'pdo_pgsql',
         host: 'postgres',
-        port: 5432,
+        port: DB_PORT_PGSQL,
         name: 'db',
         user: 'invalid_user',
         password: 'invalid_password'
@@ -261,7 +264,7 @@ test.describe('API: Installation', () => {
         database: {
           driver: 'pdo_mysql',
           host: 'db',
-          port: 3306,
+          port: DB_PORT,
           name: 'test_install',
           user: 'db',
           password: 'db'
@@ -316,7 +319,7 @@ test.describe('API: Installation', () => {
         database: {
           driver: 'pdo_mysql',
           host: 'db',
-          port: 3306,
+          port: DB_PORT,
           name: 'test',
           user: 'db',
           password: 'db'
@@ -445,7 +448,7 @@ test.describe('API: Integration Tests', () => {
       data: {
         driver: 'pdo_mysql',
         host: 'db',
-        port: 3306,
+        port: DB_PORT,
         name: 'db',
         user: 'db',
         password: 'db'

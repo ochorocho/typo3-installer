@@ -88,9 +88,10 @@ include:
       name: e2e-mysql
       stage: test
       php_image: php:8.3-fpm
-      php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip && docker-php-ext-install mysqli pdo pdo_mysql pdo_pgsql intl zip"
+      php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
       database_image: mariadb:10.11
       database_host: db
+      database_port: 3306
 
   # PostgreSQL E2E tests
   - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
@@ -98,7 +99,7 @@ include:
       name: e2e-postgresql
       stage: test
       php_image: php:8.3-fpm
-      php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip && docker-php-ext-install pdo_mysql pdo_pgsql intl zip"
+      php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
       database_image: postgres:16
       database_host: postgres
       database_port: 5432
@@ -109,7 +110,7 @@ include:
       name: e2e-sqlite
       stage: test
       php_image: php:8.3-fpm
-      php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip && docker-php-ext-install pdo_mysql pdo_pgsql intl zip"
+      php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
       database_image: mariadb:10.11
       database_host: db
 
@@ -152,6 +153,7 @@ e2e-postgresql:
     BASE_URL: http://webserver
     DB_DRIVER: pdo_pgsql
     DB_HOST: postgres
+    DB_PORT: "3333"
     DB_USER: db
     DB_PASSWORD: db
     DB_NAME: db
@@ -181,6 +183,7 @@ e2e-sqlite:
     BASE_URL: http://webserver
     DB_DRIVER: pdo_sqlite
     DB_HOST: db
+    DB_PORT: "3333"
     DB_USER: db
     DB_PASSWORD: db
     DB_NAME: db
