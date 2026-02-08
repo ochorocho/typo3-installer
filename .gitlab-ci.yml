@@ -88,7 +88,7 @@ include:
       name: e2e-mysql
       stage: test
       php_image: php:8.3-fpm
-      php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev && docker-php-ext-install pdo_mysql pdo_pgsql intl"
+      php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip && docker-php-ext-install pdo_mysql pdo_pgsql intl zip"
       database_image: mariadb:10.11
       database_host: db
 
@@ -98,7 +98,7 @@ include:
       name: e2e-postgresql
       stage: test
       php_image: php:8.3-fpm
-      php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev && docker-php-ext-install pdo_mysql pdo_pgsql intl"
+      php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip && docker-php-ext-install pdo_mysql pdo_pgsql intl zip"
       database_image: postgres:16
       database_host: postgres
 
@@ -108,7 +108,7 @@ include:
       name: e2e-sqlite
       stage: test
       php_image: php:8.3-fpm
-      php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev && docker-php-ext-install pdo_mysql pdo_pgsql intl"
+      php_additional_command: "apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip && docker-php-ext-install pdo_mysql pdo_pgsql intl zip"
       database_image: mariadb:10.11
       database_host: db
 
