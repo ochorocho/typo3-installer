@@ -47,9 +47,7 @@ test.describe('Database Form Validation', () => {
     await expect(page.locator('#port')).toBeHidden();
     await expect(page.locator('#user')).toBeHidden();
     await expect(page.locator('#password')).toBeHidden();
-
-    // Database name field should still be visible (used for file path)
-    await expect(page.locator('#name')).toBeVisible();
+    await expect(page.locator('#name')).toBeHidden();
   });
 
   test('should show server fields when switching back from SQLite', async ({ page }) => {
