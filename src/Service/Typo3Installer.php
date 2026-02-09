@@ -449,10 +449,7 @@ class Typo3Installer
         ];
 
         // Add database-specific arguments
-        if ($isSqlite) {
-            // SQLite uses file path as database name
-            $cliArgs[] = '--dbname=' . $dbName;
-        } else {
+        if (!$isSqlite) {
             // MySQL/PostgreSQL need host, port, user, password
             $host = $this->validateInput($dbConfig->host, 'database.host');
             $dbUser = $this->validateInput($dbConfig->user, 'database.user');

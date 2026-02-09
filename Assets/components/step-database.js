@@ -137,7 +137,7 @@ export class StepDatabase extends LitElement {
 
     const isFileBased = this._isFileBasedDriver();
     const hasRequiredFields = isFileBased
-      ? db.name?.trim()
+      ? true
       : db.host?.trim() && db.name?.trim() && db.user?.trim();
 
     if (hasRequiredFields) {
@@ -208,15 +208,11 @@ export class StepDatabase extends LitElement {
             <span class="help-text">${this._getPortHelpText()}</span>
           </div>
         </div>
-      ` : ''}
-
-      <div class="form-group">
-        <label for="name" class="required">${isFileBased ? 'Database File Path' : 'Database Name'}</label>
-        <input type="text" id="name" required autocomplete="off" .value=${db.name} @input=${e => this._update('name', e.target.value)} placeholder=${isFileBased ? '/path/to/database.sqlite' : 'typo3'}>
-        <span class="help-text">${isFileBased ? 'Path to the SQLite database file' : 'The database must already exist'}</span>
-      </div>
-
-      ${!isFileBased ? html`
+        <div class="form-group">
+          <label for="name" class="required">Database Name</label>
+          <input type="text" id="name" required autocomplete="off" .value=${db.name} @input=${e => this._update('name', e.target.value)} placeholder='typo3'>
+          <span class="help-text">The database must already exist</span>
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label for="user" class="required">Username</label>
