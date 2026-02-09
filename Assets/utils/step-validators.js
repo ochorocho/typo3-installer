@@ -154,8 +154,8 @@ export function validateInstallationConfig(state) {
   }
 
   // Database validation (server-based drivers need host/user, file-based only need name)
-  if (!db.name) missingFields.push('Database name');
   if (db.driver !== 'pdo_sqlite') {
+    if (!db.name) missingFields.push('Database name');
     if (!db.host) missingFields.push('Database host');
     if (!db.user) missingFields.push('Database user');
   }
