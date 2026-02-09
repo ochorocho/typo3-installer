@@ -76,7 +76,8 @@ installer-app {
    ================================= */
 
 .installer-progress-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
   justify-content: space-between;
   padding: var(--spacing-md) var(--spacing-xs);
   gap: var(--spacing-xs);
@@ -86,7 +87,7 @@ installer-app {
   position: relative;
 
   @media (min-width: 601px) {
-    padding: var(--spacing-lg);
+    padding: var(--spacing-lg) 0;
     gap: 0;
   }
 
@@ -94,16 +95,19 @@ installer-app {
     content: '';
     position: absolute;
     top: 50%;
-    left: var(--spacing-xs);
-    right: var(--spacing-xs);
+    left: var(--spacing-xl);
+    right: var(--spacing-xl);
     height: 2px;
     background: var(--color-border);
-    transform: translateY(-50%);
     z-index: 0;
 
+    @media (min-width: 401px) {
+      top: 40%;
+    }
+
     @media (min-width: 601px) {
-      left: var(--spacing-lg);
-      right: var(--spacing-lg);
+      left: calc(var(--spacing-xl) * 2);
+      right: calc(var(--spacing-xl) * 2);
     }
   }
 
@@ -133,8 +137,8 @@ installer-app {
   flex-direction: column;
   align-items: center;
   position: relative;
+  text-align: center;
   z-index: 1;
-  background: var(--color-bg-white);
   padding: 0 2px;
   cursor: pointer;
 
@@ -144,10 +148,6 @@ installer-app {
 
   &:hover {
     transform: scale(1.05);
-  }
-
-  &:not(.completed):not(.active):hover .step-number {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
 
   &.active {
@@ -172,10 +172,6 @@ installer-app {
       &::after {
         content: '\2713';
       }
-    }
-
-    &:hover .step-number {
-      box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
     }
   }
 
@@ -229,11 +225,13 @@ installer-app {
   border: 2px solid var(--color-border);
   background: var(--color-bg-white);
   color: var(--color-text-light);
+  outline: 10px solid var(--color-bg-white);
 
   @media (min-width: 601px) {
     width: 32px;
     height: 32px;
     font-size: 14px;
+    outline: 20px solid var(--color-bg-white);
   }
 }
 
