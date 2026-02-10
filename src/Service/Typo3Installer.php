@@ -195,7 +195,7 @@ class Typo3Installer
 
         // Step 2: Initialize Composer project (15%)
         $progressCallback(15, 'Initializing Composer project');
-        $this->initComposerProject($installDir, $config->phpBinary, $outputCallback);
+        $this->initComposerProject($installDir, $config->admin->username, $config->admin->email ?? '', $config->phpBinary, $outputCallback);
 
         // Step 3: Install selected packages via Composer (40%)
         $progressCallback(20, 'Installing TYPO3 packages via Composer');
@@ -288,17 +288,25 @@ class Typo3Installer
      */
     private function initComposerProject(
         string $installDir,
+        string $adminUsername,
+        string $adminEmail,
         ?string $phpBinary = null,
         ?callable $outputCallback = null
     ): void {
+        $arguments = [
+            'init',
+            '--name=typo3/site',
+            '--description=TYPO3 CMS Site',
+            '--type=project',
+            '--no-interaction',
+        ];
+
+        if ($adminUsername !== '' && $adminEmail !== '') {
+            $arguments[] = '--author=' . $adminUsername . ' <' . $adminEmail . '>';
+        }
+
         $this->runComposerCommand(
-            [
-                'init',
-                '--name=typo3/site',
-                '--description=TYPO3 CMS Site',
-                '--type=project',
-                '--no-interaction',
-            ],
+            $arguments,
             $installDir,
             $phpBinary,
             $outputCallback
