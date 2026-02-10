@@ -94,8 +94,6 @@ export async function fillSQLiteForm(page, options = {}) {
   const { path = '/tmp/typo3-e2e-test.sqlite' } = options;
 
   await page.locator('#driver').selectOption('pdo_sqlite');
-  // SQLite uses the database name field for the file path
-  await page.locator('#name').fill(path);
 }
 
 /**
