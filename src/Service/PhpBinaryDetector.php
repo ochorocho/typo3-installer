@@ -251,6 +251,14 @@ class PhpBinaryDetector
     {
         // For absolute paths, check existence and permissions
         if (str_starts_with($path, '/')) {
+            // Check open_basedir restriction first
+            if (!$this->isPathWithinOpenBasedir($path)) {
+                return BinaryValidationResult::openBasedirRestricted(
+                    $path,
+                    ini_get('open_basedir') ?: ''
+                );
+            }
+
             // Check if path exists at all (file, symlink, or directory)
             if (!@file_exists($path) && !@is_link($path)) {
                 return BinaryValidationResult::notFound($path);
@@ -450,6 +458,31 @@ class PhpBinaryDetector
             $debugMessages[] = sprintf('Method phpinfo: %s', $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Check if a path is accessible under open_basedir restrictions
+     *
+     * Returns true if no restriction is active or if the path is within allowed directories.
+     */
+    private function isPathWithinOpenBasedir(string $path, ?string $openBasedir = null): bool
+    {
+        $openBasedir ??= ini_get('open_basedir');
+        if ($openBasedir === '' || $openBasedir === false) {
+            return true;
+        }
+
+        foreach (explode(PATH_SEPARATOR, $openBasedir) as $dir) {
+            $dir = rtrim($dir, '/');
+            if ($dir === '') {
+                continue;
+            }
+            if (str_starts_with($path, $dir . '/') || $path === $dir) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

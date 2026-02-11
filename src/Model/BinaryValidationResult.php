@@ -21,6 +21,7 @@ class BinaryValidationResult
     public const ERROR_EXECUTION_FAILED = 'execution_failed';
     public const ERROR_TIMEOUT = 'timeout';
     public const ERROR_INVALID_OUTPUT = 'invalid_output';
+    public const ERROR_OPEN_BASEDIR = 'open_basedir_restricted';
 
     public function __construct(
         public readonly bool $valid,
@@ -105,6 +106,19 @@ class BinaryValidationResult
             error: sprintf('Binary execution timed out after %d seconds', $timeoutSeconds),
             errorCode: self::ERROR_TIMEOUT,
             resolvedPath: $resolvedPath
+        );
+    }
+
+    /**
+     * Create a failure result for open_basedir restriction
+     */
+    public static function openBasedirRestricted(string $path, string $allowedPaths): self
+    {
+        return new self(
+            valid: false,
+            error: sprintf('Path is outside open_basedir restriction: %s', $path),
+            errorCode: self::ERROR_OPEN_BASEDIR,
+            debugInfo: sprintf('Allowed paths: %s', $allowedPaths)
         );
     }
 
