@@ -152,7 +152,6 @@ include:
     CI_DEBUG_SERVICES: "false"
   before_script:
     - apt-get update && apt-get install -y postgresql-client default-mysql-client
-    - cd tests/e2e && npm ci
   artifacts:
     when: always
     paths:
@@ -167,7 +166,7 @@ e2e-mysql:
     DB_DRIVER: pdo_mysql
     DB_HOST: db
   script:
-    - cd tests/e2e
+    - cd tests/e2e && npm ci
     - npx playwright test --project=ui-desktop --project=api --project=mysql
   artifacts:
     name: e2e-mysql-results
@@ -180,7 +179,7 @@ e2e-postgresql:
     DB_DRIVER: pdo_pgsql
     DB_HOST: postgres
   script:
-    - cd tests/e2e
+    - cd tests/e2e && npm ci
     - npx playwright test --project=postgresql --project=api-postgresql
   artifacts:
     name: e2e-postgresql-results
@@ -194,7 +193,7 @@ e2e-sqlite:
     DB_HOST: db
     DB_PORT: "3333"
   script:
-    - cd tests/e2e
+    - cd tests/e2e && npm ci
     - npx playwright test --project=sqlite
   artifacts:
     name: e2e-sqlite-results
@@ -208,7 +207,7 @@ e2e-php-84:
     DB_HOST: db
     DB_PORT: "3333"
   script:
-    - cd tests/e2e
+    - cd tests/e2e && npm ci
     - npx playwright test --project=sqlite
   artifacts:
     name: e2e-php84-results
@@ -222,7 +221,7 @@ e2e-php-85:
     DB_HOST: db
     DB_PORT: "3333"
   script:
-    - cd tests/e2e
+    - cd tests/e2e && npm ci
     - npx playwright test --project=sqlite
   artifacts:
     name: e2e-php85-results
