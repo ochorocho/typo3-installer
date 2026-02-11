@@ -89,7 +89,7 @@ include:
       name: e2e-mysql
       stage: test
       php_image: php:8.3-fpm
-      php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
+      php_additional_command: &php_ext_install "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
       database_image: mariadb:10.11
       database_host: db
       database_port: 3306
@@ -100,7 +100,7 @@ include:
       name: e2e-postgresql
       stage: test
       php_image: php:8.3-fpm
-      php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
+      php_additional_command: *php_ext_install
       database_image: postgres:16
       database_host: postgres
       database_port: 3333
@@ -111,98 +111,115 @@ include:
       name: e2e-sqlite
       stage: test
       php_image: php:8.3-fpm
-      php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
+      php_additional_command: *php_ext_install
       database_image: mariadb:10.11
       database_host: db
 
+  # PHP 8.4
+  - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
+    inputs:
+      name: e2e-php-84
+      stage: test
+      php_image: php:8.4-fpm
+      php_additional_command: *php_ext_install
+      database_image: mariadb:10.11
+      database_host: db
+
+  # PHP 8.5
+  - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
+    inputs:
+      name: e2e-php-85
+      stage: test
+      php_image: php:8.5-fpm
+      php_additional_command: *php_ext_install
+      database_image: mariadb:10.11
+      database_host: db
+
+# Shared configuration for all E2E job overrides
+.e2e-base:
+  image: mcr.microsoft.com/playwright:v1.58.0-noble
+  needs:
+    - build-phar
+  timeout: 60 minutes
+  variables:
+    BASE_URL: http://webserver
+    DB_USER: db
+    DB_PASSWORD: db
+    DB_NAME: db
+    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
+    CI: "true"
+    COMPOSER_PUBLIC_DIR: test-installer-root/public/
+    CI_DEBUG_SERVICES: "false"
+  before_script:
+    - apt-get update && apt-get install -y postgresql-client default-mysql-client
+    - cd tests/e2e && npm ci
+  artifacts:
+    when: always
+    paths:
+      - tests/e2e/playwright-report/
+      - tests/e2e/test-results/
+    expire_in: 7 days
+
 # Override the generated jobs to add our specific configuration
 e2e-mysql:
-  image: mcr.microsoft.com/playwright:v1.58.0-noble
-  needs:
-    - build-phar
-  timeout: 60 minutes
+  extends: .e2e-base
   variables:
-    BASE_URL: http://webserver
     DB_DRIVER: pdo_mysql
     DB_HOST: db
-    DB_USER: db
-    DB_PASSWORD: db
-    DB_NAME: db
-    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
-    CI: "true"
-    COMPOSER_PUBLIC_DIR: test-installer-root/public/
-    CI_DEBUG_SERVICES: "false"
   script:
-    - apt-get update && apt-get install -y postgresql-client default-mysql-client
-    - cd tests/e2e && npm ci
     - npx playwright test --project=ui-desktop --project=api --project=mysql
   artifacts:
-    when: always
     name: e2e-mysql-results
-    paths:
-      - tests/e2e/playwright-report/
-      - tests/e2e/test-results/
     reports:
       junit: tests/e2e/playwright-report/e2e-mysql-playwright.xunit.xml
-    expire_in: 7 days
 
 e2e-postgresql:
-  image: mcr.microsoft.com/playwright:v1.58.0-noble
-  needs:
-    - build-phar
-  timeout: 60 minutes
+  extends: .e2e-base
   variables:
-    BASE_URL: http://webserver
     DB_DRIVER: pdo_pgsql
     DB_HOST: postgres
-    DB_USER: db
-    DB_PASSWORD: db
-    DB_NAME: db
-    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
-    CI: "true"
-    COMPOSER_PUBLIC_DIR: test-installer-root/public/
-    CI_DEBUG_SERVICES: "false"
   script:
-    - apt-get update && apt-get install -y postgresql-client default-mysql-client
-    - cd tests/e2e && npm ci
     - npx playwright test --project=postgresql --project=api-postgresql
   artifacts:
-    when: always
     name: e2e-postgresql-results
-    paths:
-      - tests/e2e/playwright-report/
-      - tests/e2e/test-results/
     reports:
       junit: tests/e2e/playwright-report/e2e-postgresql-playwright.xunit.xml
-    expire_in: 7 days
 
 e2e-sqlite:
-  image: mcr.microsoft.com/playwright:v1.58.0-noble
-  needs:
-    - build-phar
-  timeout: 60 minutes
+  extends: .e2e-base
   variables:
-    BASE_URL: http://webserver
     DB_DRIVER: pdo_sqlite
     DB_HOST: db
     DB_PORT: "3333"
-    DB_USER: db
-    DB_PASSWORD: db
-    DB_NAME: db
-    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
-    CI: "true"
-    COMPOSER_PUBLIC_DIR: test-installer-root/public/
-    CI_DEBUG_SERVICES: "false"
   script:
-    - apt-get update && apt-get install -y postgresql-client default-mysql-client
-    - cd tests/e2e && npm ci
     - npx playwright test --project=sqlite
   artifacts:
-    when: always
     name: e2e-sqlite-results
-    paths:
-      - tests/e2e/playwright-report/
-      - tests/e2e/test-results/
     reports:
       junit: tests/e2e/playwright-report/e2e-sqlite-playwright.xunit.xml
-    expire_in: 7 days
+
+e2e-php-84:
+  extends: .e2e-base
+  variables:
+    DB_DRIVER: pdo_sqlite
+    DB_HOST: db
+    DB_PORT: "3333"
+  script:
+    - npx playwright test --project=sqlite
+  artifacts:
+    name: e2e-php84-results
+    reports:
+      junit: tests/e2e/playwright-report/e2e-sqlite-playwright.xunit.xml
+
+e2e-php-85:
+  extends: .e2e-base
+  variables:
+    DB_DRIVER: pdo_sqlite
+    DB_HOST: db
+    DB_PORT: "3333"
+  script:
+    - npx playwright test --project=sqlite
+  artifacts:
+    name: e2e-php85-results
+    reports:
+      junit: tests/e2e/playwright-report/e2e-sqlite-playwright.xunit.xml
