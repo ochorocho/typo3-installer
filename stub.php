@@ -8,6 +8,10 @@ declare(strict_types=1);
  * This file is executed when the PHAR is run
  */
 
+// Force error reporting for diagnostics (PHAR runs in a controlled context)
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+
 // Disable time limit for installation
 @set_time_limit(0);
 
@@ -20,8 +24,19 @@ if (PHP_SAPI === 'cli') {
     exit(0);
 }
 
-// Include the bootstrap
-Phar::interceptFileFuncs();
-require 'phar://' . __FILE__ . '/src/bootstrap.php';
+try {
+    Phar::interceptFileFuncs();
+    require 'phar://' . __FILE__ . '/src/bootstrap.php';
+} catch (\Throwable $e) {
+    header('Content-Type: application/json', true, 500);
+    echo json_encode([
+        'error' => true,
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+        'trace' => $e->getTraceAsString(),
+    ], JSON_PRETTY_PRINT);
+    exit(1);
+}
 
 __HALT_COMPILER();

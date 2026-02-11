@@ -252,26 +252,26 @@ class PhpBinaryDetector
         // For absolute paths, check existence and permissions
         if (str_starts_with($path, '/')) {
             // Check if path exists at all (file, symlink, or directory)
-            if (!file_exists($path) && !is_link($path)) {
+            if (!@file_exists($path) && !@is_link($path)) {
                 return BinaryValidationResult::notFound($path);
             }
 
             // Check for broken symlink
-            if (is_link($path)) {
-                $target = readlink($path);
-                if ($target === false || !file_exists($path)) {
+            if (@is_link($path)) {
+                $target = @readlink($path);
+                if ($target === false || !@file_exists($path)) {
                     return BinaryValidationResult::symlinkBroken($path, $target ?: 'unknown');
                 }
             }
 
             // Resolve symlinks for debugging
-            $resolvedPath = realpath($path);
+            $resolvedPath = @realpath($path);
             if ($resolvedPath === false) {
                 $resolvedPath = $path;
             }
 
             // Check if file is executable
-            if (!is_executable($path)) {
+            if (!@is_executable($path)) {
                 return BinaryValidationResult::notExecutable($path, $resolvedPath !== $path ? $resolvedPath : null);
             }
         } else {

@@ -1,5 +1,5 @@
 {
-    "compression": "GZ",
+    "compression": "NONE",
     "output": "typo3-installer.phar",
     "check-requirements": false,
     "stub": "stub.php",

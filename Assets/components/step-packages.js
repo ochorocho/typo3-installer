@@ -175,7 +175,7 @@ export class StepPackages extends LitElement {
       console.error('Failed to load info:', error);
       this.infoError = {
         message: error.getUserMessage?.() || error.message || 'Failed to load installation info',
-        details: error.details || null
+        details: error.details?.details || error.message || null
       };
     } finally {
       this.loadingInfo = false;
@@ -197,7 +197,7 @@ export class StepPackages extends LitElement {
       console.error('Failed to load versions:', error);
       this.versionsError = {
         message: error.getUserMessage?.() || error.message || 'Failed to load TYPO3 versions',
-        details: error.details || null
+        details: error.details?.details || error.message || null
       };
     } finally {
       this.loadingVersions = false;
@@ -233,7 +233,7 @@ export class StepPackages extends LitElement {
       console.error('Failed to load packages:', error);
       this.packagesError = {
         message: error.getUserMessage?.() || error.message || 'Failed to load packages',
-        details: error.details || null
+        details: error.details?.details || error.message || null
       };
     } finally {
       this.loadingPackages = false;
