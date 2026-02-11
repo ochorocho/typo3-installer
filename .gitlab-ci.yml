@@ -150,8 +150,6 @@ include:
     CI: "true"
     COMPOSER_PUBLIC_DIR: test-installer-root/public/
     CI_DEBUG_SERVICES: "false"
-  before_script:
-    - apt-get update && apt-get install -y postgresql-client default-mysql-client
   artifacts:
     when: always
     paths:
@@ -166,6 +164,7 @@ e2e-mysql:
     DB_DRIVER: pdo_mysql
     DB_HOST: db
   script:
+    - apt-get update && apt-get install -y postgresql-client default-mysql-client
     - cd tests/e2e && npm ci
     - npx playwright test --project=ui-desktop --project=api --project=mysql
   artifacts:
@@ -179,6 +178,7 @@ e2e-postgresql:
     DB_DRIVER: pdo_pgsql
     DB_HOST: postgres
   script:
+    - apt-get update && apt-get install -y postgresql-client default-mysql-client
     - cd tests/e2e && npm ci
     - npx playwright test --project=postgresql --project=api-postgresql
   artifacts:
@@ -193,6 +193,7 @@ e2e-sqlite:
     DB_HOST: db
     DB_PORT: "3333"
   script:
+    - apt-get update && apt-get install -y postgresql-client default-mysql-client
     - cd tests/e2e && npm ci
     - npx playwright test --project=sqlite
   artifacts:
@@ -207,6 +208,7 @@ e2e-php-84:
     DB_HOST: db
     DB_PORT: "3333"
   script:
+    - apt-get update && apt-get install -y postgresql-client default-mysql-client
     - cd tests/e2e && npm ci
     - npx playwright test --project=sqlite
   artifacts:
@@ -221,6 +223,7 @@ e2e-php-85:
     DB_HOST: db
     DB_PORT: "3333"
   script:
+    - apt-get update && apt-get install -y postgresql-client default-mysql-client
     - cd tests/e2e && npm ci
     - npx playwright test --project=sqlite
   artifacts:
