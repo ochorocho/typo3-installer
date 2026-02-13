@@ -99,6 +99,7 @@ class PhpDetectionController extends AbstractController
                 'errorCode' => $result->errorCode,
                 'debugInfo' => $result->debugInfo,
                 'resolvedPath' => $result->resolvedPath,
+                'sapi' => $result->sapi,
             ]);
         }
 
@@ -111,6 +112,7 @@ class PhpDetectionController extends AbstractController
             'version' => $result->version,
             'matchesFpm' => $matchesFpm,
             'resolvedPath' => $result->resolvedPath,
+            'sapi' => $result->sapi,
         ]);
     }
 

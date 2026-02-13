@@ -295,21 +295,19 @@ class PhpBinaryDetector
             ['-r', 'echo PHP_VERSION;'],
             $debugMessages,
             'inline'
-        );
-        if ($version !== null) {
-            return BinaryValidationResult::success($version, $resolvedPath ?? null);
-        }
-
+        )
         // Method 2: --version flag (works with most wrappers)
-        $version = $this->tryVersionFlag($path, $debugMessages);
-        if ($version !== null) {
-            return BinaryValidationResult::success($version, $resolvedPath ?? null);
-        }
-
+        ?? $this->tryVersionFlag($path, $debugMessages)
         // Method 3: php -i (last resort, parses phpinfo output)
-        $version = $this->tryPhpInfo($path, $debugMessages);
+        ?? $this->tryPhpInfo($path, $debugMessages);
+
         if ($version !== null) {
-            return BinaryValidationResult::success($version, $resolvedPath ?? null);
+            // Check SAPI to detect wrapper scripts (e.g. cPanel CGI wrappers)
+            $sapi = $this->detectSapi($path);
+            if ($sapi !== null && $sapi !== 'cli') {
+                return BinaryValidationResult::wrapperScript($path, $version, $sapi, $resolvedPath ?? null);
+            }
+            return BinaryValidationResult::success($version, $resolvedPath ?? null, $sapi);
         }
 
         // All methods failed - determine the best error to return
@@ -456,6 +454,40 @@ class PhpBinaryDetector
             return null;
         } catch (\Throwable $e) {
             $debugMessages[] = sprintf('Method phpinfo: %s', $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Detect the SAPI type of a PHP binary
+     *
+     * Returns the SAPI name (e.g. 'cli', 'cgi-fcgi', 'fpm-fcgi') or null on failure.
+     * Used to detect wrapper scripts that route through CGI/FPM instead of CLI.
+     */
+    private function detectSapi(string $path): ?string
+    {
+        try {
+            $process = new Process(
+                [$path, '-r', 'echo php_sapi_name();'],
+                null,
+                null,
+                null,
+                self::PROCESS_TIMEOUT_SECONDS
+            );
+
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                return null;
+            }
+
+            $output = trim($process->getOutput());
+            if ($output !== '' && preg_match('/^[a-z][a-z0-9_-]*$/i', $output)) {
+                return $output;
+            }
+
+            return null;
+        } catch (\Throwable $e) {
             return null;
         }
     }

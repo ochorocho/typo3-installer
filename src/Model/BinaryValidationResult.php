@@ -22,6 +22,7 @@ class BinaryValidationResult
     public const ERROR_TIMEOUT = 'timeout';
     public const ERROR_INVALID_OUTPUT = 'invalid_output';
     public const ERROR_OPEN_BASEDIR = 'open_basedir_restricted';
+    public const ERROR_WRAPPER_SCRIPT = 'wrapper_script';
 
     public function __construct(
         public readonly bool $valid,
@@ -29,18 +30,36 @@ class BinaryValidationResult
         public readonly ?string $error = null,
         public readonly ?string $errorCode = null,
         public readonly ?string $resolvedPath = null,
-        public readonly ?string $debugInfo = null
+        public readonly ?string $debugInfo = null,
+        public readonly ?string $sapi = null
     ) {}
 
     /**
      * Create a successful validation result
      */
-    public static function success(string $version, ?string $resolvedPath = null): self
+    public static function success(string $version, ?string $resolvedPath = null, ?string $sapi = null): self
     {
         return new self(
             valid: true,
             version: $version,
-            resolvedPath: $resolvedPath
+            resolvedPath: $resolvedPath,
+            sapi: $sapi
+        );
+    }
+
+    /**
+     * Create a failure result for a wrapper script (non-CLI SAPI)
+     */
+    public static function wrapperScript(string $path, string $version, string $sapi, ?string $resolvedPath = null): self
+    {
+        return new self(
+            valid: false,
+            version: $version,
+            error: sprintf('Binary is a wrapper script using SAPI "%s" instead of CLI', $sapi),
+            errorCode: self::ERROR_WRAPPER_SCRIPT,
+            resolvedPath: $resolvedPath,
+            debugInfo: sprintf('Detected SAPI: %s at path: %s', $sapi, $path),
+            sapi: $sapi
         );
     }
 
@@ -139,7 +158,7 @@ class BinaryValidationResult
     /**
      * Convert to array for JSON response
      *
-     * @return array{valid: bool, version: ?string, error: ?string, errorCode: ?string, resolvedPath: ?string, debugInfo: ?string}
+     * @return array{valid: bool, version: ?string, error: ?string, errorCode: ?string, resolvedPath: ?string, debugInfo: ?string, sapi: ?string}
      */
     public function toArray(): array
     {
@@ -150,6 +169,7 @@ class BinaryValidationResult
             'errorCode' => $this->errorCode,
             'resolvedPath' => $this->resolvedPath,
             'debugInfo' => $this->debugInfo,
+            'sapi' => $this->sapi,
         ];
     }
 }
