@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
 ## Description: Run Playwright SQLite full-flow test against remote servers
-## Usage: playwright-remote
+## Usage: playwright-remote [host]
 ## Example: "ddev playwright-remote" (test all configured servers)
+## Example: "ddev playwright-remote ftp.example.com" (test specific host only)
 
 set -euo pipefail
 
 CONFIG_FILE="/var/www/html/.deploy-servers.json"
+FILTER_HOST="${1:-}"
 
 # Colors
 RED='\033[0;31m'
@@ -56,16 +58,28 @@ if [[ "$SERVER_COUNT" -eq 0 ]]; then
     exit 0
 fi
 
-# Filter to servers with playwright_url
-TESTABLE=$(jq '[.[] | select(.playwright_url and .playwright_url != "")]' "$CONFIG_FILE")
+# Filter to servers with playwright_url (and optionally by host)
+if [[ -n "$FILTER_HOST" ]]; then
+    TESTABLE=$(jq --arg host "$FILTER_HOST" '[.[] | select(.playwright_url and .playwright_url != "" and .host == $host)]' "$CONFIG_FILE")
+else
+    TESTABLE=$(jq '[.[] | select(.playwright_url and .playwright_url != "")]' "$CONFIG_FILE")
+fi
 TESTABLE_COUNT=$(echo "$TESTABLE" | jq 'length')
 
 if [[ "$TESTABLE_COUNT" -eq 0 ]]; then
-    warn "No servers with 'playwright_url' configured — nothing to test."
+    if [[ -n "$FILTER_HOST" ]]; then
+        warn "No testable server found matching host '$FILTER_HOST'."
+    else
+        warn "No servers with 'playwright_url' configured — nothing to test."
+    fi
     exit 0
 fi
 
-info "Running remote Playwright tests against $TESTABLE_COUNT server(s)…"
+if [[ -n "$FILTER_HOST" ]]; then
+    info "Running remote Playwright test against host '$FILTER_HOST'…"
+else
+    info "Running remote Playwright tests against $TESTABLE_COUNT server(s)…"
+fi
 echo
 
 # ------------------------------------------------------------------

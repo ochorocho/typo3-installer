@@ -31,7 +31,10 @@ export class StepProgress extends LitElement {
       { id: 'init', label: 'Initializing Composer project', status: 'pending' },
       { id: 'composer', label: 'Installing TYPO3 packages', status: 'pending' },
       { id: 'setup', label: 'Setting up TYPO3', status: 'pending' },
+      { id: 'assets', label: 'Publishing assets', status: 'pending' },
+      { id: 'extensions', label: 'Setting up extensions', status: 'pending' },
       { id: 'cache', label: 'Clearing caches', status: 'pending' },
+      { id: 'warmup', label: 'Warming up caches', status: 'pending' },
       { id: 'finalize', label: 'Finalizing installation', status: 'pending' }
     ];
     this._streamController = null;
@@ -165,7 +168,7 @@ export class StepProgress extends LitElement {
   }
 
   _getStepLabel(step) {
-    const labels = { prepare: 'Preparing Installation', init: 'Initializing Composer Project', composer: 'Installing TYPO3 Packages', setup: 'Setting Up TYPO3', cache: 'Clearing Caches', finalize: 'Finalizing Installation' };
+    const labels = { prepare: 'Preparing Installation', init: 'Initializing Composer Project', composer: 'Installing TYPO3 Packages', setup: 'Setting Up TYPO3', assets: 'Publishing Assets', extensions: 'Setting Up Extensions', cache: 'Clearing Caches', warmup: 'Warming Up Caches', finalize: 'Finalizing Installation' };
     return labels[step] || step;
   }
 
@@ -176,8 +179,10 @@ export class StepProgress extends LitElement {
   _updateTasksFromProgress(progress) {
     const thresholds = [
       { id: 'prepare', min: 0, max: 15 }, { id: 'init', min: 15, max: 20 },
-      { id: 'composer', min: 20, max: 50 }, { id: 'setup', min: 50, max: 95 },
-      { id: 'cache', min: 95, max: 98 }, { id: 'finalize', min: 98, max: 100 }
+      { id: 'composer', min: 20, max: 50 }, { id: 'setup', min: 50, max: 80 },
+      { id: 'assets', min: 80, max: 85 }, { id: 'extensions', min: 85, max: 90 },
+      { id: 'cache', min: 90, max: 95 }, { id: 'warmup', min: 95, max: 98 },
+      { id: 'finalize', min: 98, max: 100 }
     ];
     this.tasks = this.tasks.map(task => {
       const t = thresholds.find(th => th.id === task.id);

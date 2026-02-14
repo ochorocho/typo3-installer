@@ -130,9 +130,9 @@ test.describe.serial('SQLite Full Installation Flow', () => {
     const progressFill = page.locator('.progress-fill');
     await expect(progressFill).toHaveAttribute('style', 'width: 100%');
 
-    // Assert all 6 tasks are completed
+    // Assert all 9 tasks are completed
     const completedTasks = page.locator('t3-task-list .task.completed');
-    await expect(completedTasks).toHaveCount(6);
+    await expect(completedTasks).toHaveCount(9);
 
     // Assert terminal output is still visible
     await expect(page.locator('t3-terminal-output')).toBeVisible();

@@ -295,8 +295,17 @@ class InstallController extends AbstractController
         if ($progress >= 98) {
             return 'finalize';
         }
+        if ($progress >= 95) {
+            return 'warmup';
+        }
         if ($progress >= 90) {
             return 'cache';
+        }
+        if ($progress >= 85) {
+            return 'extensions';
+        }
+        if ($progress >= 80) {
+            return 'assets';
         }
         if ($progress >= 50) {
             return 'setup';

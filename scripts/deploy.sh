@@ -13,6 +13,7 @@ CONFIG_FILE="$PROJECT_ROOT/.deploy-servers.json"
 PHAR_FILE="$PROJECT_ROOT/test-installer-root/public/typo3-installer.php"
 NUKE_USER="nuke"
 NUKE_PASS="Password.1"
+FILTER_HOST="${1:-}"
 
 # Colors
 RED='\033[0;31m'
@@ -60,7 +61,11 @@ if [[ "$SERVER_COUNT" -eq 0 ]]; then
     exit 0
 fi
 
-info "Deploying $(basename "$PHAR_FILE") to $SERVER_COUNT server(s)…"
+if [[ -n "$FILTER_HOST" ]]; then
+    info "Deploying $(basename "$PHAR_FILE") to host '$FILTER_HOST' only…"
+else
+    info "Deploying $(basename "$PHAR_FILE") to $SERVER_COUNT server(s)…"
+fi
 echo
 
 # ------------------------------------------------------------------
@@ -77,6 +82,11 @@ for i in $(seq 0 $((SERVER_COUNT - 1))); do
     RPATH=$(jq -r ".[$i].remote_path"  "$CONFIG_FILE")
     NUKE=$(jq -r ".[$i].nuke_url"     "$CONFIG_FILE")
     INSECURE=$(jq -r ".[$i].insecure // false" "$CONFIG_FILE")
+
+    # Skip servers that don't match the filter
+    if [[ -n "$FILTER_HOST" && "$HOST" != "$FILTER_HOST" ]]; then
+        continue
+    fi
 
     echo "──────────────────────────────────────────"
     info "Server: $HOST → $RPATH ($PROTOCOL)"

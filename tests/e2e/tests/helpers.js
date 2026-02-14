@@ -164,9 +164,9 @@ export async function completeInstallationAndVerify(page) {
   const progressFill = page.locator('.progress-fill');
   await expect(progressFill).toHaveAttribute('style', 'width: 100%');
 
-  // Assert all 6 tasks are completed
+  // Assert all 9 tasks are completed
   const completedTasks = page.locator('t3-task-list .task.completed');
-  await expect(completedTasks).toHaveCount(6);
+  await expect(completedTasks).toHaveCount(9);
 }
 
 /**
@@ -233,7 +233,6 @@ export async function verifyTYPO3Backend(page, options = {}) {
   const backendLink = page.locator('.success-buttons a.btn-success');
   const backendUrl = await backendLink.getAttribute('href');
 
-  // Navigate to backend (same tab, not new window for testing)
   await page.goto(backendUrl, { waitUntil: 'networkidle' });
 
   // Wait for TYPO3 login form

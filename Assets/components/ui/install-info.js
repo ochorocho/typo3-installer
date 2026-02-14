@@ -44,6 +44,23 @@ export class InstallInfo extends LitElement {
     }
   }
 
+  _getBrowserInfo() {
+    const ua = navigator.userAgent;
+    if (ua.includes('Firefox/')) {
+      return 'Firefox ' + ua.split('Firefox/')[1].split(' ')[0];
+    }
+    if (ua.includes('Edg/')) {
+      return 'Edge ' + ua.split('Edg/')[1].split(' ')[0];
+    }
+    if (ua.includes('Chrome/')) {
+      return 'Chrome ' + ua.split('Chrome/')[1].split(' ')[0];
+    }
+    if (ua.includes('Safari/') && ua.includes('Version/')) {
+      return 'Safari ' + ua.split('Version/')[1].split(' ')[0];
+    }
+    return navigator.userAgent;
+  }
+
   render() {
     if (this.loading) return html`<t3-loading-skeleton height="80px">Loading environment...</t3-loading-skeleton>`;
     if (this.error) return html`<t3-section-error title="Failed to Load Environment Info" .message=${this.error.message} .details=${this.error.details || ''} context="general"></t3-section-error>`;
@@ -62,8 +79,10 @@ export class InstallInfo extends LitElement {
           <code class="info-value">${installPath}</code>
           <span class="info-label">Web Directory:</span>
           <code class="info-value">${webDir}</code>
-          <span class="info-label">PHP Version:</span>
+          <span class="info-label">PHP Version (Web):</span>
           <code class="info-value">${phpVersion || 'Unknown'}</code>
+          <span class="info-label">PHP Version (CLI):</span>
+          <code class="info-value">${this.info.cliVersion || 'Unknown'}</code>
           ${phpBinary ? html`
             <span class="info-label">PHP Binary:</span>
             <code class="info-value">${phpBinary}</code>
@@ -72,6 +91,8 @@ export class InstallInfo extends LitElement {
             <span class="info-label">Composer Binary:</span>
             <code class="info-value">${composerPath}</code>
           ` : ''}
+          <span class="info-label">Browser:</span>
+          <code class="info-value">${this._getBrowserInfo()}</code>
         </div>
         ${validation?.warnings?.length ? html`
           <div class="warnings">

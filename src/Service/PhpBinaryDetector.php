@@ -147,15 +147,15 @@ class PhpBinaryDetector
             }
         }
 
-        // Fallback: first valid candidate (any version) with mismatch flag
-        $availableVersions = $this->getAvailableVersions($candidates);
+        // Fallback: first valid candidate (any version) with dynamic mismatch check
+        $versionMismatch = $firstValidVersion === null || !$this->versionsMatch($fpmVersion, $firstValidVersion);
 
         return [
             'fpmVersion' => $fpmVersion,
             'cliBinary' => $firstValidBinary,
             'cliVersion' => $firstValidVersion,
-            'mismatch' => true,
-            'availableVersions' => $availableVersions,
+            'mismatch' => $versionMismatch,
+            'availableVersions' => $versionMismatch ? $this->getAvailableVersions($candidates) : [],
             'detectionMethod' => null,
         ];
     }

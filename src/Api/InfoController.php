@@ -39,6 +39,7 @@ class InfoController extends AbstractController
             'composerPath' => $info['composerPath'],
             'validation' => $info['validation'],
             'phpVersion' => $phpDetection['fpmVersion'],
+            'cliVersion' => $phpDetection['cliVersion'],
             'phpBinary' => $phpDetection['cliBinary'],
             'phpMismatch' => $phpDetection['mismatch'],
         ]);

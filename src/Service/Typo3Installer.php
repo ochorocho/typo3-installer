@@ -262,15 +262,30 @@ class Typo3Installer
         $progressCallback(20, 'Installing TYPO3 packages via Composer');
         $this->installPackages($installDir, $config->packages, $config->typo3Version, $config->phpBinary, $outputCallback);
 
-        // Step 4: Run TYPO3 setup with database and admin config (70%)
+        // Step 4: Run TYPO3 setup with database and admin config (50%)
         $progressCallback(50, 'Setting up TYPO3');
         $this->setupTypo3($config, $installDir, $outputCallback);
 
-        // Step 6: Clear caches (95%)
-        $progressCallback(95, 'Clearing caches');
+        // Step 5: Composer dump-autoload to populate _assets (80%)
+        $progressCallback(80, 'Publishing assets');
+        $this->runComposerCommand(['dump-autoload'], $installDir, $config->phpBinary, $outputCallback);
+
+        // Replace _assets symlinks with file copies to avoid stat cache issues on LiteSpeed/cPanel
+        $this->resolveAssetSymlinks($installDir);
+
+        // Step 6: Extension setup (85%)
+        $progressCallback(85, 'Setting up extensions');
+        $this->runTypo3Command('extension:setup', [], $installDir, $config->phpBinary, $outputCallback);
+
+        // Step 7: Clear caches (90%)
+        $progressCallback(90, 'Clearing caches');
         $this->clearCaches($installDir, $config->phpBinary, $outputCallback);
 
-        // Step 7: Finalize (100%)
+        // Step 8: Warm up caches (95%)
+        $progressCallback(95, 'Warming up caches');
+        $this->warmupCaches($installDir, $config->phpBinary, $outputCallback);
+
+        // Step 9: Finalize (100%)
         $progressCallback(100, 'Installation complete!');
     }
 
@@ -554,14 +569,32 @@ class Typo3Installer
         $configContent = <<<PHP
 <?php
 
-// Additional TYPO3 configuration
+// Additional TYPO3 configuration for maximum compatability
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['trustedHostsPattern'] = '{$trustedHostsPattern}';
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['devIPmask'] = '*';
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['displayErrors'] = 1;
+\$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxySSL'] = '*';
+\$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxyIP'] = '*';
+\$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxyHeaderMultiValue'] = 'first';
 
 PHP;
 
         file_put_contents($additionalConfig, $configContent);
+    }
+
+    /**
+     * @param callable(string): void|null $outputCallback
+     */
+    private function warmupCaches(
+        string $installDir,
+        ?string $phpBinary = null,
+        ?callable $outputCallback = null
+    ): void {
+        try {
+            $this->runTypo3Command('cache:warmup', [], $installDir, $phpBinary, $outputCallback);
+        } catch (\Exception $e) {
+            // Ignore cache warmup errors — non-critical
+        }
     }
 
     /**
@@ -582,6 +615,49 @@ PHP;
         // Clear OPcache
         if (function_exists('opcache_reset')) {
             opcache_reset();
+        }
+    }
+
+    /**
+     * Replace _assets symlinks with actual file copies.
+     *
+     * After composer dump-autoload creates _assets symlinks, web servers with
+     * stat caches (especially LiteSpeed on BlueHost/cPanel) may 404 on first
+     * request. Replacing symlinks with real directory copies eliminates this
+     * problem entirely.
+     */
+    private function resolveAssetSymlinks(string $installDir): void
+    {
+        $webDir = $this->infoService->getWebDir();
+        $assetsDir = $installDir . '/' . $webDir . '/_assets';
+
+        if (!is_dir($assetsDir)) {
+            return;
+        }
+
+        $entries = scandir($assetsDir);
+        if ($entries === false) {
+            return;
+        }
+
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            $path = $assetsDir . '/' . $entry;
+            if (!is_link($path)) {
+                continue;
+            }
+
+            $target = realpath($path);
+            if ($target === false || !is_dir($target)) {
+                continue;
+            }
+
+            // Replace symlink with a copy of the target directory
+            unlink($path);
+            $this->filesystem->mirror($target, $path);
         }
     }
 

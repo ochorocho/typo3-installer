@@ -83,8 +83,8 @@ export class PhpVersionWarning extends LitElement {
         <h3>PHP Version Mismatch Detected</h3>
         <div class="php-version-info">
           <p>
-            Your web server is running <strong>PHP ${this.phpDetection.fpmVersion}</strong>,
-            but the default CLI PHP is a different version.
+            Your web server is running <strong>PHP ${this.phpDetection.fpmVersion}</strong> (expected),
+            but the detected CLI PHP is <strong>PHP ${this.phpDetection.cliVersion || 'unknown'}</strong> (actual).
           </p>
           <p>
             TYPO3 CLI commands need to use the same PHP version as the web server.
