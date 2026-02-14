@@ -28,8 +28,23 @@ class Typo3Installer
      */
     private const MAX_INPUT_LENGTH = 255;
 
+    /**
+     * Error substring Composer outputs when run under a non-CLI SAPI
+     */
+    private const COMPOSER_SAPI_ERROR = 'non-CLI SAPIs';
+
+    /**
+     * Warning substring Composer outputs when invoked via CGI SAPI
+     */
+    private const COMPOSER_SAPI_WARNING = 'Composer should be invoked via the CLI';
+
     private Filesystem $filesystem;
     private InstallationInfoService $infoService;
+
+    /**
+     * Cached result of CGI SAPI detection (null = not yet checked)
+     */
+    private ?bool $isCgiBinary = null;
 
     public function __construct()
     {
@@ -105,6 +120,23 @@ class Typo3Installer
             );
         }
 
+        // CGI mode: use wrapper script to bypass Composer's SAPI check
+        if ($this->isCgiBinary === true) {
+            $env = [
+                'COMPOSER_HOME' => sys_get_temp_dir() . '/composer',
+                'COMPOSER' => $installDir . '/composer.json',
+            ];
+            $this->runViaCgiWrapper(
+                $php,
+                $composerPath,
+                [$composerPath, ...$arguments],
+                $installDir,
+                $env,
+                $outputCallback
+            );
+            return;
+        }
+
         $process = new Process(
             array_merge([$php, $composerPath], $arguments),
             $installDir,
@@ -116,14 +148,14 @@ class Typo3Installer
             self::PROCESS_TIMEOUT_SECONDS
         );
 
-        // Run with real-time output streaming
+        // Run with real-time output streaming, filtering Composer SAPI warning
         $process->run(function (string $type, string $buffer) use ($outputCallback): void {
             if ($outputCallback !== null) {
                 // Split buffer into lines and send each line
                 $lines = explode("\n", $buffer);
                 foreach ($lines as $line) {
                     $line = trim($line);
-                    if ($line !== '') {
+                    if ($line !== '' && !str_contains($line, self::COMPOSER_SAPI_WARNING)) {
                         $outputCallback($line);
                     }
                 }
@@ -134,6 +166,27 @@ class Typo3Installer
             $errorOutput = $process->getErrorOutput();
             $standardOutput = $process->getOutput();
             $combinedOutput = trim($errorOutput . "\n" . $standardOutput);
+
+            // Safety net: if Composer failed due to non-CLI SAPI, retry via CGI wrapper
+            if (str_contains($combinedOutput, self::COMPOSER_SAPI_ERROR)) {
+                $this->isCgiBinary = true;
+                if ($outputCallback !== null) {
+                    $outputCallback('[INFO] Composer rejected non-CLI SAPI — retrying via CGI wrapper');
+                }
+                $env = [
+                    'COMPOSER_HOME' => sys_get_temp_dir() . '/composer',
+                    'COMPOSER' => $installDir . '/composer.json',
+                ];
+                $this->runViaCgiWrapper(
+                    $php,
+                    $composerPath,
+                    [$composerPath, ...$arguments],
+                    $installDir,
+                    $env,
+                    $outputCallback
+                );
+                return;
+            }
 
             throw new \RuntimeException(
                 sprintf('Composer command failed: %s', $combinedOutput ?: 'Unknown error')
@@ -188,6 +241,14 @@ class Typo3Installer
         ?callable $outputCallback = null
     ): void {
         $installDir = $this->getInstallDir($config);
+        $phpBinary = $config->phpBinary ?? 'php';
+
+        // Detect CGI SAPI upfront so all sub-methods can use the cached result
+        if ($this->detectCgiSapi($phpBinary)) {
+            if ($outputCallback !== null) {
+                $outputCallback('[INFO] Detected CGI SAPI for PHP binary — using CGI wrapper mode');
+            }
+        }
 
         // Step 1: Prepare installation directory (10%)
         $progressCallback(10, 'Preparing installation directory');
@@ -542,6 +603,19 @@ PHP;
         // Use provided PHP binary or fall back to 'php'
         $php = $phpBinary ?? 'php';
 
+        // CGI mode: use wrapper script to avoid SAPI issues
+        if ($this->isCgiBinary === true) {
+            $this->runViaCgiWrapper(
+                $php,
+                $typo3Binary,
+                [$typo3Binary, $command, ...$arguments],
+                $installDir,
+                null,
+                $outputCallback
+            );
+            return;
+        }
+
         $process = new Process(
             array_merge([$php, $typo3Binary, $command], $arguments),
             $installDir,
@@ -572,6 +646,155 @@ PHP;
             throw new \RuntimeException(
                 sprintf('TYPO3 command "%s" failed: %s', $command, $combinedOutput ?: 'Unknown error')
             );
+        }
+    }
+
+    /**
+     * Detect if a PHP binary uses a CGI SAPI (not CLI)
+     *
+     * Caches the result in $this->isCgiBinary for the duration of the install run.
+     */
+    public function detectCgiSapi(string $phpBinary): bool
+    {
+        if ($this->isCgiBinary !== null) {
+            return $this->isCgiBinary;
+        }
+
+        try {
+            $process = new Process(
+                [$phpBinary, '-r', 'echo php_sapi_name();'],
+                null,
+                null,
+                null,
+                5
+            );
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                $this->isCgiBinary = false;
+                return false;
+            }
+
+            $output = $this->stripCgiHeaders($process->getOutput());
+            $sapi = trim($output);
+
+            $this->isCgiBinary = ($sapi !== '' && $sapi !== 'cli' && $sapi !== 'phpdbg');
+            return $this->isCgiBinary;
+        } catch (\Throwable $e) {
+            $this->isCgiBinary = false;
+            return false;
+        }
+    }
+
+    /**
+     * Strip CGI headers from output
+     *
+     * CGI binaries prepend HTTP headers (e.g., "Content-type: text/html; charset=UTF-8")
+     * followed by a blank line before the actual script output.
+     */
+    public function stripCgiHeaders(string $output): string
+    {
+        // Check if output starts with an HTTP header pattern (e.g., "Header-Name: value")
+        if (preg_match('/^[A-Za-z][A-Za-z0-9-]*:\s/', $output)) {
+            // Find the first blank line (double newline) that separates headers from body
+            $pos = strpos($output, "\r\n\r\n");
+            if ($pos !== false) {
+                return substr($output, $pos + 4);
+            }
+            $pos = strpos($output, "\n\n");
+            if ($pos !== false) {
+                return substr($output, $pos + 2);
+            }
+        }
+
+        return $output;
+    }
+
+    /**
+     * Create a temporary PHP wrapper script for CGI mode
+     *
+     * The wrapper sets $_SERVER['argv']/$_SERVER['argc'] manually (since
+     * register_argc_argv is disabled) and then requires the target script.
+     *
+     * @param array<string> $argv The argument values to inject
+     */
+    public function createCgiWrapperScript(string $targetScript, array $argv): string
+    {
+        $escapedArgv = var_export($argv, true);
+        $escapedTarget = var_export($targetScript, true);
+
+        $script = <<<PHP
+<?php
+// CGI wrapper: inject argv/argc and require target script
+\$_SERVER['argv'] = {$escapedArgv};
+\$_SERVER['argc'] = count(\$_SERVER['argv']);
+\$GLOBALS['argv'] = \$_SERVER['argv'];
+\$GLOBALS['argc'] = \$_SERVER['argc'];
+require {$escapedTarget};
+PHP;
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'typo3-cgi-wrapper-');
+        if ($tempFile === false) {
+            throw new \RuntimeException('Failed to create temporary CGI wrapper script');
+        }
+
+        file_put_contents($tempFile, $script);
+        return $tempFile;
+    }
+
+    /**
+     * Run a PHP script via CGI wrapper
+     *
+     * Creates a wrapper that injects argv/argc, runs it with register_argc_argv=0
+     * and default_mimetype= to suppress CGI headers, then cleans up.
+     *
+     * @param array<string> $argv The argv values for the target script
+     * @param array<string, string>|null $env Environment variables
+     * @param callable(string): void|null $outputCallback
+     */
+    private function runViaCgiWrapper(
+        string $phpBinary,
+        string $targetScript,
+        array $argv,
+        string $cwd,
+        ?array $env = null,
+        ?callable $outputCallback = null
+    ): void {
+        $wrapperPath = $this->createCgiWrapperScript($targetScript, $argv);
+
+        try {
+            $process = new Process(
+                [$phpBinary, '-d', 'register_argc_argv=0', '-d', 'default_mimetype=', '-d', 'html_errors=0', $wrapperPath],
+                $cwd,
+                $env,
+                null,
+                self::PROCESS_TIMEOUT_SECONDS
+            );
+
+            $process->run(function (string $type, string $buffer) use ($outputCallback): void {
+                if ($outputCallback !== null) {
+                    $buffer = $this->stripCgiHeaders($buffer);
+                    $lines = explode("\n", $buffer);
+                    foreach ($lines as $line) {
+                        $line = trim($line);
+                        if ($line !== '' && !str_contains($line, self::COMPOSER_SAPI_WARNING)) {
+                            $outputCallback($line);
+                        }
+                    }
+                }
+            });
+
+            if (!$process->isSuccessful()) {
+                $errorOutput = $this->stripCgiHeaders($process->getErrorOutput());
+                $standardOutput = $this->stripCgiHeaders($process->getOutput());
+                $combinedOutput = trim($errorOutput . "\n" . $standardOutput);
+
+                throw new \RuntimeException(
+                    sprintf('CGI wrapper command failed: %s', $combinedOutput ?: 'Unknown error')
+                );
+            }
+        } finally {
+            @unlink($wrapperPath);
         }
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TYPO3\Installer\Service;
 
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
+use Symfony\Component\Process\PhpExecutableFinder;
 use Symfony\Component\Process\Process;
 use TYPO3\Installer\Model\BinaryValidationResult;
 
@@ -25,16 +26,20 @@ class PhpBinaryDetector
      * @var array<string>
      */
     private const BINARY_PATHS = [
-        // Standard Linux paths
+        // Standard Linux paths (php-cli first, as 'php' may be a CGI wrapper on cPanel)
+        '/usr/bin/php-cli{major}.{minor}',
         '/usr/bin/php{major}.{minor}',
         '/usr/bin/php{major}{minor}',
+        '/usr/local/bin/php-cli{major}.{minor}',
         '/usr/local/bin/php{major}.{minor}',
         '/usr/local/bin/php{major}{minor}',
         // Plesk
         '/opt/plesk/php/{major}.{minor}/bin/php',
-        // cPanel/WHM
+        // cPanel/WHM (php-cli variant first)
+        '/opt/cpanel/ea-php{major}{minor}/root/usr/bin/php-cli',
         '/opt/cpanel/ea-php{major}{minor}/root/usr/bin/php',
-        // CloudLinux (alt-php)
+        // CloudLinux (alt-php, php-cli variant first)
+        '/opt/alt/php{major}{minor}/usr/bin/php-cli',
         '/opt/alt/php{major}{minor}/usr/bin/php',
         // Remi repository
         '/opt/remi/php{major}{minor}/root/usr/bin/php',
@@ -73,48 +78,261 @@ class PhpBinaryDetector
     /**
      * Detect PHP CLI binary matching the FPM version
      *
+     * 2-tier detection:
+     * 1. Candidates — runtime paths + common paths + Symfony finder
+     * 2. Brute-force scan — BINARY_PATHS templates across known PHP versions
+     *
      * @return array{
      *     fpmVersion: string,
      *     cliBinary: ?string,
      *     cliVersion: ?string,
      *     mismatch: bool,
-     *     availableVersions: array<array{path: string, version: string}>
+     *     availableVersions: array<array{path: string, version: string}>,
+     *     detectionMethod: ?string
      * }
      */
-    public function detect(): array
+    public function detect(?string $composerPath = null): array
     {
         $fpmVersion = $this->getFpmVersion();
-        $defaultCliBinary = $this->getDefaultCliBinary();
-        $defaultCliVersion = $defaultCliBinary !== null ? $this->validateBinary($defaultCliBinary) : null;
+        $candidates = $this->getCandidates();
 
-        // Check if default CLI matches FPM version
-        $versionMatch = $defaultCliVersion !== null && $this->versionsMatch($fpmVersion, $defaultCliVersion);
+        // Tier 1: Iterate candidates, find version-matching binary
+        $firstValidBinary = null;
+        $firstValidVersion = null;
 
-        // If versions match, no need to scan for alternatives
-        if ($versionMatch) {
+        foreach ($candidates as $candidate) {
+            $result = $this->validateBinaryWithDetails($candidate);
+            if (!$result->valid || $result->version === null) {
+                continue;
+            }
+
+            // Remember first valid binary as fallback
+            if ($firstValidBinary === null) {
+                $firstValidBinary = $candidate;
+                $firstValidVersion = $result->version;
+            }
+
+            if (!$this->versionsMatch($fpmVersion, $result->version)) {
+                continue;
+            }
+
+            // Optionally validate with Composer
+            if ($composerPath !== null && !$this->validateWithComposer($candidate, $composerPath)) {
+                continue;
+            }
+
             return [
                 'fpmVersion' => $fpmVersion,
-                'cliBinary' => $defaultCliBinary,
-                'cliVersion' => $defaultCliVersion,
+                'cliBinary' => $candidate,
+                'cliVersion' => $result->version,
                 'mismatch' => false,
                 'availableVersions' => [],
+                'detectionMethod' => 'candidates',
             ];
         }
 
-        // Versions don't match - try to find a matching binary
+        // Tier 2: Brute-force scan across BINARY_PATHS templates
         $matchingBinary = $this->findMatchingBinary($fpmVersion);
-        $matchingVersion = $matchingBinary !== null ? $this->validateBinary($matchingBinary) : null;
+        if ($matchingBinary !== null) {
+            $matchingVersion = $this->validateBinary($matchingBinary);
+            if ($matchingVersion !== null) {
+                return [
+                    'fpmVersion' => $fpmVersion,
+                    'cliBinary' => $matchingBinary,
+                    'cliVersion' => $matchingVersion,
+                    'mismatch' => false,
+                    'availableVersions' => [],
+                    'detectionMethod' => 'scan',
+                ];
+            }
+        }
 
-        // Get all available versions for user selection
-        $availableVersions = $this->getAvailableVersions();
+        // Fallback: first valid candidate (any version) with mismatch flag
+        $availableVersions = $this->getAvailableVersions($candidates);
 
         return [
             'fpmVersion' => $fpmVersion,
-            'cliBinary' => $matchingBinary ?? $defaultCliBinary,
-            'cliVersion' => $matchingVersion ?? $defaultCliVersion,
-            'mismatch' => $matchingBinary === null,
+            'cliBinary' => $firstValidBinary,
+            'cliVersion' => $firstValidVersion,
+            'mismatch' => true,
             'availableVersions' => $availableVersions,
+            'detectionMethod' => null,
         ];
+    }
+
+    /**
+     * Get CLI binary candidates derived from runtime PHP constants
+     *
+     * Uses PHP_BINDIR, php_ini_loaded_file(), and PHP_BINARY to find
+     * the CLI binary without scanning hardcoded path templates.
+     *
+     * @return array<string>
+     */
+    public function getRuntimeCandidates(): array
+    {
+        $candidates = [];
+        $seen = [];
+
+        $addCandidate = function (string $path) use (&$candidates, &$seen): void {
+            if (!isset($seen[$path])) {
+                $candidates[] = $path;
+                $seen[$path] = true;
+            }
+        };
+
+        // 1. PHP_BINDIR — most reliable on cPanel/shared hosting
+        $binDir = $this->getPhpBinDir();
+        if ($binDir !== '') {
+            $addCandidate($binDir . '/php-cli');
+            $addCandidate($binDir . '/php');
+        }
+
+        // 2. php_ini_loaded_file() — derive prefix from ini path
+        //    e.g. /opt/cpanel/ea-php82/root/etc/php.ini → prefix /opt/cpanel/ea-php82/root
+        $iniFile = $this->getPhpIniLoadedFile();
+        if ($iniFile !== false && $iniFile !== '') {
+            $etcPos = strpos($iniFile, '/etc/');
+            if ($etcPos !== false) {
+                $prefix = substr($iniFile, 0, $etcPos);
+                $addCandidate($prefix . '/usr/bin/php-cli');
+                $addCandidate($prefix . '/usr/bin/php');
+            }
+        }
+
+        // 3. PHP_BINARY — current process binary's directory
+        $phpBinary = $this->getPhpBinaryPath();
+        if ($phpBinary !== '') {
+            $binaryDir = dirname($phpBinary);
+            $addCandidate($binaryDir . '/php-cli');
+            $addCandidate($binaryDir . '/php');
+        }
+
+        return $candidates;
+    }
+
+    /**
+     * Get all CLI binary candidates in priority order, deduplicated
+     *
+     * Merges runtime-derived paths (PHP_BINDIR, ini, PHP_BINARY) with
+     * common hardcoded paths and Symfony PhpExecutableFinder results.
+     *
+     * @return array<string>
+     */
+    public function getCandidates(): array
+    {
+        $candidates = [];
+        $seen = [];
+
+        $addCandidate = function (string $path) use (&$candidates, &$seen): void {
+            if (!isset($seen[$path])) {
+                $candidates[] = $path;
+                $seen[$path] = true;
+            }
+        };
+
+        // 1. Runtime-derived paths (PHP_BINDIR, ini, PHP_BINARY)
+        foreach ($this->getRuntimeCandidates() as $candidate) {
+            $addCandidate($candidate);
+        }
+
+        // 2. Common hardcoded paths (php-cli first, as 'php' may be a CGI wrapper)
+        foreach (['/usr/bin/php-cli', '/usr/local/bin/php-cli', 'php-cli', '/usr/bin/php', '/usr/local/bin/php', 'php'] as $path) {
+            $addCandidate($path);
+        }
+
+        // 3. Symfony PhpExecutableFinder (checks PATH, env vars)
+        $finder = new PhpExecutableFinder();
+        $found = $finder->find(false);
+        if ($found !== false) {
+            $addCandidate($found);
+        }
+
+        return $candidates;
+    }
+
+    /**
+     * Detect CLI binary from runtime constants
+     *
+     * Iterates runtime candidates, validates each, checks version match
+     * against FPM, and optionally validates with Composer.
+     */
+    public function detectFromRuntime(?string $composerPath = null): ?string
+    {
+        $fpmVersion = $this->getFpmVersion();
+        $candidates = $this->getRuntimeCandidates();
+
+        foreach ($candidates as $candidate) {
+            $result = $this->validateBinaryWithDetails($candidate);
+            if (!$result->valid || $result->version === null) {
+                continue;
+            }
+
+            if (!$this->versionsMatch($fpmVersion, $result->version)) {
+                continue;
+            }
+
+            // Optionally validate with Composer
+            if ($composerPath !== null && !$this->validateWithComposer($candidate, $composerPath)) {
+                continue;
+            }
+
+            return $candidate;
+        }
+
+        return null;
+    }
+
+    /**
+     * Validate a PHP binary by running a Composer command
+     *
+     * Runs `<php-cli> <composer.phar> show --self --no-ansi` to exercise
+     * the full stack: CLI SAPI, PHAR loading, Composer bootstrap.
+     */
+    public function validateWithComposer(string $binaryPath, string $composerPath): bool
+    {
+        if (!@file_exists($composerPath)) {
+            return false;
+        }
+
+        try {
+            $process = new Process(
+                [$binaryPath, $composerPath, 'show', '--self', '--no-ansi'],
+                null,
+                null,
+                null,
+                self::PROCESS_TIMEOUT_SECONDS
+            );
+
+            $process->run();
+
+            return $process->isSuccessful();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Get PHP_BINDIR value (protected for testability)
+     */
+    protected function getPhpBinDir(): string
+    {
+        return PHP_BINDIR;
+    }
+
+    /**
+     * Get php_ini_loaded_file() value (protected for testability)
+     */
+    protected function getPhpIniLoadedFile(): string|false
+    {
+        return php_ini_loaded_file();
+    }
+
+    /**
+     * Get PHP_BINARY value (protected for testability)
+     */
+    protected function getPhpBinaryPath(): string
+    {
+        return PHP_BINARY;
     }
 
     /**
@@ -123,23 +341,6 @@ class PhpBinaryDetector
     public function getFpmVersion(): string
     {
         return PHP_VERSION;
-    }
-
-    /**
-     * Get the default CLI binary path
-     */
-    public function getDefaultCliBinary(): ?string
-    {
-        // Try to find the default 'php' binary
-        $paths = ['/usr/bin/php', '/usr/local/bin/php', 'php'];
-
-        foreach ($paths as $path) {
-            if ($this->validateBinary($path) !== null) {
-                return $path;
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -170,25 +371,27 @@ class PhpBinaryDetector
     /**
      * Get all available PHP versions on the system
      *
+     * @param array<string> $additionalCandidates Pre-checked candidate paths to include
      * @return array<array{path: string, version: string}>
      */
-    public function getAvailableVersions(): array
+    public function getAvailableVersions(array $additionalCandidates = []): array
     {
         $versions = [];
         $seen = [];
 
-        // Check default php first
-        $defaultCliVersion = null;
-        $defaultPath = $this->getDefaultCliBinary();
-        if ($defaultPath !== null) {
-            $defaultCliVersion = $this->validateBinary($defaultPath);
-            if ($defaultCliVersion !== null) {
-                $versions[] = [
-                    'path' => $defaultPath,
-                    'version' => $defaultCliVersion,
-                ];
-                $seen[$defaultPath] = true;
+        // Validate additional candidates first (e.g. from getCandidates())
+        foreach ($additionalCandidates as $path) {
+            if (isset($seen[$path])) {
+                continue;
             }
+            $version = $this->validateBinary($path);
+            if ($version !== null) {
+                $versions[] = [
+                    'path' => $path,
+                    'version' => $version,
+                ];
+            }
+            $seen[$path] = true;
         }
 
         // Scan all known paths for each supported PHP version
@@ -251,36 +454,38 @@ class PhpBinaryDetector
     {
         // For absolute paths, check existence and permissions
         if (str_starts_with($path, '/')) {
-            // Check open_basedir restriction first
-            if (!$this->isPathWithinOpenBasedir($path)) {
-                return BinaryValidationResult::openBasedirRestricted(
-                    $path,
-                    ini_get('open_basedir') ?: ''
-                );
-            }
+            $outsideOpenBasedir = !$this->isPathWithinOpenBasedir($path);
 
-            // Check if path exists at all (file, symlink, or directory)
-            if (!@file_exists($path) && !@is_link($path)) {
-                return BinaryValidationResult::notFound($path);
-            }
-
-            // Check for broken symlink
-            if (@is_link($path)) {
-                $target = @readlink($path);
-                if ($target === false || !@file_exists($path)) {
-                    return BinaryValidationResult::symlinkBroken($path, $target ?: 'unknown');
+            if ($outsideOpenBasedir) {
+                // Path is outside open_basedir: filesystem checks (file_exists,
+                // is_executable, etc.) would fail, but proc_open() is NOT restricted
+                // by open_basedir. Skip filesystem checks and fall through to
+                // execution-based validation below.
+                $resolvedPath = null;
+            } else {
+                // Check if path exists at all (file, symlink, or directory)
+                if (!@file_exists($path) && !@is_link($path)) {
+                    return BinaryValidationResult::notFound($path);
                 }
-            }
 
-            // Resolve symlinks for debugging
-            $resolvedPath = @realpath($path);
-            if ($resolvedPath === false) {
-                $resolvedPath = $path;
-            }
+                // Check for broken symlink
+                if (@is_link($path)) {
+                    $target = @readlink($path);
+                    if ($target === false || !@file_exists($path)) {
+                        return BinaryValidationResult::symlinkBroken($path, $target ?: 'unknown');
+                    }
+                }
 
-            // Check if file is executable
-            if (!@is_executable($path)) {
-                return BinaryValidationResult::notExecutable($path, $resolvedPath !== $path ? $resolvedPath : null);
+                // Resolve symlinks for debugging
+                $resolvedPath = @realpath($path);
+                if ($resolvedPath === false) {
+                    $resolvedPath = $path;
+                }
+
+                // Check if file is executable
+                if (!@is_executable($path)) {
+                    return BinaryValidationResult::notExecutable($path, $resolvedPath !== $path ? $resolvedPath : null);
+                }
             }
         } else {
             $resolvedPath = null;
@@ -482,6 +687,20 @@ class PhpBinaryDetector
             }
 
             $output = trim($process->getOutput());
+
+            // Strip CGI headers if present (e.g., "Content-type: text/html\r\n\r\ncgi-fcgi")
+            if (preg_match('/^[A-Za-z][A-Za-z0-9-]*:\s/', $output)) {
+                $pos = strpos($output, "\r\n\r\n");
+                if ($pos !== false) {
+                    $output = trim(substr($output, $pos + 4));
+                } else {
+                    $pos = strpos($output, "\n\n");
+                    if ($pos !== false) {
+                        $output = trim(substr($output, $pos + 2));
+                    }
+                }
+            }
+
             if ($output !== '' && preg_match('/^[a-z][a-z0-9_-]*$/i', $output)) {
                 return $output;
             }
@@ -497,7 +716,7 @@ class PhpBinaryDetector
      *
      * Returns true if no restriction is active or if the path is within allowed directories.
      */
-    private function isPathWithinOpenBasedir(string $path, ?string $openBasedir = null): bool
+    protected function isPathWithinOpenBasedir(string $path, ?string $openBasedir = null): bool
     {
         $openBasedir ??= ini_get('open_basedir');
         if ($openBasedir === '' || $openBasedir === false) {
@@ -520,7 +739,7 @@ class PhpBinaryDetector
     /**
      * Check if two PHP versions match (major.minor)
      */
-    private function versionsMatch(string $version1, string $version2): bool
+    public function versionsMatch(string $version1, string $version2): bool
     {
         $parts1 = explode('.', $version1);
         $parts2 = explode('.', $version2);

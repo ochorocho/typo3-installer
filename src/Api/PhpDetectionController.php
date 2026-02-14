@@ -6,6 +6,7 @@ namespace TYPO3\Installer\Api;
 
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use TYPO3\Installer\Service\InstallationInfoService;
 use TYPO3\Installer\Service\PhpBinaryDetector;
 
 /**
@@ -14,10 +15,14 @@ use TYPO3\Installer\Service\PhpBinaryDetector;
 class PhpDetectionController extends AbstractController
 {
     private PhpBinaryDetector $detector;
+    private InstallationInfoService $installationInfo;
 
-    public function __construct(?PhpBinaryDetector $detector = null)
-    {
+    public function __construct(
+        ?PhpBinaryDetector $detector = null,
+        ?InstallationInfoService $installationInfo = null
+    ) {
         $this->detector = $detector ?? new PhpBinaryDetector();
+        $this->installationInfo = $installationInfo ?? new InstallationInfoService();
     }
 
     /**
@@ -32,6 +37,7 @@ class PhpDetectionController extends AbstractController
      *   "cliBinary": "/usr/bin/php8.3",
      *   "cliVersion": "8.3.0",
      *   "mismatch": false,
+     *   "detectionMethod": "runtime",
      *   "availableVersions": [
      *     {"path": "/usr/bin/php8.3", "version": "8.3.0"},
      *     {"path": "/usr/bin/php8.2", "version": "8.2.15"}
@@ -40,13 +46,15 @@ class PhpDetectionController extends AbstractController
      */
     public function detect(Request $request): JsonResponse
     {
-        $result = $this->detector->detect();
+        $composerPath = $this->resolveComposerPath();
+        $result = $this->detector->detect($composerPath);
 
         return $this->successResponse([
             'fpmVersion' => $result['fpmVersion'],
             'cliBinary' => $result['cliBinary'],
             'cliVersion' => $result['cliVersion'],
             'mismatch' => $result['mismatch'],
+            'detectionMethod' => $result['detectionMethod'],
             'availableVersions' => $result['availableVersions'],
         ]);
     }
@@ -105,7 +113,7 @@ class PhpDetectionController extends AbstractController
 
         // Check if it matches the FPM version
         $fpmVersion = $this->detector->getFpmVersion();
-        $matchesFpm = $this->versionsMatch($fpmVersion, $result->version ?? '');
+        $matchesFpm = $this->detector->versionsMatch($fpmVersion, $result->version ?? '');
 
         return $this->successResponse([
             'valid' => true,
@@ -117,15 +125,12 @@ class PhpDetectionController extends AbstractController
     }
 
     /**
-     * Check if two PHP versions match (major.minor)
+     * Resolve the composer.phar path if the file exists
      */
-    private function versionsMatch(string $version1, string $version2): bool
+    private function resolveComposerPath(): ?string
     {
-        $parts1 = explode('.', $version1);
-        $parts2 = explode('.', $version2);
+        $path = $this->installationInfo->getComposerPath();
 
-        // Compare major and minor versions
-        return $parts1[0] === $parts2[0]
-            && ($parts1[1] ?? '0') === ($parts2[1] ?? '0');
+        return @file_exists($path) ? $path : null;
     }
 }
