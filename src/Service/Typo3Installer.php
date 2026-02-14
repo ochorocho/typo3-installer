@@ -556,6 +556,8 @@ class Typo3Installer
 
 // Additional TYPO3 configuration
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['trustedHostsPattern'] = '{$trustedHostsPattern}';
+\$GLOBALS['TYPO3_CONF_VARS']['SYS']['devIPmask'] = '*';
+\$GLOBALS['TYPO3_CONF_VARS']['SYS']['displayErrors'] = 1;
 
 PHP;
 

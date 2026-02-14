@@ -290,6 +290,7 @@ export function resetPostgreSQLDatabase() {
  * Uses environment variable: INSTALL_DIR
  */
 export function resetSQLiteDatabase() {
+  if (process.env.REMOTE_TEST) return;
   const installDir = process.env.INSTALL_DIR || '/var/www/html/test-installer-root';
   console.log('Resetting SQLite database...');
   try {
@@ -307,6 +308,7 @@ export function resetSQLiteDatabase() {
  * Uses environment variable: INSTALL_DIR
  */
 export function resetTYPO3Installation() {
+  if (process.env.REMOTE_TEST) return;
   const installDir = process.env.INSTALL_DIR || '/var/www/html/test-installer-root';
   console.log('Resetting TYPO3 installation files...');
   const commands = [

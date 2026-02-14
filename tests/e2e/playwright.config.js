@@ -16,7 +16,8 @@ export default defineConfig({
 
   use: {
     baseURL: process.env.BASE_URL || 'https://typo3-installer.ddev.site',
-    trace: 'on-first-retry',
+    //trace: 'on-first-retry',
+    trace: 'on',
     screenshot: 'only-on-failure',
     ignoreHTTPSErrors: true,  // Required for DDEV self-signed SSL certificates
     extraHTTPHeaders: {
