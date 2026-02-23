@@ -21,6 +21,10 @@ web_extra_exposed_ports:
     container_port: 43837
     http_port: 8880
     https_port: 8884
+  - name: playwright-report
+    container_port: 9323
+    http_port: 9323
+    https_port: 9324
 nodejs_version: "24"
 
 # Key features of DDEV's config.yaml:
