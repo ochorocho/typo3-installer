@@ -233,17 +233,20 @@ export async function verifyTYPO3Backend(page, options = {}) {
   const backendLink = page.locator('.success-buttons a.btn-success');
   const backendUrl = await backendLink.getAttribute('href');
 
+  // First load after fresh installation triggers TYPO3 cache compilation;
+  // reload once to get a stable, fully cached backend
   await page.goto(backendUrl, { waitUntil: 'networkidle' });
+  await page.reload({ waitUntil: 'networkidle' });
 
-  // Wait for TYPO3 login form
-  await page.getByRole('textbox', { name: 'Password' }).waitFor({ state: 'visible', timeout: 30000 });
+  // Wait for login form to be fully interactive
+  await page.getByRole('button', { name: 'Login' }).waitFor({ state: 'visible', timeout: 30000 });
 
   // Fill login credentials
   await page.getByRole('textbox', { name: 'Username' }).fill(username);
   await page.getByRole('textbox', { name: 'Password' }).fill(password);
 
   // Submit login form
-  await page.locator('button[type="submit"]').click();
+  await page.getByRole('button', { name: 'Login' }).click();
   await page.waitForLoadState('networkidle');
 
   // Verify successful login - TYPO3 backend shows module menu
