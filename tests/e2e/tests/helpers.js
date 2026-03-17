@@ -245,19 +245,43 @@ export async function verifyTYPO3Backend(page, options = {}) {
   }
   await page.reload({ waitUntil: 'networkidle' });
 
-  // Wait for login form to be fully interactive
-  await loginButton.waitFor({ state: 'visible', timeout: 60000 });
+  // Attempt login with retries — fresh TYPO3 installs may reject the first
+  // login while caches are still compiling or sessions are not yet stable.
+  const maxLoginAttempts = 3;
+  for (let attempt = 1; attempt <= maxLoginAttempts; attempt++) {
+    // Wait for login form to be fully interactive
+    await loginButton.waitFor({ state: 'visible', timeout: 60000 });
 
-  // Fill login credentials
-  await page.getByRole('textbox', { name: 'Username' }).fill(username);
-  await page.getByRole('textbox', { name: 'Password' }).fill(password);
+    // Fill login credentials sequentially to trigger TYPO3's JS event listeners
+    await page.getByRole('textbox', { name: 'Username' }).pressSequentially(username, { delay: 50 });
+    await page.getByRole('textbox', { name: 'Password' }).pressSequentially(password, { delay: 50 });
 
-  // Submit login form — use Promise.all to avoid race between click and navigation
-  await Promise.all([
-    page.waitForURL('**/main**', { timeout: 60000 }),
-    page.getByRole('button', { name: 'Login' }).click(),
-  ]);
-  await page.waitForLoadState('networkidle');
+    // Submit login form — use Promise.all to avoid race between click and navigation
+    const navigationPromise = page.waitForURL('**/main**', { timeout: 15000 })
+      .then(() => true)
+      .catch(() => false);
+    await page.getByRole('button', { name: 'Login' }).click();
+    const navigated = await navigationPromise;
+
+    if (navigated) {
+      await page.waitForLoadState('networkidle');
+      break;
+    }
+
+    // Login failed — check if we got an error alert
+    const loginError = page.locator('[role="alert"]');
+    if (await loginError.isVisible().catch(() => false)) {
+      console.log(`Login attempt ${attempt}/${maxLoginAttempts} failed, TYPO3 rejected credentials`);
+    }
+
+    if (attempt === maxLoginAttempts) {
+      throw new Error(`Login failed after ${maxLoginAttempts} attempts — TYPO3 rejected credentials`);
+    }
+
+    // Wait before retrying to let TYPO3 finish cache warmup
+    await page.waitForTimeout(5000);
+    await page.reload({ waitUntil: 'networkidle' });
+  }
 
   // Verify successful login - TYPO3 backend shows module menu
   await page.getByRole('navigation', { name: 'Module Menu' })
