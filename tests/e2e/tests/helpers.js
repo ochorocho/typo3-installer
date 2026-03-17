@@ -257,12 +257,6 @@ export async function verifyTYPO3Backend(page, options = {}) {
     await page.waitForLoadState('networkidle')
 
     await page.getByRole('button', { name: 'Login' }).click();
-    const navigated = await navigationPromise;
-
-    if (navigated) {
-      await page.waitForLoadState('networkidle');
-      break;
-    }
 
     // Wait before retrying to let TYPO3 finish cache warmup
     await page.waitForLoadState('networkidle');
