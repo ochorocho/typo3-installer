@@ -234,12 +234,19 @@ export async function verifyTYPO3Backend(page, options = {}) {
   const backendUrl = await backendLink.getAttribute('href');
 
   // First load after fresh installation triggers TYPO3 cache compilation;
-  // reload once to get a stable, fully cached backend
+  // reload once to get a stable, fully cached backend.
+  // If PHP-FPM is still starting in CI, retry the initial load once.
   await page.goto(backendUrl, { waitUntil: 'networkidle' });
+  const loginButton = page.getByRole('button', { name: 'Login' });
+  const firstTry = await loginButton.isVisible().catch(() => false);
+  if (!firstTry) {
+    await page.waitForTimeout(5000);
+    await page.goto(backendUrl, { waitUntil: 'networkidle' });
+  }
   await page.reload({ waitUntil: 'networkidle' });
 
   // Wait for login form to be fully interactive
-  await page.getByRole('button', { name: 'Login' }).waitFor({ state: 'visible', timeout: 30000 });
+  await loginButton.waitFor({ state: 'visible', timeout: 60000 });
 
   // Fill login credentials
   await page.getByRole('textbox', { name: 'Username' }).fill(username);
@@ -247,11 +254,14 @@ export async function verifyTYPO3Backend(page, options = {}) {
 
   // Submit login form
   await page.getByRole('button', { name: 'Login' }).click();
+
+  // Wait for navigation to complete (login redirects from /login to /main)
+  await page.waitForURL('**/main**', { timeout: 60000 });
   await page.waitForLoadState('networkidle');
 
   // Verify successful login - TYPO3 backend shows module menu
   await page.getByRole('navigation', { name: 'Module Menu' })
-    .waitFor({ state: 'visible', timeout: 30000 });
+    .waitFor({ state: 'visible', timeout: 60000 });
 }
 
 /**
