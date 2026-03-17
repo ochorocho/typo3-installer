@@ -252,11 +252,11 @@ export async function verifyTYPO3Backend(page, options = {}) {
   await page.getByRole('textbox', { name: 'Username' }).fill(username);
   await page.getByRole('textbox', { name: 'Password' }).fill(password);
 
-  // Submit login form
-  await page.getByRole('button', { name: 'Login' }).click();
-
-  // Wait for navigation to complete (login redirects from /login to /main)
-  await page.waitForURL('**/main**', { timeout: 60000 });
+  // Submit login form — use Promise.all to avoid race between click and navigation
+  await Promise.all([
+    page.waitForURL('**/main**', { timeout: 60000 }),
+    page.getByRole('button', { name: 'Login' }).click(),
+  ]);
   await page.waitForLoadState('networkidle');
 
   // Verify successful login - TYPO3 backend shows module menu
