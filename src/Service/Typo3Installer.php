@@ -569,8 +569,8 @@ class Typo3Installer
         $configContent = <<<PHP
 <?php
 
-// Additional TYPO3 configuration for maximum compatability
-\$GLOBALS['TYPO3_CONF_VARS']['SYS']['trustedHostsPattern'] = '{$trustedHostsPattern}';
+// Additional TYPO3 configuration for maximum compatability @todo: set trusted host properly... this is just for testing sake
+\$GLOBALS['TYPO3_CONF_VARS']['SYS']['trustedHostsPattern'] = '.*';
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['devIPmask'] = '*';
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['displayErrors'] = 1;
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxySSL'] = '*';
