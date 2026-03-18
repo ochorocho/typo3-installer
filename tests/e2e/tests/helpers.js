@@ -235,9 +235,7 @@ export async function verifyTYPO3Backend(page, options = {}) {
 
   // First load after fresh installation triggers TYPO3 cache compilation;
   // reload once to get a stable, fully cached backend.
-  // If PHP-FPM is still starting in CI, retry the initial load once.
   await page.goto(backendUrl, { waitUntil: 'networkidle' });
-  const loginButton = page.getByRole('button', { name: 'Login' });
   await page.waitForLoadState('networkidle');
   await page.reload({ waitUntil: 'networkidle' });
 
@@ -245,23 +243,34 @@ export async function verifyTYPO3Backend(page, options = {}) {
   // login while caches are still compiling or sessions are not yet stable.
   const maxLoginAttempts = 3;
   for (let attempt = 1; attempt <= maxLoginAttempts; attempt++) {
-    await page.waitForLoadState('networkidle');
-    // Wait for login form to be fully interactive
+    const loginButton = page.getByRole('button', { name: 'Login' });
     await loginButton.waitFor({ state: 'visible', timeout: 60000 });
 
-    // Fill login credentials sequentially to trigger TYPO3's JS event listeners
-    await page.getByRole('textbox', { name: 'Username' }).pressSequentially(username, { delay: 50 });
-    await page.getByRole('textbox', { name: 'Password' }).pressSequentially(password, { delay: 50 });
+    // Clear fields before typing (critical for retries)
+    const usernameField = page.getByRole('textbox', { name: 'Username' });
+    const passwordField = page.getByRole('textbox', { name: 'Password' });
+    await usernameField.clear();
+    await usernameField.pressSequentially(username, { delay: 50 });
+    await passwordField.clear();
+    await passwordField.pressSequentially(password, { delay: 50 });
 
-    // Submit login form — use Promise.all to avoid race between click and navigation
-    await page.waitForLoadState('networkidle')
-
-    await page.getByRole('button', { name: 'Login' }).click();
-
-    // Wait before retrying to let TYPO3 finish cache warmup
-    await page.waitForLoadState('networkidle');
-    await page.reload({ waitUntil: 'networkidle' });
+    // Click login and wait for either navigation to /main or staying on /login
+    await loginButton.click();
+    try {
+      await page.waitForURL('**/main**', { timeout: 15000 });
+      // Login succeeded
+      break;
+    } catch {
+      // Login failed — check if we're on the last attempt
+      if (attempt === maxLoginAttempts) {
+        throw new Error(`TYPO3 login failed after ${maxLoginAttempts} attempts`);
+      }
+      console.log(`Login attempt ${attempt}/${maxLoginAttempts} failed, retrying...`);
+      await page.waitForTimeout(3000);
+    }
   }
+
+  await page.waitForLoadState('networkidle');
 
   // Verify successful login - TYPO3 backend shows module menu
   await page.getByRole('navigation', { name: 'Module Menu' })
