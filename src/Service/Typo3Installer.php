@@ -573,9 +573,6 @@ class Typo3Installer
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['trustedHostsPattern'] = '.*';
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['devIPmask'] = '*';
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['displayErrors'] = 1;
-\$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxySSL'] = '*';
-\$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxyIP'] = '*';
-\$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxyHeaderMultiValue'] = 'first';
 
 PHP;
 

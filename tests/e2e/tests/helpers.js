@@ -246,13 +246,12 @@ export async function verifyTYPO3Backend(page, options = {}) {
     const loginButton = page.getByRole('button', { name: 'Login' });
     await loginButton.waitFor({ state: 'visible', timeout: 60000 });
 
-    // Clear fields before typing (critical for retries)
+    // Use fill() for the standard TYPO3 login form — it's atomic and clears
+    // the field first, avoiding issues with pressSequentially on retries.
     const usernameField = page.getByRole('textbox', { name: 'Username' });
     const passwordField = page.getByRole('textbox', { name: 'Password' });
-    await usernameField.clear();
-    await usernameField.pressSequentially(username, { delay: 50 });
-    await passwordField.clear();
-    await passwordField.pressSequentially(password, { delay: 50 });
+    await usernameField.fill(username);
+    await passwordField.fill(password);
 
     // Click login and wait for either navigation to /main or staying on /login
     await loginButton.click();
