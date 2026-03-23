@@ -15,9 +15,10 @@ A self-contained single-file installer for TYPO3 CMS that works on any web hosti
 ## Requirements
 
 - PHP 8.2 or higher
-- MySQL 8.0+ / MariaDB 10.4+ or PostgreSQL 10+
+- SQLite / MySQL 8.0+ / MariaDB 10.4+ or PostgreSQL 10+
 - Web server (Apache, Nginx, etc.)
-- Write permissions in the upload directory
+- Write permissions in the upload directory (document root) and it's parent
+  directory (project root)
 
 ## Quick Start
 
