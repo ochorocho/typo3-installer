@@ -569,8 +569,13 @@ class Typo3Installer
         $configContent = <<<PHP
 <?php
 
-// Additional TYPO3 configuration for maximum compatability @todo: set trusted host properly... this is just for testing sake
+// Auto-detect HTTPS: trust X-Forwarded-Proto from any reverse proxy.
+// Unlike reverseProxySSL (which unconditionally forces HTTPS detection),
+// reverseProxyIP only activates when the proxy actually sends the header.
+// This works correctly on: direct HTTPS, HTTP behind SSL proxy, and plain HTTP.
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['trustedHostsPattern'] = '.*';
+\$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxyIP'] = '*';
+\$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxyHeaderMultiValue'] = 'first';
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['devIPmask'] = '*';
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['displayErrors'] = 1;
 
