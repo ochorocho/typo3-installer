@@ -301,6 +301,7 @@ e2e-live-webspaces:
   timeout: 60 minutes
   script:
     - cd tests/e2e && npm ci && cd ../../
+    - apt update && apt install -y yq
     - echo "$DEPLOY_SERVERS" > ./.deploy-servers.json
     - bash ./scripts/deploy.sh
     - bash ./.ddev/commands/web/playwright-remote.sh
