@@ -300,6 +300,7 @@ e2e-live-webspaces:
     - build-phar
   timeout: 60 minutes
   script:
+    - '[[ -f /.dockerenv || "$container" == "podman" ]] && echo -e "Host *\n\tStrictHostKeyChecking accept-new\n\n" > ~/.ssh/config'
     - cd tests/e2e && npm ci && cd ../../
     - apt update && apt install -y yq
     - echo "$DEPLOY_SERVERS" > ./.deploy-servers.json
