@@ -7,7 +7,9 @@
 
 set -euo pipefail
 
-CONFIG_FILE="/var/www/html/.deploy-servers.json"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+CONFIG_FILE="$PROJECT_ROOT/.deploy-servers.json"
 FILTER_HOST="${1:-}"
 
 # Colors
@@ -110,7 +112,7 @@ for i in $(seq 0 $((TESTABLE_COUNT - 1))); do
 
     # --- Run Playwright test (global-setup.js handles nuke call) ---
     info "  Running SQLite full-flow test (BASE_URL='$BASE_URL')…"
-    if (unset npm_config_prefix && cd /var/www/html/tests/e2e && npx playwright test --project=sqlite tests/full-flows/sqlite.spec.js); then
+    if (unset npm_config_prefix && cd "$PROJECT_ROOT/tests/e2e" && npx playwright test --project=sqlite tests/full-flows/sqlite.spec.js); then
         info "  ✓ PASSED: $HOST"
         SUCCESS=$((SUCCESS + 1))
     else
