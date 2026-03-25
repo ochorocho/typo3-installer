@@ -32,7 +32,8 @@ done
 
 # Install dependencies
 echo "Installing Playwright dependencies..."
-if ! (unset npm_config_prefix && cd tests/e2e/ && npm install && sudo npx playwright install-deps && npx playwright install); then
+SUDO=""; command -v sudo &>/dev/null && SUDO="sudo"
+if ! (unset npm_config_prefix && cd tests/e2e/ && npm install && $SUDO npx playwright install-deps && npx playwright install); then
     echo "Error: Failed to install Playwright dependencies"
     exit 1
 fi

@@ -309,7 +309,7 @@ e2e-live-webspaces:
     - ssh-add /tmp/.key
     - echo "$DEPLOY_SERVERS" > ./.deploy-servers.json
     - bash ./scripts/deploy.sh
-    - bash ./.ddev/commands/web/playwright-remote.sh
+    - bash .ddev/commands/web/playwright-remote.sh
   artifacts:
     when: always
     name: e2e-php85-results
