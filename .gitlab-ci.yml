@@ -303,6 +303,7 @@ e2e-live-webspaces:
     - '[[ -f /.dockerenv || "$container" == "podman" ]] && echo -e "Host *\n\tStrictHostKeyChecking accept-new\n\n" > ~/.ssh/config'
     - cd tests/e2e && npm ci && cd ../../
     - apt update && apt install -y yq
+    - eval $(ssh-agent -s)
     - echo -e "$SSH_PRIVATE_KEY" > /tmp/.key
     - chmod 600 /tmp/.key
     - ssh-add /tmp/.key
