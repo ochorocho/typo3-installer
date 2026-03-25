@@ -7,8 +7,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+PROJECT_ROOT="${DDEV_APPROOT:-$(pwd)}"
 CONFIG_FILE="$PROJECT_ROOT/.deploy-servers.json"
 FILTER_HOST="${1:-}"
 
@@ -110,9 +109,16 @@ for i in $(seq 0 $((TESTABLE_COUNT - 1))); do
         unset NUKE_URL 2>/dev/null || true
     fi
 
+    # --- Per-host output directories ---
+    HOST_DIR="$PROJECT_ROOT/tests/e2e/$HOST"
+    mkdir -p "$HOST_DIR"
+    export PLAYWRIGHT_HTML_REPORT="$HOST_DIR/playwright-report"
+    export PLAYWRIGHT_HTML_OPEN=never
+    export PLAYWRIGHT_JUNIT_OUTPUT_NAME="$HOST_DIR/junit.xml"
+
     # --- Run Playwright test (global-setup.js handles nuke call) ---
     info "  Running SQLite full-flow test (BASE_URL='$BASE_URL')…"
-    if (unset npm_config_prefix && cd "$PROJECT_ROOT/tests/e2e" && npx playwright test --project=sqlite tests/full-flows/sqlite.spec.js); then
+    if (unset npm_config_prefix && cd "$PROJECT_ROOT/tests/e2e" && npx playwright test --project=sqlite --output="$HOST_DIR/test-results" tests/full-flows/sqlite.spec.js); then
         info "  ✓ PASSED: $HOST"
         SUCCESS=$((SUCCESS + 1))
     else

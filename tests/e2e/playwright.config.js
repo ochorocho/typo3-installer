@@ -9,7 +9,7 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html'],
-    ['junit', { outputFile: 'test-results/junit.xml' }]
+    ['junit', { outputFile: process.env.PLAYWRIGHT_JUNIT_OUTPUT_NAME || 'test-results/junit.xml' }]
   ],
   timeout: 60000,
   globalSetup: './global-setup.js',
