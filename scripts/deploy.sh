@@ -103,28 +103,13 @@ for i in $(seq 0 $((SERVER_COUNT - 1))); do
             INSECURE_FLAG=""
             [[ "$INSECURE" == "true" ]] && INSECURE_FLAG="-k"
 
-            if command -v lftp &>/dev/null; then
-                info "  Uploading via FTPS (lftp, binary mode)…"
-                SSL_OPTS="set ssl:verify-certificate yes; set ftp:ssl-force yes; set ftp:ssl-protect-data yes;"
-                [[ "$INSECURE" == "true" ]] && SSL_OPTS="set ssl:verify-certificate no; set ftp:ssl-force yes; set ftp:ssl-protect-data yes;"
-                if lftp -u "$USER,$PASS" "ftp://${HOST}" -e "
-                    ${SSL_OPTS}
-                    set xfer:clobber yes;
-                    cd ${RDIR};
-                    put ${PHAR_FILE} -o ${RFILE};
-                    bye
-                " 2>&1; then
-                    UPLOAD_OK=true
-                fi
-            else
-                info "  Uploading via FTPS (curl, binary mode)…"
-                CURL_OPTS=(--ftp-create-dirs --ssl-reqd $INSECURE_FLAG
-                          -Q "-TYPE I" -Q "*TYPE I"
-                          -T "$PHAR_FILE" -u "$USER:$PASS"
-                          --connect-timeout 30 --max-time 300 -s -S)
-                if curl "${CURL_OPTS[@]}" "ftp://${HOST}${RPATH}" 2>&1; then
-                    UPLOAD_OK=true
-                fi
+            info "  Uploading via FTPS (binary mode)…"
+            CURL_OPTS=(--ftp-create-dirs --ssl-reqd $INSECURE_FLAG
+                      -Q "-TYPE I" -Q "*TYPE I"
+                      -T "$PHAR_FILE" -u "$USER:$PASS"
+                      --connect-timeout 30 --max-time 300 -s -S)
+            if curl "${CURL_OPTS[@]}" "ftp://${HOST}${RPATH}" 2>&1; then
+                UPLOAD_OK=true
             fi
 
             # Verify file size on remote server to detect ASCII-mode corruption
