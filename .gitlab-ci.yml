@@ -13,17 +13,16 @@ variables:
 
 build-phar:
   stage: build
-  image: docker:27
-  services:
-    - docker:27-dind
   variables:
-    DOCKER_HOST: tcp://docker:2376
-    DOCKER_TLS_CERTDIR: "/certs"
-    DOCKER_CERT_PATH: "/certs/client"
-    DOCKER_TLS_VERIFY: "1"
-  before_script:
-    - apk add --no-cache bash curl
-    - curl -fsSL https://raw.githubusercontent.com/ddev/ddev/master/scripts/install_ddev.sh | bash
+    FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR: 1
+    TEST_DIR: .template/tests/Playwright
+  image:
+    name: ghcr.io/ddev/ddev-gitlab-ci:latest
+    pull_policy: always
+  services:
+    - name: docker:dind
+  when: always
+  needs: [] # Run job immediately
   script:
     - ddev config --auto
     - ddev start
