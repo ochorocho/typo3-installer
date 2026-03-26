@@ -14,8 +14,9 @@ variables:
 
 composer-install:
   stage: build
-  image: composer:2
+  image: php:8.3-cli
   script:
+    - curl -LSs https://getcomposer.org/download/latest-2.x/composer.phar -o /usr/local/bin/composer && chmod +x /usr/local/bin/composer
     - composer install --no-interaction --no-dev
   artifacts:
     paths:
