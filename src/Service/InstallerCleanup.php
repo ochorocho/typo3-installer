@@ -45,20 +45,21 @@ class InstallerCleanup
 
         $scriptPath = dirname($pharPath) . '/cleanup-installer.php';
 
-        $script = <<<'PHP'
+        $installerFilename = basename($pharPath);
+        $script = <<<PHP
 <?php
 // TYPO3 Installer Cleanup Script
 // This script will delete the installer PHAR file
 
-$installerPath = __DIR__ . '/typo3-installer.phar';
+\$installerPath = __DIR__ . '/{$installerFilename}';
 
-if (file_exists($installerPath)) {
-    if (unlink($installerPath)) {
+if (file_exists(\$installerPath)) {
+    if (unlink(\$installerPath)) {
         echo "✓ Installer deleted successfully\n";
         echo "✓ You can now delete this cleanup script\n";
     } else {
         echo "✗ Failed to delete installer\n";
-        echo "Please delete manually: " . $installerPath . "\n";
+        echo "Please delete manually: " . \$installerPath . "\n";
     }
 } else {
     echo "Installer file not found\n";

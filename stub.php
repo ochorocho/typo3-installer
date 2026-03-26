@@ -52,8 +52,8 @@ if ($integrityError === 'truncated') {
 }
 
 try {
-    Phar::mapPhar('typo3-installer.phar');
-    require 'phar://' . __FILE__ . '/src/bootstrap.php';
+    Phar::mapPhar('typo3-installer.php');
+    require 'phar://typo3-installer.php/src/bootstrap.php';
 } catch (\Throwable $e) {
     $isSignatureError = stripos($e->getMessage(), 'signature') !== false;
 
