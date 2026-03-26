@@ -109,6 +109,10 @@ for i in $(seq 0 $((SERVER_COUNT - 1))); do
                       -T "$PHAR_FILE" -u "$USER:$PASS"
                       --connect-timeout 30 --max-time 300 -s -S)
             if curl "${CURL_OPTS[@]}" "ftp://${HOST}${RPATH}" 2>&1; then
+                # Set executable permission (744)
+                curl --ssl-reqd $INSECURE_FLAG -u "$USER:$PASS" -s \
+                    -Q "SITE CHMOD 744 ${RPATH}" -Q "QUIT" \
+                    "ftp://${HOST}/" >/dev/null 2>&1 || true
                 UPLOAD_OK=true
             fi
 
@@ -128,6 +132,7 @@ for i in $(seq 0 $((SERVER_COUNT - 1))); do
         scp)
             info "  Uploading via SCP…"
             if scp "$PHAR_FILE" "${USER}@${HOST}:${RPATH}"; then
+                ssh "${USER}@${HOST}" "chmod 744 ${RPATH}" 2>/dev/null || true
                 UPLOAD_OK=true
             fi
             ;;
