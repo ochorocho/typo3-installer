@@ -94,16 +94,30 @@ for i in $(seq 0 $((SERVER_COUNT - 1))); do
     # --- Upload ---
     UPLOAD_OK=false
 
+    LOCAL_SIZE=$(stat -f%z "$PHAR_FILE" 2>/dev/null || stat -c%s "$PHAR_FILE" 2>/dev/null)
+
     case "$PROTOCOL" in
         ftp)
             FTP_URL="ftp://${HOST}${RPATH}"
             info "  Uploading via FTPS (explicit TLS, binary mode)…"
-            CURL_OPTS=(--ftp-create-dirs --ssl-reqd -Q "TYPE I"
+            INSECURE_FLAG=""
+            [[ "$INSECURE" == "true" ]] && INSECURE_FLAG="-k"
+            CURL_OPTS=(--ftp-create-dirs --ssl-reqd $INSECURE_FLAG
+                      -Q "-TYPE I" -Q "TYPE I"
                       -T "$PHAR_FILE" -u "$USER:$PASS"
                       --connect-timeout 30 --max-time 300 -s -S)
-            [[ "$INSECURE" == "true" ]] && CURL_OPTS+=(-k)
             if curl "${CURL_OPTS[@]}" "$FTP_URL" 2>&1; then
-                UPLOAD_OK=true
+                # Verify file size on remote server to detect ASCII-mode corruption
+                REMOTE_SIZE=$(curl --ssl-reqd $INSECURE_FLAG -u "$USER:$PASS" \
+                    -s -I "ftp://${HOST}${RPATH}" 2>/dev/null \
+                    | grep -i "Content-Length" | awk '{print $2}' | tr -d '\r')
+                if [[ -n "$REMOTE_SIZE" && "$REMOTE_SIZE" != "$LOCAL_SIZE" ]]; then
+                    error "  Size mismatch! Local: ${LOCAL_SIZE}, Remote: ${REMOTE_SIZE} — file likely corrupted (ASCII mode transfer?)"
+                    UPLOAD_OK=false
+                else
+                    UPLOAD_OK=true
+                    [[ -n "$REMOTE_SIZE" ]] && info "  Size verified: ${REMOTE_SIZE} bytes"
+                fi
             fi
             ;;
         scp)
