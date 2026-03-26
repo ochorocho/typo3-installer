@@ -300,7 +300,7 @@ deploy-live-webspaces:
   needs:
     - build-phar
   script:
-    - apk add --no-cache curl jq openssh-client bash
+    - apk add --no-cache curl jq openssh-client bash lftp
     - mkdir -p ~/.ssh && printf "Host *\n\tStrictHostKeyChecking accept-new\n\n" > ~/.ssh/config
     - eval $(ssh-agent -s)
     - printf "%s" "$SSH_PRIVATE_KEY" > /tmp/.key

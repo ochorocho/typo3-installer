@@ -98,24 +98,44 @@ for i in $(seq 0 $((SERVER_COUNT - 1))); do
 
     case "$PROTOCOL" in
         ftp)
-            FTP_URL="ftp://${HOST}${RPATH}"
-            info "  Uploading via FTPS (explicit TLS, binary mode)…"
+            RDIR=$(dirname "$RPATH")
+            RFILE=$(basename "$RPATH")
             INSECURE_FLAG=""
             [[ "$INSECURE" == "true" ]] && INSECURE_FLAG="-k"
-            CURL_OPTS=(--ftp-create-dirs --ssl-reqd $INSECURE_FLAG
-                      -Q "-TYPE I" -Q "*TYPE I"
-                      -T "$PHAR_FILE" -u "$USER:$PASS"
-                      --connect-timeout 30 --max-time 300 -s -S)
-            if curl "${CURL_OPTS[@]}" "$FTP_URL" 2>&1; then
-                # Verify file size on remote server to detect ASCII-mode corruption
+
+            if command -v lftp &>/dev/null; then
+                info "  Uploading via FTPS (lftp, binary mode)…"
+                SSL_OPTS="set ssl:verify-certificate yes; set ftp:ssl-force yes; set ftp:ssl-protect-data yes;"
+                [[ "$INSECURE" == "true" ]] && SSL_OPTS="set ssl:verify-certificate no; set ftp:ssl-force yes; set ftp:ssl-protect-data yes;"
+                if lftp -u "$USER,$PASS" "ftp://${HOST}" -e "
+                    ${SSL_OPTS}
+                    set xfer:clobber yes;
+                    cd ${RDIR};
+                    put ${PHAR_FILE} -o ${RFILE};
+                    bye
+                " 2>&1; then
+                    UPLOAD_OK=true
+                fi
+            else
+                info "  Uploading via FTPS (curl, binary mode)…"
+                CURL_OPTS=(--ftp-create-dirs --ssl-reqd $INSECURE_FLAG
+                          -Q "-TYPE I" -Q "*TYPE I"
+                          -T "$PHAR_FILE" -u "$USER:$PASS"
+                          --connect-timeout 30 --max-time 300 -s -S)
+                if curl "${CURL_OPTS[@]}" "ftp://${HOST}${RPATH}" 2>&1; then
+                    UPLOAD_OK=true
+                fi
+            fi
+
+            # Verify file size on remote server to detect ASCII-mode corruption
+            if $UPLOAD_OK; then
                 REMOTE_SIZE=$(curl --ssl-reqd $INSECURE_FLAG -u "$USER:$PASS" \
                     -s -I "ftp://${HOST}${RPATH}" 2>/dev/null \
                     | grep -i "Content-Length" | awk '{print $2}' | tr -d '\r')
                 if [[ -n "$REMOTE_SIZE" && "$REMOTE_SIZE" != "$LOCAL_SIZE" ]]; then
-                    error "  Size mismatch! Local: ${LOCAL_SIZE}, Remote: ${REMOTE_SIZE} — file likely corrupted (ASCII mode transfer?)"
+                    error "  Size mismatch! Local: ${LOCAL_SIZE}, Remote: ${REMOTE_SIZE} — file likely corrupted during transfer"
                     UPLOAD_OK=false
                 else
-                    UPLOAD_OK=true
                     [[ -n "$REMOTE_SIZE" ]] && info "  Size verified: ${REMOTE_SIZE} bytes"
                 fi
             fi
