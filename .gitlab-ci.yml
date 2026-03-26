@@ -301,12 +301,12 @@ deploy-live-webspaces:
     - build-phar
   script:
     - apk add --no-cache curl jq openssh-client bash
-    - '[[ -f /.dockerenv || "$container" == "podman" ]] && mkdir -p ~/.ssh && echo -e "Host *\n\tStrictHostKeyChecking accept-new\n\n" > ~/.ssh/config'
+    - mkdir -p ~/.ssh && printf "Host *\n\tStrictHostKeyChecking accept-new\n\n" > ~/.ssh/config
     - eval $(ssh-agent -s)
-    - echo -e "$SSH_PRIVATE_KEY" > /tmp/.key
+    - printf "%s" "$SSH_PRIVATE_KEY" > /tmp/.key
     - chmod 600 /tmp/.key
     - ssh-add /tmp/.key
-    - cat <<< "$DEPLOY_SERVERS" > ./.deploy-servers.json
+    - printf "%s" "$DEPLOY_SERVERS" > ./.deploy-servers.json
     - bash ./scripts/deploy.sh
 
 e2e-live-webspaces:
@@ -318,7 +318,7 @@ e2e-live-webspaces:
   script:
     - cd tests/e2e && npm ci && cd ../../
     - apt update && apt install -y jq
-    - cat <<< "$DEPLOY_SERVERS" > ./.deploy-servers.json
+    - printf "%s" "$DEPLOY_SERVERS" > ./.deploy-servers.json
     - bash .ddev/commands/web/playwright-remote.sh
   artifacts:
     when: always
