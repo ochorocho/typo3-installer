@@ -27,6 +27,7 @@ build-phar:
     - ddev config --auto
     - ddev start
     - ddev composer install --no-interaction --no-dev
+    - ddev exec "curl -LSs https://github.com/box-project/box/releases/download/4.6.10/box.phar -o /usr/local/bin/box && chmod +x /usr/local/bin/box"
     - ddev composer run build
     - ddev stop
   artifacts:
