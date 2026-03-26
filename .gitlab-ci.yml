@@ -1,7 +1,6 @@
 stages:
-  - build      # composer + npm (parallel)
+  - build      # DDEV build (composer + npm + PHAR)
   - analysis   # phpstan + php-cs-fixer (parallel)
-  - package    # build PHAR
   - test       # E2E tests
 
 variables:
@@ -9,29 +8,33 @@ variables:
   COMPOSER_PUBLIC_DIR: test-installer-root/public/
 
 # =============================================================================
-# BUILD STAGE - parallel jobs for dependencies
+# BUILD STAGE - build everything via DDEV (matches local dev environment)
 # =============================================================================
 
-composer-install:
+build-phar:
   stage: build
-  image: php:8.3-cli
+  image: docker:27
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_CERT_PATH: "/certs/client"
+    DOCKER_TLS_VERIFY: "1"
+  before_script:
+    - apk add --no-cache bash curl
+    - curl -fsSL https://raw.githubusercontent.com/ddev/ddev/master/scripts/install_ddev.sh | bash
   script:
-    - apt-get update && apt-get install -y --no-install-recommends git unzip
-    - curl -LSs https://getcomposer.org/download/latest-2.x/composer.phar -o /usr/local/bin/composer && chmod +x /usr/local/bin/composer
-    - composer install --no-interaction --no-dev
+    - ddev config --auto
+    - ddev start
+    - ddev composer install --no-interaction --no-dev
+    - ddev composer run build
+    - ddev stop
   artifacts:
+    name: TYPO3-Installer
     paths:
+      - test-installer-root/public/typo3-installer.php
       - vendor/
-    expire_in: 1 hour
-
-npm-build:
-  stage: build
-  image: node:22-slim
-  script:
-    - npm ci
-    - npm run build
-  artifacts:
-    paths:
       - public/
     expire_in: 1 hour
 
@@ -45,7 +48,7 @@ phpstan:
     name: ghcr.io/phpstan/phpstan:2-php8.3
     entrypoint: [""]
   needs:
-    - composer-install
+    - build-phar
   script:
     - phpstan analyse src --level=9
 
@@ -55,29 +58,9 @@ php-cs-fixer:
     name: ghcr.io/php-cs-fixer/php-cs-fixer:3-php8.3
     entrypoint: [""]
   needs:
-    - composer-install
+    - build-phar
   script:
     - php-cs-fixer fix --dry-run --diff
-
-# =============================================================================
-# PACKAGE STAGE - build the PHAR
-# =============================================================================
-
-build-phar:
-  stage: package
-  image: php:8.3-cli
-  needs:
-    - composer-install
-    - npm-build
-  script:
-    - curl -LSs https://getcomposer.org/download/latest-2.x/composer.phar -o /usr/local/bin/composer && chmod +x /usr/local/bin/composer
-    - curl -LSs https://github.com/box-project/box/releases/download/4.6.10/box.phar -o /usr/local/bin/box && chmod +x /usr/local/bin/box
-    - composer run build:phar
-  artifacts:
-    name: TYPO3-Installer
-    paths:
-      - test-installer-root/public/typo3-installer.php
-    expire_in: 1 hour
 
 # =============================================================================
 # TEST STAGE - E2E tests
