@@ -294,24 +294,24 @@ deploy-live-webspaces:
     - printf "%s" "$DEPLOY_SERVERS" > ./.deploy-servers.json
     - bash ./scripts/deploy.sh
 
-#e2e-live-webspaces:
-#  image: mcr.microsoft.com/playwright:v1.58.0-noble
-#  needs:
-#    - build-phar
-#    - deploy-live-webspaces
-#  timeout: 60 minutes
-#  script:
-#    - cd tests/e2e && npm ci && cd ../../
-#    - apt update && apt install -y jq
-#    - printf "%s" "$DEPLOY_SERVERS" > ./.deploy-servers.json
-#    - bash .ddev/commands/web/playwright-remote.sh
-#  artifacts:
-#    when: always
-#    name: e2e-php85-results
-#    paths:
-#      - tests/e2e/*/playwright-report/
-#      - tests/e2e/*/test-results/
-#      - tests/e2e/*/junit.xml
-#    reports:
-#      junit: tests/e2e/*/junit.xml
-#    expire_in: 7 days
+e2e-live-webspaces:
+  image: mcr.microsoft.com/playwright:v1.58.0-noble
+  needs:
+    - build-phar
+    - deploy-live-webspaces
+  timeout: 60 minutes
+  script:
+    - cd tests/e2e && npm ci && cd ../../
+    - apt update && apt install -y jq
+    - printf "%s" "$DEPLOY_SERVERS" > ./.deploy-servers.json
+    - bash .ddev/commands/web/playwright-remote.sh
+  artifacts:
+    when: always
+    name: e2e-php85-results
+    paths:
+      - tests/e2e/*/playwright-report/
+      - tests/e2e/*/test-results/
+      - tests/e2e/*/junit.xml
+    reports:
+      junit: tests/e2e/*/junit.xml
+    expire_in: 7 days
