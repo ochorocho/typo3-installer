@@ -103,7 +103,7 @@ for i in $(seq 0 $((SERVER_COUNT - 1))); do
             INSECURE_FLAG=""
             [[ "$INSECURE" == "true" ]] && INSECURE_FLAG="-k"
             CURL_OPTS=(--ftp-create-dirs --ssl-reqd $INSECURE_FLAG
-                      -Q "-TYPE I" -Q "TYPE I"
+                      -Q "-TYPE I" -Q "*TYPE I"
                       -T "$PHAR_FILE" -u "$USER:$PASS"
                       --connect-timeout 30 --max-time 300 -s -S)
             if curl "${CURL_OPTS[@]}" "$FTP_URL" 2>&1; then
