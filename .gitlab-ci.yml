@@ -16,6 +16,7 @@ composer-install:
   stage: build
   image: php:8.3-cli
   script:
+    - apt-get update && apt-get install -y --no-install-recommends git unzip
     - curl -LSs https://getcomposer.org/download/latest-2.x/composer.phar -o /usr/local/bin/composer && chmod +x /usr/local/bin/composer
     - composer install --no-interaction --no-dev
   artifacts:
