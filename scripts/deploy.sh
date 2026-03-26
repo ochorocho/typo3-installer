@@ -141,6 +141,25 @@ for i in $(seq 0 $((SERVER_COUNT - 1))); do
         continue
     fi
 
+    # --- Upload OPcache-clearing helper alongside the PHAR ---
+    RDIR=$(dirname "$RPATH")
+    OPCACHE_HELPER="/tmp/_opcache_clear.php"
+    cat > "$OPCACHE_HELPER" <<'OPCACHE_PHP'
+<?php
+if (function_exists('opcache_reset')) { opcache_reset(); echo 'opcache:cleared'; }
+else { echo 'opcache:not_available'; }
+OPCACHE_PHP
+    case "$PROTOCOL" in
+        ftp)
+            curl --ssl-reqd $INSECURE_FLAG -Q "-TYPE I" -Q "*TYPE I" \
+                -T "$OPCACHE_HELPER" -u "$USER:$PASS" -s -S \
+                "ftp://${HOST}${RDIR}/_opcache_clear.php" 2>/dev/null
+            ;;
+        scp)
+            scp -q "$OPCACHE_HELPER" "${USER}@${HOST}:${RDIR}/_opcache_clear.php" 2>/dev/null
+            ;;
+    esac
+
     # --- Nuke/reset call ---
     if [[ -n "$NUKE" && "$NUKE" != "null" ]]; then
         info "  Calling nuke URL: $NUKE"
@@ -156,6 +175,31 @@ for i in $(seq 0 $((SERVER_COUNT - 1))); do
         fi
     else
         info "  No nuke URL configured — skipping reset"
+    fi
+
+    # --- Clear OPcache on the remote server ---
+    PLAYWRIGHT_URL=$(jq -r ".[$i].playwright_url // empty" "$CONFIG_FILE")
+    if [[ -n "$PLAYWRIGHT_URL" ]]; then
+        CACHE_CLEAR_URL="${PLAYWRIGHT_URL%/*}/_opcache_clear.php"
+        OPCACHE_RESULT=$(curl -s --connect-timeout 10 --max-time 15 \
+            $([[ "$INSECURE" == "true" ]] && echo "-k") \
+            "$CACHE_CLEAR_URL" 2>/dev/null || true)
+        if [[ "$OPCACHE_RESULT" == *"cleared"* ]]; then
+            info "  OPcache cleared"
+        elif [[ -n "$OPCACHE_RESULT" ]]; then
+            info "  OPcache: $OPCACHE_RESULT"
+        fi
+        # Clean up the helper
+        case "$PROTOCOL" in
+            ftp)
+                curl --ssl-reqd $INSECURE_FLAG -u "$USER:$PASS" -s \
+                    -Q "DELE ${RDIR}/_opcache_clear.php" -Q "QUIT" \
+                    "ftp://${HOST}/" >/dev/null 2>&1 || true
+                ;;
+            scp)
+                ssh "${USER}@${HOST}" "rm -f ${RDIR}/_opcache_clear.php" 2>/dev/null || true
+                ;;
+        esac
     fi
 
     SUCCESS=$((SUCCESS + 1))
