@@ -1,284 +1,184 @@
 stages:
-  - build      # DDEV build (composer + npm + PHAR)
-  - analysis   # phpstan + php-cs-fixer (parallel)
-  - test       # E2E tests
+  - build
+  - analysis
+  - test
 
 variables:
-  # Shared variables for all jobs
   COMPOSER_PUBLIC_DIR: test-installer-root/public/
 
 # =============================================================================
-# BUILD STAGE - build everything via DDEV (matches local dev environment)
+# DDEV job template — all DDEV-based jobs extend this
 # =============================================================================
-
-build-phar:
-  stage: build
+.ddev-job:
   variables:
     FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR: 1
-    TEST_DIR: .template/tests/Playwright
   image:
     name: ghcr.io/ddev/ddev-gitlab-ci:latest
     pull_policy: always
   services:
     - name: docker:dind
+
+# =============================================================================
+# Shared script snippets (YAML anchors)
+# =============================================================================
+.ddev-start: &ddev-start
+  - ddev config --auto
+  - ddev start
+
+.ddev-build: &ddev-build
+  - ddev composer install --no-interaction --no-dev
+  - ddev exec "curl -LSs https://github.com/box-project/box/releases/download/4.6.10/box.phar -o /usr/local/bin/box && chmod +x /usr/local/bin/box"
+  - ddev composer run build
+
+# =============================================================================
+# BUILD STAGE
+# =============================================================================
+build-phar:
+  extends: .ddev-job
+  stage: build
   when: always
-  needs: [] # Run job immediately
+  needs: []
   script:
-    - ddev config --auto
-    - ddev start
-    - ddev composer install --no-interaction --no-dev
-    - ddev exec "curl -LSs https://github.com/box-project/box/releases/download/4.6.10/box.phar -o /usr/local/bin/box && chmod +x /usr/local/bin/box"
-    - ddev composer run build
+    - *ddev-start
+    - *ddev-build
     - ddev stop
   artifacts:
     name: TYPO3-Installer
     paths:
       - test-installer-root/public/typo3-installer.php
-      - vendor/
-      - public/
     expire_in: 1 hour
 
 # =============================================================================
-# ANALYSIS STAGE - parallel code quality checks
+# ANALYSIS STAGE — run in parallel, need dev dependencies
 # =============================================================================
-
 phpstan:
+  extends: .ddev-job
   stage: analysis
-  image:
-    name: ghcr.io/phpstan/phpstan:2-php8.3
-    entrypoint: [""]
-  needs:
-    - build-phar
+  needs: []
   script:
-    - phpstan analyse src --level=9
+    - *ddev-start
+    - ddev composer install --no-interaction
+    - ddev composer run phpstan
+    - ddev stop
 
 php-cs-fixer:
+  extends: .ddev-job
   stage: analysis
-  image:
-    name: ghcr.io/php-cs-fixer/php-cs-fixer:3-php8.3
-    entrypoint: [""]
-  needs:
-    - build-phar
+  needs: []
   script:
-    - php-cs-fixer fix --dry-run --diff
+    - *ddev-start
+    - ddev composer install --no-interaction
+    - ddev exec "vendor/bin/php-cs-fixer fix --dry-run --diff"
+    - ddev stop
 
 # =============================================================================
-# TEST STAGE - E2E tests
+# TEST STAGE — E2E tests via DDEV + Playwright addon
 # =============================================================================
-
-# Include LAMP testing component for each database type
-include:
-  # MySQL/MariaDB E2E tests
-  - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
-    inputs:
-      name: e2e-mysql
-      stage: test
-      php_image: php:8.3-fpm
-      php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
-      database_image: mariadb:10.11
-      database_host: db
-      database_port: 3306
-
-  # PostgreSQL E2E tests
-  - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
-    inputs:
-      name: e2e-postgresql
-      stage: test
-      php_image: php:8.3-fpm
-      php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
-      database_image: postgres:16
-      database_host: postgres
-      database_port: 3333
-
-  # SQLite E2E tests (uses placeholder DB, actual SQLite is in PHP)
-  - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
-    inputs:
-      name: e2e-sqlite
-      stage: test
-      php_image: php:8.3-fpm
-      php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
-      database_image: mariadb:10.11
-      database_host: db
-
-  # PHP 8.4
-  - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
-    inputs:
-      name: e2e-php-84
-      stage: test
-      php_image: php:8.4-fpm
-      php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
-      database_image: mariadb:10.11
-      database_host: db
-
-  # PHP 8.5
-  - remote: 'https://gitlab.com/ochorocho/lamp-acceptance-testing/-/raw/main/templates/lamp/template.yml'
-    inputs:
-      name: e2e-php-85
-      stage: test
-      php_image: php:8.5-fpm
-      php_additional_command: "docker-php-ext-install pdo_mysql && apt-get update && apt-get install -y libpq-dev libicu-dev libzip-dev unzip libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype --with-jpeg && docker-php-ext-install pdo_pgsql intl zip gd"
-      database_image: mariadb:10.11
-      database_host: db
-
-# Override the generated jobs to add our specific configuration
 e2e-mysql:
-  image: mcr.microsoft.com/playwright:v1.58.0-noble
-  needs:
-    - build-phar
+  extends: .ddev-job
+  stage: test
+  needs: [build-phar]
   timeout: 60 minutes
-  variables:
-    BASE_URL: http://webserver
-    DB_DRIVER: pdo_mysql
-    DB_HOST: db
-    DB_USER: db
-    DB_PASSWORD: db
-    DB_NAME: db
-    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
-    CI: "true"
-    COMPOSER_PUBLIC_DIR: test-installer-root/public/
-    CI_DEBUG_SERVICES: "false"
   script:
-    - apt-get update && apt-get install -y postgresql-client default-mysql-client
-    - cd tests/e2e && npm ci
-    - npx playwright test --project=ui-desktop --project=api --project=mysql
+    - *ddev-start
+    - *ddev-build
+    - ddev typo3:reset
+    - ddev playwright test --dir=tests/e2e --project=ui-desktop --project=api --project=mysql
   artifacts:
     when: always
     name: e2e-mysql-results
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
-      - test-installer-root/var/log/
     reports:
-      junit: tests/e2e/playwright-report/e2e-mysql-playwright.xunit.xml
+      junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
 
 e2e-postgresql:
-  image: mcr.microsoft.com/playwright:v1.58.0-noble
-  needs:
-    - build-phar
+  extends: .ddev-job
+  stage: test
+  needs: [build-phar]
   timeout: 60 minutes
-  variables:
-    BASE_URL: http://webserver
-    DB_DRIVER: pdo_pgsql
-    DB_HOST: postgres
-    DB_USER: db
-    DB_PASSWORD: db
-    DB_NAME: db
-    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
-    CI: "true"
-    COMPOSER_PUBLIC_DIR: test-installer-root/public/
-    CI_DEBUG_SERVICES: "false"
   script:
-    - apt-get update && apt-get install -y postgresql-client default-mysql-client
-    - cd tests/e2e && npm ci
-    - npx playwright test --project=postgresql --project=api-postgresql
+    - *ddev-start
+    - *ddev-build
+    - ddev typo3:reset
+    - ddev playwright test --dir=tests/e2e --project=postgresql --project=api-postgresql
   artifacts:
     when: always
     name: e2e-postgresql-results
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
-      - test-installer-root/var/log/
     reports:
-      junit: tests/e2e/playwright-report/e2e-postgresql-playwright.xunit.xml
+      junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
 
 e2e-sqlite:
-  image: mcr.microsoft.com/playwright:v1.58.0-noble
-  needs:
-    - build-phar
+  extends: .ddev-job
+  stage: test
+  needs: [build-phar]
   timeout: 60 minutes
-  variables:
-    BASE_URL: http://webserver
-    DB_DRIVER: pdo_sqlite
-    DB_HOST: db
-    DB_PORT: "3333"
-    DB_USER: db
-    DB_PASSWORD: db
-    DB_NAME: db
-    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
-    CI: "true"
-    COMPOSER_PUBLIC_DIR: test-installer-root/public/
-    CI_DEBUG_SERVICES: "false"
   script:
-    - apt-get update && apt-get install -y postgresql-client default-mysql-client
-    - cd tests/e2e && npm ci
-    - npx playwright test --project=sqlite
+    - *ddev-start
+    - *ddev-build
+    - ddev typo3:reset
+    - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
     when: always
     name: e2e-sqlite-results
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
-      - test-installer-root/var/log/
     reports:
-      junit: tests/e2e/playwright-report/e2e-sqlite-playwright.xunit.xml
+      junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
 
 e2e-php-84:
-  image: mcr.microsoft.com/playwright:v1.58.0-noble
-  needs:
-    - build-phar
+  extends: .ddev-job
+  stage: test
+  needs: [build-phar]
   timeout: 60 minutes
-  variables:
-    BASE_URL: http://webserver
-    DB_DRIVER: pdo_sqlite
-    DB_HOST: db
-    DB_PORT: "3333"
-    DB_USER: db
-    DB_PASSWORD: db
-    DB_NAME: db
-    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
-    CI: "true"
-    COMPOSER_PUBLIC_DIR: test-installer-root/public/
-    CI_DEBUG_SERVICES: "false"
   script:
-    - apt-get update && apt-get install -y postgresql-client default-mysql-client
-    - cd tests/e2e && npm ci
-    - npx playwright test --project=sqlite
+    - ddev config --auto --php-version=8.4
+    - ddev start
+    - *ddev-build
+    - ddev typo3:reset
+    - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
     when: always
     name: e2e-php84-results
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
-      - test-installer-root/var/log/
     reports:
-      junit: tests/e2e/playwright-report/e2e-sqlite-playwright.xunit.xml
+      junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
 
 e2e-php-85:
-  image: mcr.microsoft.com/playwright:v1.58.0-noble
-  needs:
-    - build-phar
+  extends: .ddev-job
+  stage: test
+  needs: [build-phar]
   timeout: 60 minutes
-  variables:
-    BASE_URL: http://webserver
-    DB_DRIVER: pdo_sqlite
-    DB_HOST: db
-    DB_PORT: "3333"
-    DB_USER: db
-    DB_PASSWORD: db
-    DB_NAME: db
-    INSTALL_DIR: $CI_PROJECT_DIR/test-installer-root
-    CI: "true"
-    COMPOSER_PUBLIC_DIR: test-installer-root/public/
-    CI_DEBUG_SERVICES: "false"
   script:
-    - apt-get update && apt-get install -y postgresql-client default-mysql-client
-    - cd tests/e2e && npm ci
-    - npx playwright test --project=sqlite
+    - ddev config --auto --php-version=8.5
+    - ddev start
+    - *ddev-build
+    - ddev typo3:reset
+    - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
     when: always
     name: e2e-php85-results
     paths:
       - tests/e2e/playwright-report/
       - tests/e2e/test-results/
-      - test-installer-root/var/log/
     reports:
-      junit: tests/e2e/playwright-report/e2e-sqlite-playwright.xunit.xml
+      junit: tests/e2e/test-results/junit.xml
     expire_in: 7 days
 
+# =============================================================================
+# DEPLOY + LIVE E2E — deploy to real webspaces and test remotely
+# =============================================================================
 deploy-live-webspaces:
   stage: test
   image: debian:bookworm-slim
@@ -295,19 +195,21 @@ deploy-live-webspaces:
     - bash ./scripts/deploy.sh
 
 e2e-live-webspaces:
-  image: mcr.microsoft.com/playwright:v1.58.0-noble
+  extends: .ddev-job
+  stage: test
   needs:
     - build-phar
     - deploy-live-webspaces
   timeout: 60 minutes
   script:
-    - cd tests/e2e && npm ci && cd ../../
-    - apt update && apt install -y jq
+    - *ddev-start
+    - *ddev-build
     - printf "%s" "$DEPLOY_SERVERS" > ./.deploy-servers.json
-    - bash .ddev/commands/web/playwright-remote.sh
+    - ddev typo3:reset
+    - ddev playwright test --dir=tests/e2e --dir=tests/e2e --project=sqlite tests/full-flows/sqlite.spec.js
   artifacts:
     when: always
-    name: e2e-php85-results
+    name: e2e-live-results
     paths:
       - tests/e2e/*/playwright-report/
       - tests/e2e/*/test-results/

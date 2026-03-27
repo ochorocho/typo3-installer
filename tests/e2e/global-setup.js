@@ -4,6 +4,15 @@ import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+function isCommandAvailable(cmd) {
+  try {
+    execSync(`command -v ${cmd}`, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export default function globalSetup() {
   if (process.env.REMOTE_TEST) {
     const nukeUrl = process.env.NUKE_URL;
@@ -21,12 +30,19 @@ export default function globalSetup() {
 
   console.log('Running TYPO3 reset...');
 
-  if (process.env.CI) {
-    // CI environment: use portable reset script
+  // Detect if running inside the DDEV Playwright addon container
+  // (has DDEV_SITENAME set but no mysql/database tools available)
+  const isPlaywrightContainer = process.env.DDEV_SITENAME && !isCommandAvailable('mysql');
+
+  if (isPlaywrightContainer) {
+    // Reset is handled externally (e.g. `ddev typo3:reset` before `ddev playwright test`)
+    console.log('Running in Playwright container — skipping reset (run `ddev typo3:reset` before tests)');
+  } else if (process.env.CI) {
+    // CI environment (non-DDEV): use portable reset script
     const resetScript = resolve(__dirname, '../../scripts/ci/reset-test-installation.sh');
     execSync(`bash "${resetScript}"`, { stdio: 'inherit' });
   } else {
-    // Local development: use DDEV command
+    // Local development inside DDEV web container
     execSync('/mnt/ddev_config/commands/web/typo3-test-reset.sh', { stdio: 'inherit' });
   }
 }
