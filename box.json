@@ -1,5 +1,4 @@
 {
-    "alias": "typo3-installer.php",
     "compression": "NONE",
     "output": "typo3-installer.phar",
     "check-requirements": false,
