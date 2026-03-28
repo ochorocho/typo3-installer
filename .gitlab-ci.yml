@@ -30,9 +30,6 @@ variables:
   - ddev exec "curl -LSs https://github.com/box-project/box/releases/download/4.6.10/box.phar -o /usr/local/bin/box && chmod +x /usr/local/bin/box"
   - ddev composer run build
 
-#.ddev-playwright-deps: &ddev-playwright-deps
-#  - ddev exec "cd tests/e2e && npm install"
-
 # =============================================================================
 # BUILD STAGE
 # =============================================================================
@@ -42,6 +39,9 @@ build-phar:
   when: always
   needs: []
   script:
+    - ddev config --omit-containers=db
+    - rm -Rf .ddev/docker-compose.postgres.yaml
+    - ddev add-on remove ochorocho/ddev-playwright
     - *ddev-start
     - *ddev-build
   artifacts:
@@ -58,6 +58,9 @@ phpstan:
   stage: analysis
   needs: []
   script:
+    - ddev config --omit-containers=db
+    - rm -Rf .ddev/docker-compose.postgres.yaml
+    - ddev add-on remove ochorocho/ddev-playwright
     - *ddev-start
     - ddev composer install --no-interaction
     - ddev composer run phpstan
@@ -68,6 +71,9 @@ php-cs-fixer:
   stage: analysis
   needs: []
   script:
+    - ddev config --omit-containers=db
+    - rm -Rf .ddev/docker-compose.postgres.yaml
+    - ddev add-on remove ochorocho/ddev-playwright
     - *ddev-start
     - ddev composer install --no-interaction
     - ddev exec "vendor/bin/php-cs-fixer fix --dry-run --diff"
@@ -82,8 +88,8 @@ e2e-mysql:
   needs: [build-phar]
   timeout: 60 minutes
   script:
+    - rm -Rf .ddev/docker-compose.postgres.yaml
     - *ddev-start
-#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --project=ui-desktop --project=api --project=mysql
   artifacts:
@@ -102,8 +108,8 @@ e2e-postgresql:
   needs: [build-phar]
   timeout: 60 minutes
   script:
+    - ddev config --omit-containers=db
     - *ddev-start
-#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --project=postgresql --project=api-postgresql
   artifacts:
@@ -122,8 +128,9 @@ e2e-sqlite:
   needs: [build-phar]
   timeout: 60 minutes
   script:
+    - ddev config --omit-containers=db
+    - rm -Rf .ddev/docker-compose.postgres.yaml
     - *ddev-start
-#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
@@ -142,9 +149,9 @@ e2e-php-84:
   needs: [build-phar]
   timeout: 60 minutes
   script:
-    - ddev config --auto --php-version=8.4
+    - ddev config --auto --php-version=8.4 --omit-containers=db
+    - rm -Rf .ddev/docker-compose.postgres.yaml
     - ddev start
-#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
@@ -163,9 +170,9 @@ e2e-php-85:
   needs: [build-phar]
   timeout: 60 minutes
   script:
-    - ddev config --auto --php-version=8.5
+    - ddev config --auto --php-version=8.5 --omit-containers=db
+    - rm -Rf .ddev/docker-compose.postgres.yaml
     - ddev start
-#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
@@ -204,9 +211,10 @@ e2e-live-webspaces:
     - deploy-live-webspaces
   timeout: 60 minutes
   script:
+    - ddev config --omit-containers=db
+    - rm -Rf .ddev/docker-compose.postgres.yaml
     - *ddev-start
     - printf "%s" "$DEPLOY_SERVERS" > ./.deploy-servers.json
-#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --dir=tests/e2e --project=sqlite tests/full-flows/sqlite.spec.js
   artifacts:
