@@ -3,6 +3,18 @@ import { expect } from '@playwright/test';
 import { execSync } from 'node:child_process';
 
 /**
+ * Check if a command is available in the current environment.
+ */
+function isCommandAvailable(cmd) {
+  try {
+    execSync(`command -v ${cmd}`, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Shared test helpers for TYPO3 Installer E2E tests
  */
 
@@ -282,6 +294,10 @@ export async function verifyTYPO3Backend(page, options = {}) {
  * Uses environment variables: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
  */
 export function resetMySQLDatabase() {
+  if (!isCommandAvailable('mysql')) {
+    console.log('mysql not available — skipping reset (handled by ddev typo3:reset)');
+    return;
+  }
   const host = process.env.DB_HOST || 'db';
   const user = process.env.DB_USER || 'db';
   const password = process.env.DB_PASSWORD || 'db';
@@ -298,6 +314,10 @@ export function resetMySQLDatabase() {
  * Uses environment variables: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
  */
 export function resetPostgreSQLDatabase() {
+  if (!isCommandAvailable('psql')) {
+    console.log('psql not available — skipping reset (handled by ddev typo3:reset)');
+    return;
+  }
   const host = process.env.DB_HOST || 'postgres';
   const user = process.env.DB_USER || 'db';
   const password = process.env.DB_PASSWORD || 'db';
