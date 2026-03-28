@@ -30,8 +30,8 @@ variables:
   - ddev exec "curl -LSs https://github.com/box-project/box/releases/download/4.6.10/box.phar -o /usr/local/bin/box && chmod +x /usr/local/bin/box"
   - ddev composer run build
 
-.ddev-playwright-deps: &ddev-playwright-deps
-  - ddev exec "cd tests/e2e && npm install"
+#.ddev-playwright-deps: &ddev-playwright-deps
+#  - ddev exec "cd tests/e2e && npm install"
 
 # =============================================================================
 # BUILD STAGE
@@ -44,7 +44,6 @@ build-phar:
   script:
     - *ddev-start
     - *ddev-build
-    - ddev stop
   artifacts:
     name: TYPO3-Installer
     paths:
@@ -84,8 +83,7 @@ e2e-mysql:
   timeout: 60 minutes
   script:
     - *ddev-start
-    - *ddev-build
-    - *ddev-playwright-deps
+#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --project=ui-desktop --project=api --project=mysql
   artifacts:
@@ -105,8 +103,7 @@ e2e-postgresql:
   timeout: 60 minutes
   script:
     - *ddev-start
-    - *ddev-build
-    - *ddev-playwright-deps
+#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --project=postgresql --project=api-postgresql
   artifacts:
@@ -126,8 +123,7 @@ e2e-sqlite:
   timeout: 60 minutes
   script:
     - *ddev-start
-    - *ddev-build
-    - *ddev-playwright-deps
+#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
@@ -148,8 +144,7 @@ e2e-php-84:
   script:
     - ddev config --auto --php-version=8.4
     - ddev start
-    - *ddev-build
-    - *ddev-playwright-deps
+#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
@@ -170,8 +165,7 @@ e2e-php-85:
   script:
     - ddev config --auto --php-version=8.5
     - ddev start
-    - *ddev-build
-    - *ddev-playwright-deps
+#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
@@ -211,9 +205,8 @@ e2e-live-webspaces:
   timeout: 60 minutes
   script:
     - *ddev-start
-    - *ddev-build
     - printf "%s" "$DEPLOY_SERVERS" > ./.deploy-servers.json
-    - *ddev-playwright-deps
+#    - *ddev-playwright-deps
     - ddev typo3:reset
     - ddev playwright test --dir=tests/e2e --dir=tests/e2e --project=sqlite tests/full-flows/sqlite.spec.js
   artifacts:
