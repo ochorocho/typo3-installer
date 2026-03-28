@@ -90,7 +90,7 @@ e2e-mysql:
   script:
     - rm -Rf .ddev/docker-compose.postgres.yaml
     - *ddev-start
-    - ddev typo3:reset
+    - ddev exec "cd tests/e2e/ && npm install"
     - ddev playwright test --dir=tests/e2e --project=ui-desktop --project=api --project=mysql
   artifacts:
     when: always
@@ -110,7 +110,7 @@ e2e-postgresql:
   script:
     - ddev config --omit-containers=db
     - *ddev-start
-    - ddev typo3:reset
+    - ddev exec "cd tests/e2e/ && npm install"
     - ddev playwright test --dir=tests/e2e --project=postgresql --project=api-postgresql
   artifacts:
     when: always
@@ -131,7 +131,7 @@ e2e-sqlite:
     - ddev config --omit-containers=db
     - rm -Rf .ddev/docker-compose.postgres.yaml
     - *ddev-start
-    - ddev typo3:reset
+    - ddev exec "cd tests/e2e/ && npm install"
     - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
     when: always
@@ -152,7 +152,7 @@ e2e-php-84:
     - ddev config --auto --php-version=8.4 --omit-containers=db
     - rm -Rf .ddev/docker-compose.postgres.yaml
     - ddev start
-    - ddev typo3:reset
+    - ddev exec "cd tests/e2e/ && npm install"
     - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
     when: always
@@ -173,7 +173,7 @@ e2e-php-85:
     - ddev config --auto --php-version=8.5 --omit-containers=db
     - rm -Rf .ddev/docker-compose.postgres.yaml
     - ddev start
-    - ddev typo3:reset
+    - ddev exec "cd tests/e2e/ && npm install"
     - ddev playwright test --dir=tests/e2e --project=sqlite
   artifacts:
     when: always
@@ -215,7 +215,7 @@ e2e-live-webspaces:
     - rm -Rf .ddev/docker-compose.postgres.yaml
     - *ddev-start
     - printf "%s" "$DEPLOY_SERVERS" > ./.deploy-servers.json
-    - ddev typo3:reset
+    - ddev exec "cd tests/e2e/ && npm install"
     - ddev playwright test --dir=tests/e2e --dir=tests/e2e --project=sqlite tests/full-flows/sqlite.spec.js
   artifacts:
     when: always
