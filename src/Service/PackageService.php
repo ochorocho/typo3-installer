@@ -78,6 +78,7 @@ class PackageService
      * Packagist API base URL
      */
     private const PACKAGIST_API_URL = 'https://packagist.org';
+    private const PACKAGIST_REPO_URL = 'https://repo.packagist.org';
 
     /**
      * HTTP client for API requests
@@ -124,26 +125,26 @@ class PackageService
         $versions = [];
 
         try {
-            $apiUrl = self::PACKAGIST_API_URL . '/packages/typo3/cms-core.json';
+            $apiUrl = self::PACKAGIST_REPO_URL . '/p2/typo3/cms-core.json';
             $data = $this->httpClient->getJson($apiUrl);
 
             if ($data === null
-                || !isset($data['package'])
-                || !is_array($data['package'])
-                || !isset($data['package']['versions'])
-                || !is_array($data['package']['versions'])
+                || !isset($data['packages'])
+                || !is_array($data['packages'])
+                || !isset($data['packages']['typo3/cms-core'])
+                || !is_array($data['packages']['typo3/cms-core'])
             ) {
                 throw new \RuntimeException('Failed to fetch TYPO3 versions');
             }
 
-            /** @var array<string, mixed> $packageVersions */
-            $packageVersions = $data['package']['versions'];
+            /** @var list<array{version: string}> $packageVersions */
+            $packageVersions = $data['packages']['typo3/cms-core'];
 
             // Group versions by major and find latest minor.patch for each
             /** @var array<string, array{minor: int, patch: int, full: string, majorMinor: string}> $versionGroups */
             $versionGroups = [];
-            foreach ($packageVersions as $versionString => $versionData) {
-                $versionStr = (string)$versionString;
+            foreach ($packageVersions as $versionData) {
+                $versionStr = (string)($versionData['version'] ?? '');
                 // Skip dev versions
                 if (str_contains($versionStr, 'dev')) {
                     continue;
@@ -331,7 +332,7 @@ class PackageService
         $urls = [];
         foreach ($packageNames as $packageName) {
             if (!isset($this->packageMetadataCache[$packageName])) {
-                $urls[] = sprintf('%s/packages/%s.json', self::PACKAGIST_API_URL, $packageName);
+                $urls[] = sprintf('%s/p2/%s.json', self::PACKAGIST_REPO_URL, $packageName);
             }
         }
 
@@ -345,12 +346,17 @@ class PackageService
         // Now fetch from cache and populate our metadata cache
         foreach ($packageNames as $packageName) {
             if (!isset($this->packageMetadataCache[$packageName])) {
-                $url = sprintf('%s/packages/%s.json', self::PACKAGIST_API_URL, $packageName);
+                $url = sprintf('%s/p2/%s.json', self::PACKAGIST_REPO_URL, $packageName);
                 $data = $this->httpClient->getJson($url);
-                if ($data !== null && isset($data['package']) && is_array($data['package'])) {
-                    /** @var array{versions?: mixed} $packageData */
-                    $packageData = $data['package'];
-                    $this->packageMetadataCache[$packageName] = $packageData;
+                if ($data !== null && isset($data['packages'][$packageName]) && is_array($data['packages'][$packageName])) {
+                    // Convert v2 list format to v1-compatible dict keyed by version string
+                    $versions = [];
+                    foreach ($data['packages'][$packageName] as $entry) {
+                        if (isset($entry['version']) && is_string($entry['version'])) {
+                            $versions[$entry['version']] = $entry;
+                        }
+                    }
+                    $this->packageMetadataCache[$packageName] = ['versions' => $versions];
                 }
             }
         }
@@ -367,15 +373,21 @@ class PackageService
             return $this->packageMetadataCache[$packageName];
         }
 
-        $apiUrl = sprintf('%s/packages/%s.json', self::PACKAGIST_API_URL, $packageName);
+        $apiUrl = sprintf('%s/p2/%s.json', self::PACKAGIST_REPO_URL, $packageName);
         $data = $this->httpClient->getJson($apiUrl);
 
-        if ($data === null || !isset($data['package']) || !is_array($data['package'])) {
+        if ($data === null || !isset($data['packages'][$packageName]) || !is_array($data['packages'][$packageName])) {
             return null;
         }
 
-        /** @var array{versions?: mixed} $packageData */
-        $packageData = $data['package'];
+        // Convert v2 list format to v1-compatible dict keyed by version string
+        $versions = [];
+        foreach ($data['packages'][$packageName] as $entry) {
+            if (isset($entry['version']) && is_string($entry['version'])) {
+                $versions[$entry['version']] = $entry;
+            }
+        }
+        $packageData = ['versions' => $versions];
         $this->packageMetadataCache[$packageName] = $packageData;
 
         return $packageData;

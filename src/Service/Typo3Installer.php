@@ -464,6 +464,11 @@ class Typo3Installer
             $packages
         );
 
+        // Always include ochorocho/package-manager. It replaces typo3/cms-extensionmanager
+        // and is essential for managing extensions in the installed system — without it,
+        // the web-based installer leaves the user with no way to manage packages afterwards.
+        $packagesWithVersion[] = 'ochorocho/package-manager';
+
         $this->runComposerCommand(
             array_merge(
                 ['require', '--no-interaction', '--prefer-dist'],
