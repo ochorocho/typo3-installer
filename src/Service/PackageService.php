@@ -144,7 +144,7 @@ class PackageService
             /** @var array<string, array{minor: int, patch: int, full: string, majorMinor: string}> $versionGroups */
             $versionGroups = [];
             foreach ($packageVersions as $versionData) {
-                $versionStr = (string)($versionData['version'] ?? '');
+                $versionStr = $versionData['version'];
                 // Skip dev versions
                 if (str_contains($versionStr, 'dev')) {
                     continue;
@@ -345,20 +345,29 @@ class PackageService
 
         // Now fetch from cache and populate our metadata cache
         foreach ($packageNames as $packageName) {
-            if (!isset($this->packageMetadataCache[$packageName])) {
-                $url = sprintf('%s/p2/%s.json', self::PACKAGIST_REPO_URL, $packageName);
-                $data = $this->httpClient->getJson($url);
-                if ($data !== null && isset($data['packages'][$packageName]) && is_array($data['packages'][$packageName])) {
-                    // Convert v2 list format to v1-compatible dict keyed by version string
-                    $versions = [];
-                    foreach ($data['packages'][$packageName] as $entry) {
-                        if (isset($entry['version']) && is_string($entry['version'])) {
-                            $versions[$entry['version']] = $entry;
-                        }
-                    }
-                    $this->packageMetadataCache[$packageName] = ['versions' => $versions];
+            if (isset($this->packageMetadataCache[$packageName])) {
+                continue;
+            }
+            $url = sprintf('%s/p2/%s.json', self::PACKAGIST_REPO_URL, $packageName);
+            $data = $this->httpClient->getJson($url);
+            if ($data === null || !isset($data['packages']) || !is_array($data['packages'])) {
+                continue;
+            }
+            $packageEntries = $data['packages'][$packageName] ?? null;
+            if (!is_array($packageEntries)) {
+                continue;
+            }
+            // Convert v2 list format to v1-compatible dict keyed by version string
+            $versions = [];
+            foreach ($packageEntries as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+                if (isset($entry['version']) && is_string($entry['version'])) {
+                    $versions[$entry['version']] = $entry;
                 }
             }
+            $this->packageMetadataCache[$packageName] = ['versions' => $versions];
         }
     }
 
@@ -376,13 +385,21 @@ class PackageService
         $apiUrl = sprintf('%s/p2/%s.json', self::PACKAGIST_REPO_URL, $packageName);
         $data = $this->httpClient->getJson($apiUrl);
 
-        if ($data === null || !isset($data['packages'][$packageName]) || !is_array($data['packages'][$packageName])) {
+        if ($data === null || !isset($data['packages']) || !is_array($data['packages'])) {
+            return null;
+        }
+
+        $packageEntries = $data['packages'][$packageName] ?? null;
+        if (!is_array($packageEntries)) {
             return null;
         }
 
         // Convert v2 list format to v1-compatible dict keyed by version string
         $versions = [];
-        foreach ($data['packages'][$packageName] as $entry) {
+        foreach ($packageEntries as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
             if (isset($entry['version']) && is_string($entry['version'])) {
                 $versions[$entry['version']] = $entry;
             }

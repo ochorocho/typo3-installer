@@ -267,7 +267,12 @@ class Typo3Installer
         $this->setupTypo3($config, $installDir, $outputCallback);
 
         // Step 5: Composer dump-autoload to populate _assets (80%)
+        // The initial `composer require` already triggered asset:publish via the
+        // cms-composer-installers post-autoload-dump hook, so `public/_assets/` is
+        // already populated. Clear it before re-running dump-autoload, otherwise
+        // asset:publish's "mirror" strategy fails with "target directory already exists".
         $progressCallback(80, 'Publishing assets');
+        $this->clearAssetsDirectory($installDir);
         $this->runComposerCommand(['dump-autoload'], $installDir, $config->phpBinary, $outputCallback);
 
         // Replace _assets symlinks with file copies to avoid stat cache issues on LiteSpeed/cPanel
@@ -329,13 +334,18 @@ class Typo3Installer
             return;
         }
 
-        // Only clean directories that TYPO3 installation will create/overwrite
-        // DO NOT remove the web-dir (e.g., public/) as it contains the PHAR file
+        // Only clean directories that TYPO3 installation will create/overwrite.
+        // DO NOT remove the web-dir itself (e.g., public/) as it contains the PHAR file —
+        // but its `_assets/` child must go, otherwise the cms-composer-installers
+        // post-autoload-dump hook aborts with "target directory already exists" under
+        // the mirror strategy when the installer is re-run over a prior attempt.
+        $webDir = $this->infoService->getWebDir();
         $dirsToClean = [
             $installDir . '/config',
             $installDir . '/var',
             $installDir . '/vendor',
             $installDir . '/packages',
+            $installDir . '/' . $webDir . '/_assets',
         ];
 
         // Also clean files in root that will be overwritten
@@ -583,6 +593,7 @@ class Typo3Installer
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxyHeaderMultiValue'] = 'first';
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['devIPmask'] = '*';
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['displayErrors'] = 1;
+\$GLOBALS['TYPO3_CONF_VARS']['SYS']['SystemResources']['filesystemPublishingType'] = 'mirror';
 
 PHP;
 
@@ -622,6 +633,19 @@ PHP;
         // Clear OPcache
         if (function_exists('opcache_reset')) {
             opcache_reset();
+        }
+    }
+
+    /**
+     * Remove `public/_assets/` so the next asset:publish "mirror" run has a clean target.
+     */
+    private function clearAssetsDirectory(string $installDir): void
+    {
+        $webDir = $this->infoService->getWebDir();
+        $assetsDir = $installDir . '/' . $webDir . '/_assets';
+
+        if (file_exists($assetsDir)) {
+            $this->filesystem->remove($assetsDir);
         }
     }
 

@@ -1,0 +1,460 @@
+name: CI
+
+# =============================================================================
+# Triggers: push to main/develop and all pull requests
+# (GitLab defaults to all branches; narrowed per project decision.)
+# =============================================================================
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+# Cancel superseded runs for the same ref (keeps CI minutes in check)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write        # mikepenz/action-junit-report creates check runs
+  pull-requests: write # mikepenz/action-junit-report annotates PRs
+
+env:
+  COMPOSER_PUBLIC_DIR: test-installer-root/public/
+
+jobs:
+  # ===========================================================================
+  # BUILD STAGE
+  # ===========================================================================
+  build-phar:
+    name: build-phar
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup DDEV
+        uses: ddev/github-action-setup-ddev@v1
+        with:
+          autostart: false
+
+      - name: Configure project and start DDEV
+        run: |
+          ddev config --omit-containers=db
+          rm -Rf .ddev/docker-compose.postgres.yaml
+          ddev add-on remove ochorocho/ddev-playwright
+          ddev config --auto
+          ddev start
+
+      - name: Build PHAR
+        run: |
+          ddev composer install --no-interaction --no-dev
+          ddev exec "curl -LSs https://github.com/box-project/box/releases/download/4.6.10/box.phar -o /usr/local/bin/box && chmod +x /usr/local/bin/box"
+          ddev composer run build
+
+      - name: Upload PHAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TYPO3-Installer
+          path: test-installer-root/public/typo3-installer.php
+          retention-days: 1
+          if-no-files-found: error
+
+  # ===========================================================================
+  # ANALYSIS STAGE — runs in parallel with build, needs dev dependencies
+  # ===========================================================================
+  phpstan:
+    name: phpstan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup DDEV
+        uses: ddev/github-action-setup-ddev@v1
+        with:
+          autostart: false
+
+      - name: Configure project and start DDEV
+        run: |
+          ddev config --omit-containers=db
+          rm -Rf .ddev/docker-compose.postgres.yaml
+          ddev add-on remove ochorocho/ddev-playwright
+          ddev config --auto
+          ddev start
+
+      - name: Run PHPStan
+        run: |
+          ddev composer install --no-interaction
+          ddev composer run phpstan
+
+      - name: Stop DDEV
+        if: always()
+        run: ddev stop
+
+  php-cs-fixer:
+    name: php-cs-fixer
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup DDEV
+        uses: ddev/github-action-setup-ddev@v1
+        with:
+          autostart: false
+
+      - name: Configure project and start DDEV
+        run: |
+          ddev config --omit-containers=db
+          rm -Rf .ddev/docker-compose.postgres.yaml
+          ddev add-on remove ochorocho/ddev-playwright
+          ddev config --auto
+          ddev start
+
+      - name: Run php-cs-fixer
+        run: |
+          ddev composer install --no-interaction
+          ddev exec "vendor/bin/php-cs-fixer fix --dry-run --diff"
+
+      - name: Stop DDEV
+        if: always()
+        run: ddev stop
+
+  # ===========================================================================
+  # TEST STAGE — E2E tests via DDEV + Playwright addon
+  # ===========================================================================
+  e2e-mysql:
+    name: e2e-mysql
+    runs-on: ubuntu-latest
+    needs: build-phar
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download PHAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TYPO3-Installer
+          path: test-installer-root/public/
+
+      - name: Setup DDEV
+        uses: ddev/github-action-setup-ddev@v1
+        with:
+          autostart: false
+
+      - name: Configure project and start DDEV
+        run: |
+          rm -Rf .ddev/docker-compose.postgres.yaml
+          ddev config --auto
+          ddev start
+
+      - name: Run Playwright (mysql)
+        run: |
+          ddev exec "cd tests/e2e/ && npm install"
+          ddev playwright test --dir=tests/e2e --project=ui-desktop --project=api --project=mysql
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-mysql-results
+          path: |
+            tests/e2e/playwright-report/
+            tests/e2e/test-results/
+          retention-days: 7
+
+      - name: Publish JUnit report
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: tests/e2e/test-results/junit.xml
+          check_name: e2e-mysql
+          require_tests: false
+
+  e2e-postgresql:
+    name: e2e-postgresql
+    runs-on: ubuntu-latest
+    needs: build-phar
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download PHAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TYPO3-Installer
+          path: test-installer-root/public/
+
+      - name: Setup DDEV
+        uses: ddev/github-action-setup-ddev@v1
+        with:
+          autostart: false
+
+      - name: Configure project and start DDEV
+        run: |
+          ddev config --omit-containers=db
+          ddev config --auto
+          ddev start
+
+      - name: Run Playwright (postgresql)
+        run: |
+          ddev exec "cd tests/e2e/ && npm install"
+          ddev playwright test --dir=tests/e2e --project=postgresql --project=api-postgresql
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-postgresql-results
+          path: |
+            tests/e2e/playwright-report/
+            tests/e2e/test-results/
+          retention-days: 7
+
+      - name: Publish JUnit report
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: tests/e2e/test-results/junit.xml
+          check_name: e2e-postgresql
+          require_tests: false
+
+  e2e-sqlite:
+    name: e2e-sqlite
+    runs-on: ubuntu-latest
+    needs: build-phar
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download PHAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TYPO3-Installer
+          path: test-installer-root/public/
+
+      - name: Setup DDEV
+        uses: ddev/github-action-setup-ddev@v1
+        with:
+          autostart: false
+
+      - name: Configure project and start DDEV
+        run: |
+          ddev config --omit-containers=db
+          rm -Rf .ddev/docker-compose.postgres.yaml
+          ddev config --auto
+          ddev start
+
+      - name: Run Playwright (sqlite)
+        run: |
+          ddev exec "cd tests/e2e/ && npm install"
+          ddev playwright test --dir=tests/e2e --project=sqlite
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-sqlite-results
+          path: |
+            tests/e2e/playwright-report/
+            tests/e2e/test-results/
+          retention-days: 7
+
+      - name: Publish JUnit report
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: tests/e2e/test-results/junit.xml
+          check_name: e2e-sqlite
+          require_tests: false
+
+  e2e-php-84:
+    name: e2e-php-84
+    runs-on: ubuntu-latest
+    needs: build-phar
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download PHAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TYPO3-Installer
+          path: test-installer-root/public/
+
+      - name: Setup DDEV
+        uses: ddev/github-action-setup-ddev@v1
+        with:
+          autostart: false
+
+      - name: Configure project and start DDEV
+        run: |
+          ddev config --auto --php-version=8.4 --omit-containers=db
+          rm -Rf .ddev/docker-compose.postgres.yaml
+          ddev start
+
+      - name: Run Playwright (sqlite, PHP 8.4)
+        run: |
+          ddev exec "cd tests/e2e/ && npm install"
+          ddev playwright test --dir=tests/e2e --project=sqlite
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-php84-results
+          path: |
+            tests/e2e/playwright-report/
+            tests/e2e/test-results/
+          retention-days: 7
+
+      - name: Publish JUnit report
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: tests/e2e/test-results/junit.xml
+          check_name: e2e-php-84
+          require_tests: false
+
+  e2e-php-85:
+    name: e2e-php-85
+    runs-on: ubuntu-latest
+    needs: build-phar
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download PHAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TYPO3-Installer
+          path: test-installer-root/public/
+
+      - name: Setup DDEV
+        uses: ddev/github-action-setup-ddev@v1
+        with:
+          autostart: false
+
+      - name: Configure project and start DDEV
+        run: |
+          ddev config --auto --php-version=8.5 --omit-containers=db
+          rm -Rf .ddev/docker-compose.postgres.yaml
+          ddev start
+
+      - name: Run Playwright (sqlite, PHP 8.5)
+        run: |
+          ddev exec "cd tests/e2e/ && npm install"
+          ddev playwright test --dir=tests/e2e --project=sqlite
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-php85-results
+          path: |
+            tests/e2e/playwright-report/
+            tests/e2e/test-results/
+          retention-days: 7
+
+      - name: Publish JUnit report
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: tests/e2e/test-results/junit.xml
+          check_name: e2e-php-85
+          require_tests: false
+
+  # ===========================================================================
+  # DEPLOY + LIVE E2E — deploy to real webspaces and test remotely
+  # Required secrets: SSH_PRIVATE_KEY, DEPLOY_SERVERS
+  # ===========================================================================
+  deploy-live-webspaces:
+    name: deploy-live-webspaces
+    runs-on: ubuntu-latest
+    needs: build-phar
+    # ubuntu-latest already has curl, jq, openssh-client, bash, ca-certificates
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download PHAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TYPO3-Installer
+          path: test-installer-root/public/
+
+      - name: Configure SSH (accept-new host keys, load private key)
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh && printf "Host *\n\tStrictHostKeyChecking accept-new\n\n" > ~/.ssh/config
+          eval "$(ssh-agent -s)"
+          printf "%s" "$SSH_PRIVATE_KEY" > /tmp/.key
+          chmod 600 /tmp/.key
+          ssh-add /tmp/.key
+          # Persist agent env for later steps in this job
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+
+      - name: Write deploy servers config
+        env:
+          DEPLOY_SERVERS: ${{ secrets.DEPLOY_SERVERS }}
+        run: printf "%s" "$DEPLOY_SERVERS" > ./.deploy-servers.json
+
+      - name: Deploy
+        run: bash ./scripts/deploy.sh
+
+  e2e-live-webspaces:
+    name: e2e-live-webspaces
+    runs-on: ubuntu-latest
+    needs: [build-phar, deploy-live-webspaces]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download PHAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: TYPO3-Installer
+          path: test-installer-root/public/
+
+      - name: Setup DDEV
+        uses: ddev/github-action-setup-ddev@v1
+        with:
+          autostart: false
+
+      - name: Configure project and start DDEV
+        run: |
+          ddev config --omit-containers=db
+          rm -Rf .ddev/docker-compose.postgres.yaml
+          ddev config --auto
+          ddev start
+
+      - name: Write deploy servers and run remote Playwright
+        env:
+          DEPLOY_SERVERS: ${{ secrets.DEPLOY_SERVERS }}
+        run: |
+          printf "%s" "$DEPLOY_SERVERS" > ./.deploy-servers.json
+          ddev exec "cd tests/e2e/ && npm install"
+          ddev playwright-remote
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-live-results
+          path: |
+            tests/e2e/*/playwright-report/
+            tests/e2e/*/test-results/
+            tests/e2e/*/junit.xml
+          retention-days: 7
+
+      - name: Publish JUnit report
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: tests/e2e/*/junit.xml
+          check_name: e2e-live-webspaces
+          require_tests: false
