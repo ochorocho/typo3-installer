@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-## Description: Run Playwright SQLite full-flow test against remote servers
+## Description: Run Playwright SQLite full-flow test against remote servers (uses the DDEV Playwright container, which already has browsers + deps preinstalled)
 ## Usage: playwright-remote [host]
 ## Example: "ddev playwright-remote" (test all configured servers)
 ## Example: "ddev playwright-remote ftp.example.com" (test specific host only)
@@ -22,23 +22,14 @@ warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*"; }
 
 # ------------------------------------------------------------------
-# Dependency checks
+# Dependency checks (host)
 # ------------------------------------------------------------------
-for cmd in curl jq; do
+for cmd in curl jq ddev; do
     if ! command -v "$cmd" &>/dev/null; then
-        error "Required command '$cmd' is not installed."
+        error "Required command '$cmd' is not installed on the host."
         exit 1
     fi
 done
-
-# Install dependencies
-echo "Installing Playwright dependencies..."
-SUDO=""; command -v sudo &>/dev/null && SUDO="sudo"
-if ! (unset npm_config_prefix && cd tests/e2e/ && npm install && $SUDO npx playwright install-deps && npx playwright install); then
-    echo "Error: Failed to install Playwright dependencies"
-    exit 1
-fi
-
 
 # ------------------------------------------------------------------
 # Config validation
@@ -89,6 +80,7 @@ echo
 # ------------------------------------------------------------------
 SUCCESS=0
 FAIL=0
+SKIPPED=0
 
 for i in $(seq 0 $((TESTABLE_COUNT - 1))); do
     HOST=$(echo "$TESTABLE" | jq -r ".[$i].host")
@@ -100,25 +92,49 @@ for i in $(seq 0 $((TESTABLE_COUNT - 1))); do
     info "Server: $HOST"
     info "  URL: $PLAYWRIGHT_URL"
 
-    # --- Build env vars for Playwright ---
-    export BASE_URL
-    export REMOTE_TEST=true
+    # Preflight: if the nuke URL is unreachable, skip this host instead of
+    # timing out 5 min inside Playwright waiting for a fresh wizard.
     if [[ -n "$NUKE_URL" && "$NUKE_URL" != "null" ]]; then
-        export NUKE_URL
-    else
-        unset NUKE_URL 2>/dev/null || true
+        NUKE_HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            -u "nuke:Password.1" --connect-timeout 15 --max-time 60 \
+            "$NUKE_URL" || echo "000")
+        if [[ ! "$NUKE_HTTP" =~ ^2 ]]; then
+            warn "  ⚠ SKIPPED: $HOST — nuke URL returned HTTP $NUKE_HTTP"
+            SKIPPED=$((SKIPPED + 1))
+            echo
+            continue
+        fi
     fi
 
-    # --- Per-host output directories ---
-    HOST_DIR="$PROJECT_ROOT/tests/e2e/$HOST"
-    mkdir -p "$HOST_DIR"
-    export PLAYWRIGHT_HTML_REPORT="$HOST_DIR/playwright-report"
-    export PLAYWRIGHT_HTML_OPEN=never
-    export PLAYWRIGHT_JUNIT_OUTPUT_NAME="$HOST_DIR/junit.xml"
+    # Per-host output directories (paths as seen from inside the container —
+    # /var/www/html is the project root, bind-mounted)
+    CONTAINER_HOST_DIR="/var/www/html/tests/e2e/$HOST"
+    HOST_HOST_DIR="$PROJECT_ROOT/tests/e2e/$HOST"
+    mkdir -p "$HOST_HOST_DIR"
 
-    # --- Run Playwright test (global-setup.js handles nuke call) ---
-    info "  Running SQLite full-flow test (BASE_URL='$BASE_URL')…"
-    if (unset npm_config_prefix && cd "$PROJECT_ROOT/tests/e2e" && npx playwright test --project=sqlite --output="$HOST_DIR/test-results" tests/full-flows/sqlite.spec.js); then
+    # Build env vars + container NUKE_URL value (empty if unset)
+    CONTAINER_NUKE_URL=""
+    if [[ -n "$NUKE_URL" && "$NUKE_URL" != "null" ]]; then
+        CONTAINER_NUKE_URL="$NUKE_URL"
+    fi
+
+    info "  Running SQLite full-flow test in playwright container (BASE_URL='$BASE_URL')…"
+
+    # Dispatch the test into the playwright service container, which is
+    # based on the official mcr.microsoft.com/playwright image — browsers
+    # and OS deps are already installed, so we skip `playwright install-deps`
+    # and `playwright install` entirely.
+    if ddev exec -d /var/www/html/tests/e2e -s playwright env \
+            BASE_URL="$BASE_URL" \
+            REMOTE_TEST=true \
+            NUKE_URL="$CONTAINER_NUKE_URL" \
+            PLAYWRIGHT_HTML_REPORT="$CONTAINER_HOST_DIR/playwright-report" \
+            PLAYWRIGHT_HTML_OPEN=never \
+            PLAYWRIGHT_JUNIT_OUTPUT_NAME="$CONTAINER_HOST_DIR/junit.xml" \
+            npx playwright test \
+                --project=sqlite \
+                --output="$CONTAINER_HOST_DIR/test-results" \
+                tests/full-flows/sqlite.spec.js; then
         info "  ✓ PASSED: $HOST"
         SUCCESS=$((SUCCESS + 1))
     else
@@ -133,6 +149,6 @@ done
 # Summary
 # ------------------------------------------------------------------
 echo "══════════════════════════════════════════"
-info "Remote tests complete: ${GREEN}${SUCCESS} passed${NC}, ${RED}${FAIL} failed${NC} (of $TESTABLE_COUNT)"
+info "Remote tests complete: ${GREEN}${SUCCESS} passed${NC}, ${RED}${FAIL} failed${NC}, ${YELLOW}${SKIPPED} skipped${NC} (of $TESTABLE_COUNT)"
 [[ "$FAIL" -gt 0 ]] && exit 1
 exit 0
