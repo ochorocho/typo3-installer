@@ -18,10 +18,16 @@ export default function globalSetup() {
     const nukeUrl = process.env.NUKE_URL;
     if (nukeUrl) {
       console.log(`Remote test mode — calling nuke URL: ${nukeUrl}`);
-      execSync(
+      const httpCode = execSync(
         `curl -s -o /dev/null -w "%{http_code}" -u "nuke:Password.1" --connect-timeout 15 --max-time 60 "${nukeUrl}"`,
-        { stdio: 'inherit' }
-      );
+        { encoding: 'utf8' }
+      ).trim();
+      console.log(`  nuke HTTP ${httpCode}`);
+      if (!/^2\d\d$/.test(httpCode)) {
+        throw new Error(
+          `Nuke URL ${nukeUrl} returned HTTP ${httpCode} — cannot reset remote server, aborting test.`
+        );
+      }
     } else {
       console.log('Remote test mode — no NUKE_URL set, skipping reset');
     }
