@@ -25,6 +25,8 @@ info()    { echo -e "${GREEN}[INFO]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[WARN]${NC} $*"; }
 error()   { echo -e "${RED}[ERROR]${NC} $*"; }
 
+trap 'echo; error "Interrupted."; exit 130' INT TERM
+
 # ------------------------------------------------------------------
 # Dependency checks
 # ------------------------------------------------------------------
