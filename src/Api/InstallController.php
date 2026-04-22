@@ -17,13 +17,16 @@ class InstallController extends AbstractController
 {
     private Typo3Installer $installer;
     private string $statusFile;
+    private string $logFile;
 
     public function __construct(
         ?Typo3Installer $installer = null,
-        ?string $statusFile = null
+        ?string $statusFile = null,
+        ?string $logFile = null
     ) {
         $this->installer = $installer ?? new Typo3Installer();
         $this->statusFile = $statusFile ?? $this->getStatusFilePath();
+        $this->logFile = $logFile ?? $this->getLogFilePath();
     }
 
     /**
@@ -44,6 +47,21 @@ class InstallController extends AbstractController
         return sys_get_temp_dir() . '/typo3-installer-status.json';
     }
 
+    /**
+     * Log file path where the install writes line-by-line subprocess output.
+     * `installStream` tails this file to emit 'output' SSE events without
+     * having to run the install in the same request.
+     */
+    private function getLogFilePath(): string
+    {
+        $pharPath = \Phar::running(false);
+        if ($pharPath !== '') {
+            return dirname($pharPath) . '/.typo3-installer-log.txt';
+        }
+
+        return sys_get_temp_dir() . '/typo3-installer-log.txt';
+    }
+
     public function install(Request $request): JsonResponse
     {
         $data = $this->parseJsonBody($request);
@@ -54,6 +72,10 @@ class InstallController extends AbstractController
 
         try {
             $config = InstallationConfig::fromArray($data);
+
+            // Reset the log file so stale output from a previous install doesn't
+            // leak into the SSE stream. Status file is overwritten a line below.
+            @file_put_contents($this->logFile, '');
 
             // Initialize status immediately
             $this->updateStatus([
@@ -101,150 +123,213 @@ class InstallController extends AbstractController
     }
 
     /**
-     * Stream installation progress via Server-Sent Events
+     * Stream installation progress via Server-Sent Events.
      *
-     * This endpoint provides real-time output streaming from installation commands
+     * Pure observer: does NOT run the install itself. The frontend is expected
+     * to POST to /api/install first (which starts the install in the background
+     * via `fastcgi_finish_request`) and then open this endpoint for live output.
+     *
+     * Why the split? On some shared hosts (observed on Manitu/Plesk) the
+     * reverse proxy closes long-lived SSE responses after ~99 s regardless of
+     * activity, and the streaming PHP request gets killed too — taking the
+     * install down with it. By running the install in a separate, detached
+     * FPM request, it survives even when the observer stream is dropped, and
+     * the frontend's polling fallback can still report completion.
      */
     public function installStream(Request $request): StreamedResponse
     {
-        $data = $this->parseJsonBody($request);
-
-        if ($data instanceof JsonResponse) {
-            // Convert error to SSE format
-            return new StreamedResponse(function () use ($data): void {
-                $this->sendSseEvent('error', [
-                    'message' => 'Invalid request',
-                    'details' => $data->getContent(),
-                ]);
-            }, 200, $this->getSseHeaders());
-        }
-
-        return new StreamedResponse(function () use ($data): void {
+        return new StreamedResponse(function (): void {
             // Disable output buffering for SSE streaming
             // This is critical for shared hosting environments
             @ini_set('output_buffering', 'off');
             @ini_set('zlib.output_compression', 'off');
             @ini_set('implicit_flush', '1');
 
-            // Clear any existing output buffers
             while (ob_get_level() > 0) {
                 ob_end_clean();
             }
 
-            // Set unlimited execution time for installation
             set_time_limit(0);
-            // Keep installation running even if SSE connection drops
-            // (frontend can fall back to polling /api/status)
             ignore_user_abort(true);
 
             // Initial padding to break through proxy buffers immediately
             echo ': ' . str_repeat(' ', 8192) . "\n\n";
             flush();
 
-            // Register shutdown function to capture fatal errors (e.g. max_execution_time exceeded)
-            $statusFile = $this->statusFile;
-            register_shutdown_function(static function () use ($statusFile): void {
-                $error = error_get_last();
-                if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
-                    $status = [
-                        'progress' => 0,
-                        'currentTask' => 'Failed',
-                        'completed' => false,
-                        'error' => [
-                            'message' => 'PHP process terminated unexpectedly: ' . $error['message'],
-                            'details' => sprintf('%s in %s on line %d', $error['message'], $error['file'], $error['line']),
-                        ],
-                    ];
-                    file_put_contents($statusFile, json_encode($status, JSON_THROW_ON_ERROR));
+            $this->streamObservedInstall();
+        }, 200, $this->getSseHeaders());
+    }
+
+    /**
+     * Tail the log + status files written by the background install, emitting
+     * SSE `start`/`step`/`progress`/`output`/`complete`/`error` events until
+     * the install finishes, errors out, or the client disconnects.
+     *
+     * Idempotent over status-file disappearance: if the frontend's polling
+     * fallback (/api/status) races ahead and auto-unlinks the status file on
+     * completion, we still emit `complete` from whatever we read last.
+     */
+    private function streamObservedInstall(): void
+    {
+        $maxWaitSeconds = 600;   // Safety cap — longest observed install is ~3 min.
+        $pollIntervalUs = 300_000; // 300 ms
+        $startupGraceSec = 10;   // How long to tolerate a missing status file at start.
+
+        $deadline = microtime(true) + $maxWaitSeconds;
+        $startedAt = microtime(true);
+
+        $currentStep = 'init';
+        $lastProgress = -1;
+        $lastLogOffset = 0;
+        $startSent = false;
+
+        while (microtime(true) < $deadline) {
+            $this->drainLogFile($lastLogOffset, $currentStep);
+
+            $status = $this->readStatus();
+            if ($status === null) {
+                // Background install hasn't written the first status yet — wait briefly.
+                if (!$startSent && microtime(true) - $startedAt < $startupGraceSec) {
+                    usleep($pollIntervalUs);
+                    continue;
                 }
-            });
+                // No install appears to be running. Bail with a clear error.
+                $this->sendSseEvent('error', [
+                    'message' => 'No installation in progress',
+                    'details' => 'Call POST /api/install before opening the install-stream.',
+                ]);
+                return;
+            }
 
-            try {
-                $config = InstallationConfig::fromArray($data);
-
-                // Send initial event
+            if (!$startSent) {
                 $this->sendSseEvent('start', [
                     'message' => 'Installation starting...',
                     'step' => 'init',
                 ]);
+                $startSent = true;
+            }
 
-                $currentStep = 'init';
+            $progressRaw = $status['progress'] ?? 0;
+            $progress = is_int($progressRaw) ? $progressRaw : (int)(is_string($progressRaw) ? $progressRaw : 0);
+            $taskRaw = $status['currentTask'] ?? '';
+            $task = is_string($taskRaw) ? $taskRaw : '';
+            $step = $this->mapProgressToStep($progress);
 
-                // Progress callback - sends step changes
-                $progressCallback = function (int $progress, string $task) use (&$currentStep): void {
-                    $step = $this->mapProgressToStep($progress);
+            if ($step !== $currentStep) {
+                $this->sendSseEvent('step', [
+                    'step' => $step,
+                    'progress' => $progress,
+                    'task' => $task,
+                ]);
+                $currentStep = $step;
+            }
 
-                    // Send step change event if step changed
-                    if ($step !== $currentStep) {
-                        $this->sendSseEvent('step', [
-                            'step' => $step,
-                            'progress' => $progress,
-                            'task' => $task,
-                        ]);
-                        $currentStep = $step;
-                    }
+            if ($progress !== $lastProgress) {
+                $this->sendSseEvent('progress', [
+                    'progress' => $progress,
+                    'task' => $task,
+                    'step' => $step,
+                ]);
+                $lastProgress = $progress;
+            }
 
-                    // Also send progress event
-                    $this->sendSseEvent('progress', [
-                        'progress' => $progress,
-                        'task' => $task,
-                        'step' => $step,
-                    ]);
+            if (($status['error'] ?? null) !== null) {
+                // Flush any tail output before the error event.
+                $this->drainLogFile($lastLogOffset, $currentStep);
+                /** @var array{message?: string, details?: string} $err */
+                $err = $status['error'];
+                $this->sendSseEvent('error', [
+                    'message' => (string)($err['message'] ?? 'Installation failed'),
+                    'details' => (string)($err['details'] ?? ''),
+                ]);
+                return;
+            }
 
-                    // Update status file for compatibility
-                    $this->updateStatus([
-                        'progress' => $progress,
-                        'currentTask' => $task,
-                        'completed' => false,
-                        'error' => null,
-                    ]);
-                };
-
-                // Output callback - sends real-time command output
-                $outputCallback = function (string $line) use (&$currentStep): void {
-                    $this->sendSseEvent('output', [
-                        'line' => $line,
-                        'step' => $currentStep,
-                    ]);
-                };
-
-                // Run installation with streaming callbacks
-                $this->installer->install($config, $progressCallback, $outputCallback);
-
-                $backendUrl = $this->computeBackendUrl();
-
-                // Send completion event
+            if (($status['completed'] ?? false) === true) {
+                // Flush any tail output before the complete event.
+                $this->drainLogFile($lastLogOffset, $currentStep);
+                $backendUrlRaw = $status['backendUrl'] ?? '';
                 $this->sendSseEvent('complete', [
                     'message' => 'Installation complete!',
-                    'backendUrl' => $backendUrl,
+                    'backendUrl' => is_string($backendUrlRaw) ? $backendUrlRaw : '',
                 ]);
-
-                // Update status file
-                $this->updateStatus([
-                    'progress' => 100,
-                    'currentTask' => 'Installation complete',
-                    'completed' => true,
-                    'error' => null,
-                    'backendUrl' => $backendUrl,
-                ]);
-            } catch (\Exception $e) {
-                $this->sendSseEvent('error', [
-                    'message' => $e->getMessage(),
-                    'details' => $e->getTraceAsString(),
-                ]);
-
-                // Update status file
-                $this->updateStatus([
-                    'progress' => 0,
-                    'currentTask' => 'Failed',
-                    'completed' => false,
-                    'error' => [
-                        'message' => $e->getMessage(),
-                        'details' => $e->getTraceAsString(),
-                    ],
-                ]);
+                return;
             }
-        }, 200, $this->getSseHeaders());
+
+            usleep($pollIntervalUs);
+        }
+
+        $this->sendSseEvent('error', [
+            'message' => 'Installation observer timed out',
+            'details' => sprintf('No completion after %ds; client should poll /api/status.', $maxWaitSeconds),
+        ]);
+    }
+
+    /**
+     * Read new lines appended to the log file since $offset (which is updated
+     * by reference). Emits an `output` SSE event per non-empty line.
+     */
+    private function drainLogFile(int &$offset, string $currentStep): void
+    {
+        if (!file_exists($this->logFile)) {
+            return;
+        }
+        clearstatcache(false, $this->logFile);
+        $size = @filesize($this->logFile);
+        if ($size === false || $size <= $offset) {
+            return;
+        }
+
+        $fh = @fopen($this->logFile, 'rb');
+        if ($fh === false) {
+            return;
+        }
+        if (fseek($fh, $offset) !== 0) {
+            fclose($fh);
+            return;
+        }
+        $length = $size - $offset;
+        if ($length < 1) {
+            fclose($fh);
+            return;
+        }
+        $chunk = @fread($fh, $length);
+        fclose($fh);
+
+        if ($chunk === false || $chunk === '') {
+            return;
+        }
+        $offset = $size;
+
+        foreach (explode("\n", rtrim($chunk, "\n")) as $line) {
+            if ($line === '') {
+                continue;
+            }
+            $this->sendSseEvent('output', [
+                'line' => $line,
+                'step' => $currentStep,
+            ]);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function readStatus(): ?array
+    {
+        if (!file_exists($this->statusFile)) {
+            return null;
+        }
+        $raw = @file_get_contents($this->statusFile);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return null;
+        }
+        /** @var array<string, mixed> $decoded */
+        return $decoded;
     }
 
     /**
@@ -335,10 +420,13 @@ class InstallController extends AbstractController
         /** @var array<string, mixed> $status */
         $status = json_decode($fileContent !== false ? $fileContent : '{}', true);
 
-        // Clean up status file after completion or error to prevent stale data on next install
-        if (($status['completed'] ?? false) === true || ($status['error'] ?? null) !== null) {
-            @unlink($this->statusFile);
-        }
+        // Do NOT auto-unlink on completion/error. The SSE observer
+        // (installStream) may still be polling in parallel with the client's
+        // fallback polling; unlinking here caused the observer to fall into
+        // its "no install in progress" branch and emit a spurious onError
+        // that overwrote a legitimate onComplete. The file is reset at the
+        // start of the next install via updateStatus() anyway, so leftover
+        // completed state doesn't leak into a fresh run.
 
         return new JsonResponse($status);
     }
@@ -366,15 +454,25 @@ class InstallController extends AbstractController
             }
         });
 
+        $logFile = $this->logFile;
+        $outputCallback = static function (string $line) use ($logFile): void {
+            // Append raw line; installStream tails this file and emits SSE events.
+            @file_put_contents($logFile, $line . "\n", FILE_APPEND | LOCK_EX);
+        };
+
         try {
-            $this->installer->install($config, function (int $progress, string $task) {
-                $this->updateStatus([
-                    'progress' => $progress,
-                    'currentTask' => $task,
-                    'completed' => false,
-                    'error' => null,
-                ]);
-            });
+            $this->installer->install(
+                $config,
+                function (int $progress, string $task): void {
+                    $this->updateStatus([
+                        'progress' => $progress,
+                        'currentTask' => $task,
+                        'completed' => false,
+                        'error' => null,
+                    ]);
+                },
+                $outputCallback
+            );
 
             $backendUrl = $this->computeBackendUrl();
 

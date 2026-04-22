@@ -38,6 +38,17 @@ class Typo3Installer
      */
     private const COMPOSER_SAPI_WARNING = 'Composer should be invoked via the CLI';
 
+    /**
+     * How long a subprocess may be silent before we emit an SSE heartbeat (seconds).
+     * Must stay well below typical reverse-proxy idle timeouts (~30–60 s).
+     */
+    private const HEARTBEAT_INTERVAL_SEC = 5;
+
+    /**
+     * Subprocess wait-loop poll interval (microseconds).
+     */
+    private const WAIT_LOOP_POLL_US = 200_000;
+
     private Filesystem $filesystem;
     private InstallationInfoService $infoService;
 
@@ -45,6 +56,12 @@ class Typo3Installer
      * Cached result of CGI SAPI detection (null = not yet checked)
      */
     private ?bool $isCgiBinary = null;
+
+    /**
+     * Callback the SSE handler registers so the wait loops in run*Command()
+     * can emit a keepalive when a subprocess is silent for too long.
+     */
+    private ?\Closure $heartbeatCallback = null;
 
     public function __construct()
     {
@@ -100,6 +117,47 @@ class Typo3Installer
     }
 
     /**
+     * Drive a started Symfony Process until completion, streaming incremental
+     * output to the supplied emitter and firing the heartbeat callback when the
+     * child has been silent past HEARTBEAT_INTERVAL_SEC.
+     *
+     * Using Process::start() + poll (instead of Process::run()) is the only way
+     * to inject idle-time work — the blocking Process::run() would keep the PHP
+     * request stuck inside Symfony's wait loop, so the SSE stream couldn't push
+     * a keepalive byte until the subprocess produced output. On hosts with a
+     * ~30 s reverse-proxy idle timeout (e.g. Manitu/Plesk), that silence is
+     * enough to drop the client connection mid-install.
+     *
+     * @param callable(string): void $emit Receives each drained stdout+stderr chunk
+     */
+    private function waitForProcess(Process $process, callable $emit): void
+    {
+        $process->start();
+
+        $lastActivity = microtime(true);
+        while ($process->isRunning()) {
+            $buf = $process->getIncrementalOutput() . $process->getIncrementalErrorOutput();
+            if ($buf !== '') {
+                $emit($buf);
+                $lastActivity = microtime(true);
+            } elseif (
+                $this->heartbeatCallback !== null
+                && (microtime(true) - $lastActivity) >= self::HEARTBEAT_INTERVAL_SEC
+            ) {
+                ($this->heartbeatCallback)();
+                $lastActivity = microtime(true);
+            }
+            usleep(self::WAIT_LOOP_POLL_US);
+        }
+
+        // Drain anything the child produced just before exit.
+        $tail = $process->getIncrementalOutput() . $process->getIncrementalErrorOutput();
+        if ($tail !== '') {
+            $emit($tail);
+        }
+    }
+
+    /**
      * Run a Composer command using the shipped composer.phar
      *
      * @param array<string> $arguments
@@ -148,19 +206,21 @@ class Typo3Installer
             self::PROCESS_TIMEOUT_SECONDS
         );
 
-        // Run with real-time output streaming, filtering Composer SAPI warning
-        $process->run(function (string $type, string $buffer) use ($outputCallback): void {
-            if ($outputCallback !== null) {
-                // Split buffer into lines and send each line
-                $lines = explode("\n", $buffer);
-                foreach ($lines as $line) {
-                    $line = trim($line);
-                    if ($line !== '' && !str_contains($line, self::COMPOSER_SAPI_WARNING)) {
-                        $outputCallback($line);
-                    }
+        // Run with real-time output streaming, filtering Composer SAPI warning,
+        // and emit SSE heartbeats when the process is silent so reverse proxies
+        // don't close the idle connection.
+        $emitLines = function (string $buffer) use ($outputCallback): void {
+            if ($outputCallback === null || $buffer === '') {
+                return;
+            }
+            foreach (explode("\n", $buffer) as $line) {
+                $line = trim($line);
+                if ($line !== '' && !str_contains($line, self::COMPOSER_SAPI_WARNING)) {
+                    $outputCallback($line);
                 }
             }
-        });
+        };
+        $this->waitForProcess($process, $emitLines);
 
         if (!$process->isSuccessful()) {
             $errorOutput = $process->getErrorOutput();
@@ -234,11 +294,34 @@ class Typo3Installer
      *
      * @param callable(int, string): void $progressCallback Called with progress percentage and task name
      * @param callable(string): void|null $outputCallback Called with each output line (for live streaming)
+     * @param callable(): void|null $heartbeatCallback Called periodically when a subprocess is silent,
+     *     so SSE layers can push a keepalive byte and avoid proxy idle timeouts.
      */
     public function install(
         InstallationConfig $config,
         callable $progressCallback,
-        ?callable $outputCallback = null
+        ?callable $outputCallback = null,
+        ?callable $heartbeatCallback = null
+    ): void {
+        $this->heartbeatCallback = $heartbeatCallback !== null
+            ? \Closure::fromCallable($heartbeatCallback)
+            : null;
+
+        try {
+            $this->doInstall($config, $progressCallback, $outputCallback);
+        } finally {
+            $this->heartbeatCallback = null;
+        }
+    }
+
+    /**
+     * @param callable(int, string): void $progressCallback
+     * @param callable(string): void|null $outputCallback
+     */
+    private function doInstall(
+        InstallationConfig $config,
+        callable $progressCallback,
+        ?callable $outputCallback
     ): void {
         $installDir = $this->getInstallDir($config);
         $phpBinary = $config->phpBinary ?? 'php';
@@ -733,19 +816,19 @@ PHP;
             self::PROCESS_TIMEOUT_SECONDS
         );
 
-        // Run with real-time output streaming
-        $process->run(function (string $type, string $buffer) use ($outputCallback): void {
-            if ($outputCallback !== null) {
-                // Split buffer into lines and send each line
-                $lines = explode("\n", $buffer);
-                foreach ($lines as $line) {
-                    $line = trim($line);
-                    if ($line !== '') {
-                        $outputCallback($line);
-                    }
+        // Run with real-time output streaming and idle heartbeats.
+        $emitLines = function (string $buffer) use ($outputCallback): void {
+            if ($outputCallback === null || $buffer === '') {
+                return;
+            }
+            foreach (explode("\n", $buffer) as $line) {
+                $line = trim($line);
+                if ($line !== '') {
+                    $outputCallback($line);
                 }
             }
-        });
+        };
+        $this->waitForProcess($process, $emitLines);
 
         if (!$process->isSuccessful()) {
             $errorOutput = $process->getErrorOutput();
@@ -880,18 +963,19 @@ PHP;
                 self::PROCESS_TIMEOUT_SECONDS
             );
 
-            $process->run(function (string $type, string $buffer) use ($outputCallback): void {
-                if ($outputCallback !== null) {
-                    $buffer = $this->stripCgiHeaders($buffer);
-                    $lines = explode("\n", $buffer);
-                    foreach ($lines as $line) {
-                        $line = trim($line);
-                        if ($line !== '' && !str_contains($line, self::COMPOSER_SAPI_WARNING)) {
-                            $outputCallback($line);
-                        }
+            $emitLines = function (string $buffer) use ($outputCallback): void {
+                if ($outputCallback === null || $buffer === '') {
+                    return;
+                }
+                $buffer = $this->stripCgiHeaders($buffer);
+                foreach (explode("\n", $buffer) as $line) {
+                    $line = trim($line);
+                    if ($line !== '' && !str_contains($line, self::COMPOSER_SAPI_WARNING)) {
+                        $outputCallback($line);
                     }
                 }
-            });
+            };
+            $this->waitForProcess($process, $emitLines);
 
             if (!$process->isSuccessful()) {
                 $errorOutput = $this->stripCgiHeaders($process->getErrorOutput());

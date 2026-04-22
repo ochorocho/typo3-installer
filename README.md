@@ -53,11 +53,8 @@ ddev composer run build
 #### Development Workflow
 
 ```bash
-# Run frontend with hot reload
-ddev exec "cd frontend && npm run dev"
-
-# Run PHP backend
-ddev composer serve
+# Build the frontend
+ddev npm run build
 
 # Or use DDEV
 ddev start
@@ -81,25 +78,6 @@ ddev composer run build
 4. **Site Configuration** - Set site name and base URL
 5. **Installation** - Automatic TYPO3 installation with progress tracking
 
-## Technology
-
-**Frontend:**
-- Lit 3.x (Web Components)
-- Vite (bundler)
-- Progressive enhancement
-
-**Backend:**
-- PHP 8.2+
-- Symfony Components
-- Embedded Composer
-
-**Packaging:**
-- Box 4.x (PHAR builder)
-
-## Development
-
-See [CLAUDE.md](CLAUDE.md) for detailed development documentation.
-
 ## Testing
 
 ```bash
@@ -121,6 +99,21 @@ ddev composer run phpstan
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+
+## Notes and quirks
+
+* IONOS: php.ini
+    ```
+    sys_temp_dir= "/var/tmp"
+    upload_tmp_dir = "/var/tmp"
+    session.save_path = "/var/tmp"
+    memory_limit = 256M
+    error_reporting = E_ALL;
+    log_errors = On;
+    display_errors = Off;
+    error_log = "/home/www/log/php_errors.log"
+    ```
 
 ## License
 

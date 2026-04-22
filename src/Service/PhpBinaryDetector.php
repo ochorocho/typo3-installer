@@ -62,6 +62,7 @@ class PhpBinaryDetector
      * @var array<string>
      */
     private const PHP_VERSIONS = [
+        '8.5',
         '8.4',
         '8.3',
         '8.2',

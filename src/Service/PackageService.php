@@ -29,6 +29,7 @@ class PackageService
         'typo3/cms-install',
         'typo3/cms-setup',
         'typo3/cms-recycler',
+        'typo3/cms-impexp',
     ];
 
     /**

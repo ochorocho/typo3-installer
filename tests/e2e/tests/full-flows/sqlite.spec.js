@@ -97,9 +97,10 @@ test.describe.serial('SQLite Full Installation Flow', () => {
     await page.waitForSelector('h2:has-text("Installing TYPO3")');
     await checkAccessibility(page, 'Step 6: Progress', a11yOptions);
 
-    // Wait for installation to complete (up to 3 minutes)
+    // Wait for installation to complete (up to 5 minutes — some shared hosts
+    // like Manitu run the TYPO3 `extension:setup` step quite slowly).
     await page.locator('.success-message h3:has-text("Installation Complete!")')
-      .waitFor({ state: 'visible', timeout: 180000 });
+      .waitFor({ state: 'visible', timeout: 300000 });
     await checkAccessibility(page, 'Step 6: Success', a11yOptions);
 
     // ============================================

@@ -270,7 +270,8 @@ class ApiClient {
      */
     installWithStreaming(config, callbacks = {}) {
         const STALL_TIMEOUT_MS = 10000;
-        const url = this.buildUrl('/api/install-stream');
+        const streamUrl = this.buildUrl('/api/install-stream');
+        const startUrl = this.buildUrl('/api/install');
 
         // Use fetch with POST to send config, then read as stream
         const controller = new AbortController();
@@ -289,15 +290,26 @@ class ApiClient {
             }
         }, STALL_TIMEOUT_MS);
 
-        const streamPromise = fetch(url, {
+        // Step 1: kick off the install in the background via /api/install.
+        // That endpoint uses fastcgi_finish_request so the install continues
+        // even if the SSE stream below is dropped by a reverse proxy.
+        // Step 2: open /api/install-stream purely to observe progress/output.
+        const streamPromise = fetch(startUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'text/event-stream'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config),
-            signal: controller.signal
-        }).then(async response => {
+        }).then(response => {
+            if (!response.ok) {
+                throw new ApiError(`Failed to start install: ${response.status}`, {
+                    statusCode: response.status,
+                });
+            }
+            return response.json().catch(() => ({}));
+        }).then(() => fetch(streamUrl, {
+            method: 'GET',
+            headers: { 'Accept': 'text/event-stream' },
+            signal: controller.signal,
+        })).then(async response => {
             if (!response.ok) {
                 clearTimeout(stallTimer);
                 throw new ApiError(`Failed to start streaming: ${response.status}`, {
@@ -347,11 +359,16 @@ class ApiClient {
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     clearTimeout(stallTimer);
-                    if (callbacks.onError) {
-                        callbacks.onError(new ApiError('Stream connection lost', {
-                            isNetworkError: true,
-                            originalError: error.message
-                        }));
+                    // Mid-stream disconnect (e.g. Manitu/Plesk reverse proxy drops
+                    // the long-lived HTTPS connection, or PHP-FPM's
+                    // request_terminate_timeout kills the worker). The install
+                    // keeps running on the server thanks to ignore_user_abort(true),
+                    // and the status file is still being updated — so fall back to
+                    // polling and let the user see completion instead of a failure.
+                    if (!fellBackToPolling) {
+                        console.warn('SSE connection dropped mid-stream — falling back to polling:', error.message);
+                        fellBackToPolling = true;
+                        this._pollInstallationStatus(callbacks);
                     }
                 }
             }
@@ -359,11 +376,11 @@ class ApiClient {
             // If we already fell back to polling, suppress the AbortError
             if (fellBackToPolling) return;
             clearTimeout(stallTimer);
-            if (error.name !== 'AbortError' && callbacks.onError) {
-                callbacks.onError(error instanceof ApiError ? error : new ApiError(error.message, {
-                    isNetworkError: true
-                }));
-            }
+            if (error.name === 'AbortError') return;
+            // Same mid-stream fallback as above, in case the fetch promise itself rejects.
+            console.warn('SSE fetch rejected — falling back to polling:', error.message);
+            fellBackToPolling = true;
+            this._pollInstallationStatus(callbacks);
         });
 
         return {
@@ -468,8 +485,12 @@ class ApiClient {
      * @private
      */
     _mapProgressToStep(progress) {
+        // Must stay in sync with InstallController::mapProgressToStep on the server.
         if (progress >= 98) return 'finalize';
+        if (progress >= 95) return 'warmup';
         if (progress >= 90) return 'cache';
+        if (progress >= 85) return 'extensions';
+        if (progress >= 80) return 'assets';
         if (progress >= 50) return 'setup';
         if (progress >= 20) return 'composer';
         if (progress >= 15) return 'init';
