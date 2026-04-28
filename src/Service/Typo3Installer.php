@@ -624,7 +624,6 @@ class Typo3Installer
             '--admin-username=' . $adminUsername,
             '--admin-user-password=' . $adminPassword,
             '--project-name=' . $siteName,
-            '--create-site=' . $baseUrl,
             '--server-type=' . $this->detectServerType(),
             '--no-interaction',
             '--force',

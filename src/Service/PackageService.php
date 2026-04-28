@@ -30,6 +30,7 @@ class PackageService
         'typo3/cms-setup',
         'typo3/cms-recycler',
         'typo3/cms-impexp',
+        'typo3/cms-camino',
     ];
 
     /**
@@ -61,7 +62,6 @@ class PackageService
         'typo3/cms-rte-ckeditor',
         'typo3/cms-beuser',
         'typo3/cms-setup',
-        'typo3/theme-camino',
         'typo3/cms-viewpage',
         'typo3/cms-seo',
         'typo3/cms-scheduler',
