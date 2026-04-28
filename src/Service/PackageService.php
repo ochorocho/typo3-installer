@@ -73,7 +73,7 @@ class PackageService
     /**
      * Minimum supported TYPO3 version
      */
-    private const MIN_TYPO3_VERSION = '13.4';
+    private const MIN_TYPO3_VERSION = '14.2';
 
     /**
      * Packagist API base URL
