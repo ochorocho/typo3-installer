@@ -139,10 +139,10 @@ class Application
     {
         // Check if running from PHAR
         if (str_starts_with(__FILE__, 'phar://')) {
-            return 'phar://' . \Phar::running(false) . '/public';
+            return 'phar://' . \Phar::running(false) . '/dist';
         }
 
-        return __DIR__ . '/../public';
+        return __DIR__ . '/../dist';
     }
 
     private function getDefaultHtml(): string

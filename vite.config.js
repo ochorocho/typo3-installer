@@ -4,7 +4,7 @@ import { exec } from "node:child_process";
 export default defineConfig({
   publicDir: false,
   build: {
-    outDir: 'public/',
+    outDir: 'dist/',
     emptyOutDir: true,
     target: 'es2020',
     minify: 'terser',

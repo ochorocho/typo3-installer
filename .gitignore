@@ -22,7 +22,7 @@
 /.vscode/
 /test-results/
 /playwright-report/
-/public
+/dist
 /.php-cs-fixer.cache
 .deploy-servers.json
 /tests/e2e/*/playwright-report

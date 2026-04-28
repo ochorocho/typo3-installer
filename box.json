@@ -6,7 +6,7 @@
     "main": "src/bootstrap.php",
     "directories": [
         "src",
-        "public",
+        "dist",
         "vendor/symfony/console/Resources"
     ],
     "files": [
