@@ -1,12 +1,9 @@
 import { LitElement, html } from 'lit';
 import { emit } from './ui/shared-styles.js';
 import {
-  isValidUsername,
   getUsernameError,
-  isValidPassword,
   getPasswordError,
   getPasswordStrength,
-  isValidEmail,
   getEmailError,
   isValidAdmin
 } from '../utils/validators.js';

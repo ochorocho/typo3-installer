@@ -1,7 +1,8 @@
 /**
  * TYPO3 Installer - UI Component Styles
- * Styles for t3-step-actions, ui-spinner, t3-section-error, t3-package-list,
+ * Styles for t3-step-actions, t3-section-error, t3-package-list,
  * t3-version-selector, t3-php-version-warning, t3-install-info, t3-error-help, t3-theme-toggle
+ * (ui-spinner styles itself via Shadow DOM in spinner.js)
  * CSS nesting for component organization
  */
 
@@ -23,37 +24,6 @@ t3-step-actions {
   .actions-left {
     display: flex;
     gap: var(--spacing-md);
-  }
-}
-
-/* =================================
-   UI Spinner
-   ================================= */
-
-ui-spinner {
-  display: flex;
-
-  .spinner-wrapper {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5em;
-    line-height: 0;
-    margin: 0;
-  }
-
-  .spinner-icon {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 1px solid var(--color-border);
-    border-radius: 50%;
-    border-top-color: var(--color-primary-dark);
-    animation: spin 1s linear infinite;
-
-    &.small {
-      width: 11px;
-      height: 11px;
-    }
   }
 }
 

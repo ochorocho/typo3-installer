@@ -29,7 +29,6 @@ import caretEnd from '@typo3/icons/dist/svgs/actions/actions-caret-end.svg?raw';
 import caretDown from '@typo3/icons/dist/svgs/actions/actions-caret-down.svg?raw';
 
 // Branding
-import shieldTypo3 from '@typo3/icons/dist/svgs/actions/actions-shield-typo3.svg?raw';
 import typo3Logo from '../../images/typo3-logo.svg?raw';
 
 /**
@@ -62,7 +61,4 @@ export const iconRegistry = {
   // Navigation/Caret icons
   'actions-caret-end': caretEnd,
   'actions-caret-down': caretDown,
-
-  // Branding
-  'actions-shield-typo3': shieldTypo3,
 };

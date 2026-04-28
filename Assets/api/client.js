@@ -196,25 +196,11 @@ class ApiClient {
         });
     }
 
-    async checkRequirements() {
-        return this.request('/api/check-requirements', {
-            method: 'POST'
-        });
-    }
-
     async testDatabase(config) {
         return this.request('/api/test-database', {
             method: 'POST',
             body: JSON.stringify(config),
             timeout: 15000 // 15 seconds for database test
-        });
-    }
-
-    async install(config) {
-        return this.request('/api/install', {
-            method: 'POST',
-            body: JSON.stringify(config),
-            timeout: 60000 // 60 seconds to start installation
         });
     }
 

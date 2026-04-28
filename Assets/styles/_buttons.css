@@ -4,11 +4,8 @@
  */
 
 button,
-a.btn-primary,
-a.btn-secondary,
 a.btn-outline,
-a.btn-success,
-a.btn-error {
+a.btn-success {
   padding: var(--spacing-sm) var(--spacing-lg);
   border: none;
   border-radius: var(--border-radius);
@@ -16,21 +13,15 @@ a.btn-error {
   cursor: pointer;
 }
 
-a.btn-primary,
-a.btn-secondary,
 a.btn-outline,
-a.btn-success,
-a.btn-error {
+a.btn-success {
   text-decoration: none;
   display: inline-block;
 }
 
 button:focus-visible,
-a.btn-primary:focus-visible,
-a.btn-secondary:focus-visible,
 a.btn-outline:focus-visible,
-a.btn-success:focus-visible,
-a.btn-error:focus-visible {
+a.btn-success:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
@@ -74,20 +65,12 @@ button:disabled {
   background: var(--color-primary-dark);
 }
 
-a.btn-primary:hover {
-  background: var(--color-primary-dark);
-}
-
 .btn-secondary {
   background: var(--color-info);
   color: white;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--color-info-dark);
-}
-
-a.btn-secondary:hover {
   background: var(--color-info-dark);
 }
 
@@ -124,10 +107,6 @@ a.btn-success:hover {
 }
 
 .btn-error:hover:not(:disabled) {
-  background: var(--color-error-dark);
-}
-
-a.btn-error:hover {
   background: var(--color-error-dark);
 }
 

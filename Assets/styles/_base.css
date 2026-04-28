@@ -61,19 +61,6 @@ textarea {
   border: 0;
 }
 
-/* Visually hidden but accessible */
-.visually-hidden:not(:focus):not(:active) {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
 /* Focus visible styles for keyboard navigation */
 :focus-visible {
   outline: 2px solid var(--color-primary);
@@ -146,9 +133,4 @@ textarea {
     outline: none;
     box-shadow: 0 0 0 2px rgba(255, 135, 0);
   }
-}
-
-/* Responsive container padding - mobile first */
-:root {
-  --container-padding: var(--spacing-sm);
 }

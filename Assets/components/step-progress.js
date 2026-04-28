@@ -20,8 +20,7 @@ export class StepProgress extends LitElement {
     tasks: { type: Array },
     canRetry: { type: Boolean },
     outputLines: { type: Array },
-    currentStep: { type: String },
-    autoScroll: { type: Boolean }
+    currentStep: { type: String }
   };
 
   constructor() {
@@ -41,7 +40,6 @@ export class StepProgress extends LitElement {
     this.canRetry = false;
     this.outputLines = [];
     this.currentStep = 'prepare';
-    this.autoScroll = true;
   }
 
   connectedCallback() {
@@ -194,8 +192,6 @@ export class StepProgress extends LitElement {
 
   _handleRetry() { this._startInstallation(); }
   _handleGoBack() { emit(this, 'previous-step'); }
-  _handleToggleAutoScroll() { this.autoScroll = !this.autoScroll; }
-  _handleClearOutput() { this.outputLines = []; }
 
   render() {
     const install = this.state?.installation || {};
@@ -224,8 +220,7 @@ export class StepProgress extends LitElement {
           </div>
         `}
         ${this.outputLines.length > 0 ? html`
-          <t3-terminal-output .lines=${this.outputLines} .autoScroll=${this.autoScroll}
-            @toggle-autoscroll=${this._handleToggleAutoScroll} @clear-output=${this._handleClearOutput}></t3-terminal-output>
+          <t3-terminal-output .lines=${this.outputLines}></t3-terminal-output>
         ` : ''}
       `;
     }
@@ -257,8 +252,7 @@ export class StepProgress extends LitElement {
         </div>
       ` : ''}
 
-      <t3-terminal-output .lines=${this.outputLines} .autoScroll=${this.autoScroll}
-        @toggle-autoscroll=${this._handleToggleAutoScroll} @clear-output=${this._handleClearOutput}></t3-terminal-output>
+      <t3-terminal-output .lines=${this.outputLines}></t3-terminal-output>
     `;
   }
 }

@@ -121,11 +121,6 @@ step-progress {
       margin: 0 0 var(--spacing-md) 0;
       color: var(--color-text);
     }
-
-    .admin-info {
-      font-size: 14px;
-      margin-bottom: var(--spacing-lg);
-    }
   }
 
   .success-buttons {

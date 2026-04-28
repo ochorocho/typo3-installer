@@ -1,6 +1,6 @@
 import { LitElement, html } from 'lit';
 import { emit } from './ui/shared-styles.js';
-import { isValidUrl, isValidSiteName, getSiteNameError, getUrlError } from '../utils/validators.js';
+import { getSiteNameError, getUrlError } from '../utils/validators.js';
 import { canStartInstallation, getIncompleteStepDetails } from '../utils/step-validators.js';
 import './ui/step-actions.js';
 

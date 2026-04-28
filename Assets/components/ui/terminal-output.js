@@ -1,5 +1,4 @@
 import { LitElement, html } from 'lit';
-import { emit } from './shared-styles.js';
 
 /**
  * Terminal-style output display component.

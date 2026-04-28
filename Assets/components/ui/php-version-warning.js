@@ -1,4 +1,5 @@
 import { LitElement, html } from 'lit';
+import './spinner.js';
 
 /**
  * PHP version mismatch warning with binary selector.
@@ -139,7 +140,7 @@ export class PhpVersionWarning extends LitElement {
                   @click=${this._handleValidateBinary}
                   ?disabled=${this.validatingBinary || !this.customBinaryPath.trim()}
                 >
-                  ${this.validatingBinary ? html`<span class="spinner spinner-dark"></span>` : 'Validate'}
+                  ${this.validatingBinary ? html`<ui-spinner size="small"></ui-spinner>` : 'Validate'}
                 </button>
               </div>
               ${this.phpDetection.customBinaryValid === true ? html`

@@ -34,14 +34,10 @@
   --color-input-border: var(--color-border-light);
   --color-check-bg: #d4d4d4;
 
-  /* Focus indicator color */
-  --color-focus: rgba(255, 135, 0, 0.4);
-
   /* Alert/message background colors */
   --color-success-bg: #e8f5e9;
   --color-error-bg: #ffebee;
   --color-warning-bg: #fff3e0;
-  --color-info-bg: #e3f2fd;
 
   /* Accessible warning text color for info boxes */
   --color-warning-text: #9a4408;
@@ -55,7 +51,6 @@
 
   /* Button hover colors */
   --color-info-dark: #005a9e;
-  --color-success-dark: #0a6228;
   --color-error-dark: #a33232;
 
   /* Terminal colors */
@@ -82,8 +77,6 @@
 
   /* Typography sizes */
   --font-size-sm: 12px;
-  --font-size-base: 14px;
-  --font-size-lg: 16px;
 
   /* Spacing - 8px grid system */
   --spacing-xs: 4px;
@@ -99,8 +92,8 @@
   /* Box shadow */
   --shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 
-  /* Responsive container padding */
-  --container-padding: var(--spacing-md);
+  /* Container padding */
+  --container-padding: var(--spacing-sm);
 }
 
 /* Dark mode variables */
@@ -120,7 +113,6 @@
   --color-success-bg: #1a3d1a;
   --color-error-bg: #3d1a1a;
   --color-warning-bg: #3d2a1a;
-  --color-info-bg: #1a2a3d;
 
   /* Accessible status colors for dark backgrounds (WCAG AA 4.5:1) */
   --color-success-accessible: #5cc86a;
@@ -138,7 +130,6 @@
 
   /* Button hover colors (slightly lighter for dark mode) */
   --color-info-dark: #1a8cd8;
-  --color-success-dark: #1cb841;
   --color-error-dark: #d84a4a;
 
   /* Dark mode info box colors */
@@ -173,7 +164,6 @@
     --color-success-bg: #1a3d1a;
     --color-error-bg: #3d1a1a;
     --color-warning-bg: #3d2a1a;
-    --color-info-bg: #1a2a3d;
 
     /* Accessible status colors for dark backgrounds (WCAG AA 4.5:1) */
     --color-success-accessible: #5cc86a;
@@ -191,7 +181,6 @@
 
     /* Button hover colors (slightly lighter for dark mode) */
     --color-info-dark: #1a8cd8;
-    --color-success-dark: #1cb841;
     --color-error-dark: #d84a4a;
 
     /* Dark mode info box colors */

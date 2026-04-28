@@ -151,17 +151,6 @@ export class StepDatabase extends LitElement {
     return `Default: ${driver.defaultPort}`;
   }
 
-  _renderConnectionStatus() {
-    const db = this.state?.database || {};
-    if (this.testing) {
-      return html`<div class="alert alert-warning" role="status">Testing connection...</div>`;
-    }
-    if (db.tested && !db.valid) {
-      return ''; // existing testResult error handles this
-    }
-    return html`<div class="alert alert-warning" role="status">Connection not tested yet. Complete all required fields to auto-test.</div>`;
-  }
-
   render() {
     const db = this.state?.database || {};
     const isFileBased = this._isFileBasedDriver();

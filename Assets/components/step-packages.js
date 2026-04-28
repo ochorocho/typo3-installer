@@ -275,10 +275,6 @@ export class StepPackages extends LitElement {
     this._schedulePrefetch();
   }
 
-  _handleNext() {
-    emit(this, 'next-step');
-  }
-
   _handleRetryInfo() {
     this._loadInfo();
   }
