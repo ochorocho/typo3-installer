@@ -30,7 +30,8 @@ class PackageService
         'typo3/cms-setup',
         'typo3/cms-recycler',
         'typo3/cms-impexp',
-        'typo3/cms-camino',
+        // @todo: Dunno yet, if this is a good idea. Time will tell.
+        'typo3/theme-camino',
     ];
 
     /**
