@@ -75,7 +75,12 @@ export class StepDatabase extends LitElement {
 
   _update(field, value) {
     this.testResult = null;
-    const updates = { [field]: value, tested: false, valid: false };
+    // Trim user-entered text so leading/trailing whitespace can't reach
+    // the database driver and produce confusing connection errors.
+    // Passwords are intentionally not trimmed — silently rewriting a
+    // user-chosen secret can lock them out of their own database.
+    const trimmed = field === 'password' || field === 'driver' ? value : value.trim();
+    const updates = { [field]: trimmed, tested: false, valid: false };
 
     // Update default port when driver changes
     if (field === 'driver') {

@@ -90,14 +90,55 @@ class Application
                 '/api/install' => $this->installController->install($request),
                 '/api/install-stream' => $this->installController->installStream($request),
                 '/api/status' => $this->installController->getStatus($request),
-                default => new JsonResponse(['error' => 'Not found'], 404)
+                default => $this->jsonError('Not found', 404)
             };
+        } catch (\InvalidArgumentException $e) {
+            // Argument validation failures (e.g. malformed baseUrl) reflect a
+            // bad request — surface the message so the user can fix it.
+            return $this->jsonError($e->getMessage(), 400);
         } catch (\Throwable $e) {
-            return new JsonResponse([
-                'error' => true,
-                'message' => $e->getMessage(),
-            ], 500);
+            // Anything else may carry internal context (file paths, SQL,
+            // Composer stderr). Log it and return a generic message.
+            error_log(sprintf(
+                '[typo3-installer] %s in %s:%d — %s',
+                get_class($e),
+                $e->getFile(),
+                $e->getLine(),
+                $e->getMessage()
+            ));
+            return $this->jsonError('Internal server error', 500);
         }
+    }
+
+    /**
+     * Build a JSON error response with the standard security headers.
+     */
+    private function jsonError(string $message, int $statusCode): JsonResponse
+    {
+        return $this->withSecurityHeaders(new JsonResponse([
+            'error' => true,
+            'message' => $message,
+        ], $statusCode));
+    }
+
+    /**
+     * Apply default security headers to a response. JSON API responses
+     * already get these via AbstractController; this covers the router's
+     * own fallback paths (404 / 500 from handleApiRequest).
+     *
+     * @template T of Response
+     * @param T $response
+     * @return T
+     */
+    private function withSecurityHeaders(Response $response): Response
+    {
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('X-Frame-Options', 'DENY');
+        $response->headers->set('Referrer-Policy', 'no-referrer');
+        if (!$response->headers->has('Cache-Control')) {
+            $response->headers->set('Cache-Control', 'no-store');
+        }
+        return $response;
     }
 
     private function serveAsset(string $filename): Response
@@ -110,29 +151,48 @@ class Application
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
         if (!isset($contentTypes[$extension])) {
-            return new Response('Not found', 404);
+            return $this->withSecurityHeaders(new Response('Not found', 404));
         }
 
         $assetPath = $this->getAssetPath() . '/' . $filename;
 
         if (!file_exists($assetPath)) {
-            return new Response('Not found', 404);
+            return $this->withSecurityHeaders(new Response('Not found', 404));
         }
 
         $content = file_get_contents($assetPath);
         if ($content === false) {
-            return new Response('Not found', 404);
+            return $this->withSecurityHeaders(new Response('Not found', 404));
         }
 
-        return new Response($content, 200, [
+        return $this->withSecurityHeaders(new Response($content, 200, [
             'Content-Type' => $contentTypes[$extension],
             'Cache-Control' => 'public, max-age=31536000',
-        ]);
+        ]));
     }
 
     private function serveFrontend(): Response
     {
-        return new Response($this->getDefaultHtml(), 200, ['Content-Type' => 'text/html']);
+        $response = new Response($this->getDefaultHtml(), 200, [
+            'Content-Type' => 'text/html; charset=utf-8',
+        ]);
+
+        // CSP: lock the bootstrap page down. The HTML inlines bundled JS and
+        // CSS (see getDefaultHtml below), so 'unsafe-inline' is unavoidable
+        // there; everything else stays restrictive. frame-src 'self' allows
+        // the phpinfo iframe; connect-src 'self' covers /api fetches and SSE.
+        $csp = "default-src 'none'; "
+            . "script-src 'self' 'unsafe-inline'; "
+            . "style-src 'self' 'unsafe-inline'; "
+            . "img-src 'self' data:; "
+            . "font-src 'self' data:; "
+            . "connect-src 'self'; "
+            . "frame-src 'self'; "
+            . "base-uri 'none'; "
+            . "form-action 'none'";
+        $response->headers->set('Content-Security-Policy', $csp);
+
+        return $this->withSecurityHeaders($response);
     }
 
     private function getAssetPath(): string

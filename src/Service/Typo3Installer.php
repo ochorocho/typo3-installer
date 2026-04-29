@@ -651,8 +651,11 @@ class Typo3Installer
         // Run TYPO3 setup command with all parameters non-interactively
         $this->runTypo3Command('setup', $cliArgs, $installDir, $config->phpBinary, $outputCallback);
 
-        // @todo: This should not be needed ... like not at all.
-        // Create additional configuration for trusted hosts and other settings
+        // Write production-safe additional configuration. The earlier version
+        // of this block hardcoded `trustedHostsPattern = '.*'`, `devIPmask = '*'`
+        // and `displayErrors = 1`, which meant every installed site permanently
+        // accepted any Host header (cache-poisoning surface), exposed the Install
+        // Tool gateway from any IP, and rendered stack traces to end users.
         $additionalConfig = $installDir . '/config/system/additional.php';
         $configDir = dirname($additionalConfig);
 
@@ -660,21 +663,26 @@ class Typo3Installer
             $this->filesystem->mkdir($configDir, self::DEFAULT_DIR_PERMISSIONS);
         }
 
-        $trustedHost = parse_url($baseUrl, PHP_URL_HOST);
-        $trustedHostsPattern = is_string($trustedHost) ? preg_quote($trustedHost, '/') : '.*';
+        // Pin trustedHostsPattern to the host derived from the validated baseUrl.
+        // Falls back to a deny-all pattern if parsing somehow fails (defensive —
+        // SiteConfig::fromArray already validates baseUrl format).
+        $parsedHost = parse_url($baseUrl, PHP_URL_HOST);
+        $trustedHostsPattern = is_string($parsedHost) && $parsedHost !== ''
+            ? preg_quote($parsedHost, '/')
+            : 'never-matching-host';
+
+        $trustedHostsExport = var_export($trustedHostsPattern, true);
 
         $configContent = <<<PHP
 <?php
 
 // Auto-detect HTTPS: trust X-Forwarded-Proto from any reverse proxy.
-// Unlike reverseProxySSL (which unconditionally forces HTTPS detection),
-// reverseProxyIP only activates when the proxy actually sends the header.
-// This works correctly on: direct HTTPS, HTTP behind SSL proxy, and plain HTTP.
-\$GLOBALS['TYPO3_CONF_VARS']['SYS']['trustedHostsPattern'] = '.*';
+// reverseProxyIP only activates when the proxy actually sends the header,
+// so this is safe on direct HTTPS, HTTP behind SSL proxy, and plain HTTP.
+\$GLOBALS['TYPO3_CONF_VARS']['SYS']['trustedHostsPattern'] = {$trustedHostsExport};
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxyIP'] = '*';
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['reverseProxyHeaderMultiValue'] = 'first';
-\$GLOBALS['TYPO3_CONF_VARS']['SYS']['devIPmask'] = '*';
-\$GLOBALS['TYPO3_CONF_VARS']['SYS']['displayErrors'] = 1;
+\$GLOBALS['TYPO3_CONF_VARS']['SYS']['displayErrors'] = -1;
 \$GLOBALS['TYPO3_CONF_VARS']['SYS']['SystemResources']['filesystemPublishingType'] = 'mirror';
 
 PHP;
@@ -928,6 +936,12 @@ PHP;
         if ($tempFile === false) {
             throw new \RuntimeException('Failed to create temporary CGI wrapper script');
         }
+
+        // Tighten permissions immediately. The wrapper holds the absolute
+        // install path and the full argv (which for the `setup` command
+        // includes the admin/DB credentials), so on shared hosts with a
+        // shared /tmp another tenant could otherwise read it.
+        @chmod($tempFile, 0600);
 
         file_put_contents($tempFile, $script);
         return $tempFile;

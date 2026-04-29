@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use TYPO3\Installer\Model\InstallationConfig;
+use TYPO3\Installer\Service\InstallationInfoService;
 use TYPO3\Installer\Service\Typo3Installer;
 
 /**
@@ -15,55 +16,59 @@ use TYPO3\Installer\Service\Typo3Installer;
  */
 class InstallController extends AbstractController
 {
+    /**
+     * Sibling folder of the docroot used to hold the status + log files.
+     * Sitting one level above the PHAR keeps state files unreachable via HTTP
+     * regardless of host config (Indexes, dotfile-serving, .htaccess support).
+     */
+    private const string STATE_DIR_NAME = '.installer-state';
+
     private Typo3Installer $installer;
+    private InstallationInfoService $infoService;
     private string $statusFile;
     private string $logFile;
 
     public function __construct(
         ?Typo3Installer $installer = null,
         ?string $statusFile = null,
-        ?string $logFile = null
+        ?string $logFile = null,
+        ?InstallationInfoService $infoService = null
     ) {
         $this->installer = $installer ?? new Typo3Installer();
-        $this->statusFile = $statusFile ?? $this->getStatusFilePath();
-        $this->logFile = $logFile ?? $this->getLogFilePath();
+        $this->infoService = $infoService ?? new InstallationInfoService();
+        $stateDir = $this->getStateDir();
+        $this->statusFile = $statusFile ?? $stateDir . '/status.json';
+        $this->logFile = $logFile ?? $stateDir . '/log.txt';
     }
 
     /**
-     * Get a deterministic status file path that all requests resolve to.
-     *
-     * On shared hosting, sys_get_temp_dir() may return different paths per request
-     * (per-process isolation, open_basedir, etc.), so polling /api/status would
-     * read from a different directory than the one the install process wrote to.
-     * Using a path relative to the PHAR ensures consistency.
+     * Resolve the directory used for installer state. Lives in the parent of
+     * the docroot (returned by InstallationInfoService::getInstallDirectory),
+     * so files there are not served by the web server at all.
      */
-    private function getStatusFilePath(): string
+    private function getStateDir(): string
     {
-        $pharPath = \Phar::running(false);
-        if ($pharPath !== '') {
-            return dirname($pharPath) . '/.typo3-installer-status.json';
-        }
-
-        return sys_get_temp_dir() . '/typo3-installer-status.json';
+        return $this->infoService->getInstallDirectory() . '/' . self::STATE_DIR_NAME;
     }
 
     /**
-     * Log file path where the install writes line-by-line subprocess output.
-     * `installStream` tails this file to emit 'output' SSE events without
-     * having to run the install in the same request.
+     * Ensure the state directory exists with restrictive permissions.
+     * Idempotent and cheap on subsequent calls.
      */
-    private function getLogFilePath(): string
+    private function ensureStateDir(): void
     {
-        $pharPath = \Phar::running(false);
-        if ($pharPath !== '') {
-            return dirname($pharPath) . '/.typo3-installer-log.txt';
+        $dir = $this->getStateDir();
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0700, true);
         }
-
-        return sys_get_temp_dir() . '/typo3-installer-log.txt';
     }
 
     public function install(Request $request): JsonResponse
     {
+        if (($denied = $this->assertSameOrigin($request)) !== null) {
+            return $denied;
+        }
+
         $data = $this->parseJsonBody($request);
 
         if ($data instanceof JsonResponse) {
@@ -72,6 +77,8 @@ class InstallController extends AbstractController
 
         try {
             $config = InstallationConfig::fromArray($data);
+
+            $this->ensureStateDir();
 
             // Reset the log file so stale output from a previous install doesn't
             // leak into the SSE stream. Status file is overwritten a line below.
@@ -138,6 +145,12 @@ class InstallController extends AbstractController
      */
     public function installStream(Request $request): StreamedResponse
     {
+        if (($denied = $this->assertSameOrigin($request)) !== null) {
+            return new StreamedResponse(static function () use ($denied): void {
+                echo $denied->getContent() ?: '';
+            }, 403, ['Content-Type' => 'application/json']);
+        }
+
         return new StreamedResponse(function (): void {
             // Disable output buffering for SSE streaming
             // This is critical for shared hosting environments
@@ -484,14 +497,30 @@ class InstallController extends AbstractController
                 'error' => null,
                 'backendUrl' => $backendUrl,
             ]);
+
+            // Wipe the log file on success — its subprocess output (composer
+            // resolution, file paths, env hints) is no longer needed and we
+            // shouldn't let it linger on the host. Keep the small status file
+            // so late /api/status pollers still see the success outcome; the
+            // next install overwrites it anyway.
+            @file_put_contents($this->logFile, '');
         } catch (\Exception $e) {
+            // Log the full trace server-side; never expose it to the client.
+            // Stack traces can include argument values such as $adminPassword
+            // and $dbPassword on hosts where zend.exception_ignore_args is off.
+            error_log(sprintf(
+                '[typo3-installer] Installation failed: %s%s%s',
+                $e->getMessage(),
+                PHP_EOL,
+                $e->getTraceAsString()
+            ));
             $this->updateStatus([
                 'progress' => 0,
                 'currentTask' => 'Failed',
                 'completed' => false,
                 'error' => [
                     'message' => $e->getMessage(),
-                    'details' => $e->getTraceAsString(),
+                    'details' => $e->getFile(),
                 ],
             ]);
         }
@@ -502,6 +531,10 @@ class InstallController extends AbstractController
      *
      * Falls back through multiple $_SERVER variables since DOCUMENT_URI
      * is not available on all hosting environments (e.g. some LiteSpeed setups).
+     *
+     * Defends against a hostile reverse proxy injecting an absolute URL or
+     * scheme into DOCUMENT_URI: the result is always a relative path under
+     * the current origin (starts with '/', no scheme, no '//' authority).
      */
     private function computeBackendUrl(): string
     {
@@ -511,8 +544,16 @@ class InstallController extends AbstractController
         if ($basePath === '.' || $basePath === '') {
             $basePath = '/';
         }
+        $candidate = rtrim($basePath, '/') . '/typo3/';
 
-        return rtrim($basePath, '/') . '/typo3/';
+        // Reject anything that escapes a same-origin relative path. If the
+        // proxy injected a scheme, an authority, or control characters, fall
+        // back to a hardcoded relative URL.
+        if (!str_starts_with($candidate, '/') || str_starts_with($candidate, '//') || preg_match('/[\x00-\x1f:]/', $candidate)) {
+            return '/typo3/';
+        }
+
+        return $candidate;
     }
 
     /**

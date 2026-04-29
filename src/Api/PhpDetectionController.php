@@ -79,6 +79,10 @@ class PhpDetectionController extends AbstractController
      */
     public function validate(Request $request): JsonResponse
     {
+        if (($denied = $this->assertSameOrigin($request)) !== null) {
+            return $denied;
+        }
+
         $data = $this->parseJsonBody($request);
 
         if ($data instanceof JsonResponse) {
@@ -87,12 +91,22 @@ class PhpDetectionController extends AbstractController
 
         $binaryPath = $data['binaryPath'] ?? null;
 
-        if (!is_string($binaryPath) || $binaryPath === '') {
+        if (!is_string($binaryPath)) {
             return $this->errorResponse('Binary path is required');
         }
 
-        // Sanitize path - prevent command injection
-        if (preg_match('/[;&|`$]/', $binaryPath)) {
+        // Trim and require non-empty.
+        $binaryPath = trim($binaryPath);
+        if ($binaryPath === '') {
+            return $this->errorResponse('Binary path is required');
+        }
+
+        // Allowlist: absolute path with characters that legitimately appear in
+        // PHP-binary install paths across distros. Anything else is rejected
+        // outright. Symfony Process arg-escapes its first argument anyway, but
+        // a strict allowlist removes ambiguity and prevents any future code
+        // path that string-interpolates the value from being exploitable.
+        if (!preg_match('#^/[A-Za-z0-9._/+@-]+$#', $binaryPath)) {
             return $this->errorResponse('Invalid characters in binary path');
         }
 

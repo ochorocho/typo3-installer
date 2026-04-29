@@ -69,8 +69,12 @@ export class StepSite extends LitElement {
   }
 
   _update(field, value) {
-    emit(this, 'state-update', { site: { ...this.state.site, [field]: value } });
-    this._validate(field, value);
+    // Site name and base URL never legitimately contain leading/trailing
+    // whitespace; trimming here keeps the displayed value in sync with what
+    // the API will see (the server also trims at the model boundary).
+    const trimmed = value.trim();
+    emit(this, 'state-update', { site: { ...this.state.site, [field]: trimmed } });
+    this._validate(field, trimmed);
   }
 
   _blur(field) {

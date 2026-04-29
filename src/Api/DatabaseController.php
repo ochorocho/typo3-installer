@@ -22,6 +22,10 @@ class DatabaseController extends AbstractController
 
     public function test(Request $request): JsonResponse
     {
+        if (($denied = $this->assertSameOrigin($request)) !== null) {
+            return $denied;
+        }
+
         $data = $this->parseJsonBody($request);
 
         if ($data instanceof JsonResponse) {
@@ -29,12 +33,13 @@ class DatabaseController extends AbstractController
         }
 
         try {
-            $driver = is_string($data['driver'] ?? null) ? $data['driver'] : 'pdo_mysql';
-            $host = is_string($data['host'] ?? null) ? $data['host'] : 'localhost';
+            // Trim every string field except the password.
+            $driver = $this->trimmedField($data, 'driver', 'pdo_mysql');
+            $host = $this->trimmedField($data, 'host', 'localhost');
             $rawPort = $data['port'] ?? 3306;
             $port = is_int($rawPort) ? $rawPort : (is_numeric($rawPort) ? (int)$rawPort : 3306);
-            $name = is_string($data['name'] ?? null) ? $data['name'] : '';
-            $user = is_string($data['user'] ?? null) ? $data['user'] : '';
+            $name = $this->trimmedField($data, 'name');
+            $user = $this->trimmedField($data, 'user');
             $password = is_string($data['password'] ?? null) ? $data['password'] : '';
 
             $this->tester->testConnection($driver, $host, $port, $name, $user, $password);
@@ -43,5 +48,17 @@ class DatabaseController extends AbstractController
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage());
         }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function trimmedField(array $data, string $key, string $default = ''): string
+    {
+        if (!isset($data[$key]) || !is_string($data[$key])) {
+            return $default;
+        }
+        $trimmed = trim($data[$key]);
+        return $trimmed === '' ? $default : $trimmed;
     }
 }

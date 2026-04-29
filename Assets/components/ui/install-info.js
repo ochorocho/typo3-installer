@@ -109,7 +109,7 @@ export class InstallInfo extends LitElement {
             ${this._phpInfoLoading ? html`
               <div class="phpinfo-loading">Loading PHP information...</div>
             ` : this._phpInfoHtml ? html`
-              <iframe class="phpinfo-frame" srcdoc=${this._phpInfoHtml}></iframe>
+              <iframe class="phpinfo-frame" sandbox="allow-same-origin" srcdoc=${this._phpInfoHtml}></iframe>
             ` : ''}
           </div>
         </div>

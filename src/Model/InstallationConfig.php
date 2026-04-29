@@ -5,6 +5,20 @@ declare(strict_types=1);
 namespace TYPO3\Installer\Model;
 
 /**
+ * Read a string field from input, trim it, and return the default if absent or empty.
+ *
+ * @param array<string, mixed> $data
+ */
+function trimmedString(array $data, string $key, string $default = ''): string
+{
+    if (!isset($data[$key]) || !is_string($data[$key])) {
+        return $default;
+    }
+    $trimmed = trim($data[$key]);
+    return $trimmed === '' ? $default : $trimmed;
+}
+
+/**
  * Installation configuration model
  */
 class InstallationConfig
@@ -39,27 +53,26 @@ class InstallationConfig
         /** @var array<string, mixed> $site */
         $site = $data['site'] ?? [];
 
-        // Extract typo3Version with proper type checking
+        // Extract typo3Version with proper type checking and trimming
         $typo3Version = '13.4';
         if (isset($data['typo3Version'])) {
             $rawVersion = $data['typo3Version'];
-            if (is_string($rawVersion) && $rawVersion !== '') {
-                $typo3Version = $rawVersion;
+            if (is_string($rawVersion) && trim($rawVersion) !== '') {
+                $typo3Version = trim($rawVersion);
             } elseif (is_numeric($rawVersion)) {
                 $typo3Version = (string)$rawVersion;
             }
         }
 
-        // Extract installPath with proper type checking
-        $installPath = 'typo3-test-install';
-        if (isset($data['installPath']) && is_string($data['installPath']) && $data['installPath'] !== '') {
-            $installPath = $data['installPath'];
-        }
+        $installPath = trimmedString($data, 'installPath', 'typo3-test-install');
 
-        // Extract phpBinary if provided
+        // Extract phpBinary if provided (trimmed; null when absent or empty)
         $phpBinary = null;
-        if (isset($data['phpBinary']) && is_string($data['phpBinary']) && $data['phpBinary'] !== '') {
-            $phpBinary = $data['phpBinary'];
+        if (isset($data['phpBinary']) && is_string($data['phpBinary'])) {
+            $trimmed = trim($data['phpBinary']);
+            if ($trimmed !== '') {
+                $phpBinary = $trimmed;
+            }
         }
 
         return new self(
@@ -96,13 +109,17 @@ class DatabaseConfig
         $rawPort = $data['port'] ?? 3306;
         $port = is_int($rawPort) ? $rawPort : (is_numeric($rawPort) ? (int)$rawPort : 3306);
 
+        // Trim everything except the password — trimming a user-chosen secret silently
+        // alters credentials and can cause confusing lockouts.
+        $password = is_string($data['password'] ?? null) ? $data['password'] : '';
+
         return new self(
-            is_string($data['driver'] ?? null) ? $data['driver'] : 'pdo_mysql',
-            is_string($data['host'] ?? null) ? $data['host'] : 'localhost',
+            trimmedString($data, 'driver', 'pdo_mysql'),
+            trimmedString($data, 'host', 'localhost'),
             $port,
-            is_string($data['name'] ?? null) ? $data['name'] : '',
-            is_string($data['user'] ?? null) ? $data['user'] : '',
-            is_string($data['password'] ?? null) ? $data['password'] : ''
+            trimmedString($data, 'name'),
+            trimmedString($data, 'user'),
+            $password
         );
     }
 }
@@ -123,10 +140,13 @@ class AdminConfig
      */
     public static function fromArray(array $data): self
     {
+        // Same rationale as DatabaseConfig: trim user-facing identifiers, never the password.
+        $password = is_string($data['password'] ?? null) ? $data['password'] : '';
+
         return new self(
-            is_string($data['username'] ?? null) ? $data['username'] : 'admin',
-            is_string($data['password'] ?? null) ? $data['password'] : '',
-            is_string($data['email'] ?? null) ? $data['email'] : ''
+            trimmedString($data, 'username', 'admin'),
+            $password,
+            trimmedString($data, 'email')
         );
     }
 }
@@ -143,12 +163,25 @@ class SiteConfig
 
     /**
      * @param array<string, mixed> $data
+     * @throws \InvalidArgumentException When baseUrl is malformed
      */
     public static function fromArray(array $data): self
     {
-        return new self(
-            is_string($data['name'] ?? null) ? $data['name'] : 'My TYPO3 Site',
-            is_string($data['baseUrl'] ?? null) ? $data['baseUrl'] : ''
-        );
+        $name = trimmedString($data, 'name', 'My TYPO3 Site');
+        $baseUrl = trimmedString($data, 'baseUrl');
+
+        if ($baseUrl !== '') {
+            $parsed = parse_url($baseUrl);
+            $scheme = is_array($parsed) && isset($parsed['scheme']) ? $parsed['scheme'] : null;
+            $host = is_array($parsed) && isset($parsed['host']) ? $parsed['host'] : null;
+            if ($scheme !== 'http' && $scheme !== 'https') {
+                throw new \InvalidArgumentException('site.baseUrl must use http or https scheme');
+            }
+            if (!is_string($host) || $host === '') {
+                throw new \InvalidArgumentException('site.baseUrl must include a host');
+            }
+        }
+
+        return new self($name, $baseUrl);
     }
 }

@@ -22,6 +22,10 @@ export default defineConfig({
     ignoreHTTPSErrors: true,  // Required for DDEV self-signed SSL certificates
     extraHTTPHeaders: {
       'Accept': 'application/json',
+      // The installer's API enforces strict same-origin on state-changing
+      // requests; mirror what a real browser sends so tests using
+      // `request.post(...)` aren't rejected as cross-origin.
+      'Origin': process.env.BASE_URL || 'https://typo3-installer.ddev.site',
     },
   },
 

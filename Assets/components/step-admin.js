@@ -64,8 +64,12 @@ export class StepAdmin extends LitElement {
   }
 
   _update(field, value) {
-    emit(this, 'state-update', { admin: { ...this.state.admin, [field]: value } });
-    this._validate(field, value);
+    // Trim username/email so a stray leading space in the field doesn't
+    // surface as an opaque "invalid input" later. Passwords are passed
+    // through unchanged so we never silently alter a user's secret.
+    const trimmed = field === 'password' ? value : value.trim();
+    emit(this, 'state-update', { admin: { ...this.state.admin, [field]: trimmed } });
+    this._validate(field, trimmed);
   }
 
   _blur(field) {

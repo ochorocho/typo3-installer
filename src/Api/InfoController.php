@@ -47,12 +47,18 @@ class InfoController extends AbstractController
 
     public function getPhpInfo(Request $request): Response
     {
+        // Restrict to non-sensitive sections. Explicitly drop INFO_ENVIRONMENT
+        // and INFO_VARIABLES so the response cannot leak $_SERVER, $_ENV,
+        // request headers (Cookie, Authorization), or document/script paths.
         ob_start();
-        phpinfo();
+        phpinfo(INFO_GENERAL | INFO_CONFIGURATION | INFO_MODULES | INFO_LICENSE);
         $phpinfo = ob_get_clean();
 
         return new Response($phpinfo ?: '', 200, [
             'Content-Type' => 'text/html; charset=utf-8',
+            'Cache-Control' => 'no-store',
+            'X-Content-Type-Options' => 'nosniff',
+            'Referrer-Policy' => 'no-referrer',
         ]);
     }
 

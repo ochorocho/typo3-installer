@@ -61,6 +61,10 @@ class PackageController extends AbstractController
      */
     public function validateRequirements(Request $request): JsonResponse
     {
+        if (($denied = $this->assertSameOrigin($request)) !== null) {
+            return $denied;
+        }
+
         $data = $this->parseJsonBody($request);
 
         if ($data instanceof JsonResponse) {
