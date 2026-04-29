@@ -1,7 +1,7 @@
 name: playwright
 repository: ochorocho/ddev-playwright
-version: v0.0.1
-install_date: "2026-03-27T21:08:43+01:00"
+version: v0.0.2
+install_date: "2026-04-29T22:12:06+02:00"
 project_files:
     - docker-compose.playwright.yaml
     - commands/host/playwright

@@ -17,16 +17,17 @@ use TYPO3\Installer\Service\Typo3Installer;
 class InstallController extends AbstractController
 {
     /**
-     * Sibling folder of the docroot used to hold the status + log files.
-     * Sitting one level above the PHAR keeps state files unreachable via HTTP
-     * regardless of host config (Indexes, dotfile-serving, .htaccess support).
+     * Folder name used to hold the status + log files. Created lazily; the
+     * preferred location is the parent of the docroot so the files are not
+     * reachable via HTTP regardless of host config.
      */
     private const string STATE_DIR_NAME = '.installer-state';
 
     private Typo3Installer $installer;
     private InstallationInfoService $infoService;
-    private string $statusFile;
-    private string $logFile;
+    private ?string $statusFileOverride;
+    private ?string $logFileOverride;
+    private ?string $resolvedStateDir = null;
 
     public function __construct(
         ?Typo3Installer $installer = null,
@@ -36,31 +37,85 @@ class InstallController extends AbstractController
     ) {
         $this->installer = $installer ?? new Typo3Installer();
         $this->infoService = $infoService ?? new InstallationInfoService();
-        $stateDir = $this->getStateDir();
-        $this->statusFile = $statusFile ?? $stateDir . '/status.json';
-        $this->logFile = $logFile ?? $stateDir . '/log.txt';
+        $this->statusFileOverride = $statusFile;
+        $this->logFileOverride = $logFile;
     }
 
     /**
-     * Resolve the directory used for installer state. Lives in the parent of
-     * the docroot (returned by InstallationInfoService::getInstallDirectory),
-     * so files there are not served by the web server at all.
+     * Resolve (and lazily create) the state directory, with a fallback chain:
+     *
+     *   1. <installDir>/.installer-state     (parent-of-docroot — preferred,
+     *                                         not reachable via HTTP)
+     *   2. <pharDir>/.installer-state        (sibling of the PHAR — used when
+     *                                         the parent isn't writable, as
+     *                                         happens on some shared hosts that
+     *                                         restrict write access to the
+     *                                         user's home dir)
+     *
+     * If neither candidate is writable, throws — silent failure here would
+     * cause /api/status polling to return the initial empty state forever and
+     * appear to the frontend as an install that never completes.
+     *
+     * Result is cached for the lifetime of the controller instance.
      */
     private function getStateDir(): string
     {
-        return $this->infoService->getInstallDirectory() . '/' . self::STATE_DIR_NAME;
+        if ($this->resolvedStateDir !== null) {
+            return $this->resolvedStateDir;
+        }
+
+        $candidates = [
+            $this->infoService->getInstallDirectory() . '/' . self::STATE_DIR_NAME,
+            $this->infoService->getPharDirectory() . '/' . self::STATE_DIR_NAME,
+        ];
+
+        foreach ($candidates as $i => $candidate) {
+            if ($this->tryEnsureDir($candidate)) {
+                if ($i > 0) {
+                    error_log(sprintf(
+                        '[typo3-installer] state dir fallback to %s (parent-of-docroot unwritable)',
+                        $candidate
+                    ));
+                }
+                return $this->resolvedStateDir = $candidate;
+            }
+        }
+
+        throw new \RuntimeException(sprintf(
+            'Cannot create installer state directory. Tried: %s',
+            implode(', ', $candidates)
+        ));
     }
 
     /**
-     * Ensure the state directory exists with restrictive permissions.
-     * Idempotent and cheap on subsequent calls.
+     * Ensure $dir exists, is a directory, and we can actually write to it.
+     * Verifies by writing a sentinel file and reading it back — `is_writable`
+     * lies on some hosts (cPanel suEXEC, restrictive open_basedir).
      */
-    private function ensureStateDir(): void
+    private function tryEnsureDir(string $dir): bool
     {
-        $dir = $this->getStateDir();
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0700, true);
+        if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) {
+            return false;
         }
+        $sentinel = $dir . '/.write-test';
+        if (@file_put_contents($sentinel, '1') === false) {
+            return false;
+        }
+        @unlink($sentinel);
+        return true;
+    }
+
+    /**
+     * Public-style accessors so install/status/stream all see the same path.
+     */
+    private function statusFilePath(): string
+    {
+        return $this->statusFileOverride ?? $this->getStateDir() . '/status.json';
+    }
+
+    private function logFilePath(): string
+    {
+        return $this->logFileOverride ?? $this->getStateDir() . '/log.txt';
     }
 
     public function install(Request $request): JsonResponse
@@ -78,11 +133,11 @@ class InstallController extends AbstractController
         try {
             $config = InstallationConfig::fromArray($data);
 
-            $this->ensureStateDir();
-
             // Reset the log file so stale output from a previous install doesn't
             // leak into the SSE stream. Status file is overwritten a line below.
-            @file_put_contents($this->logFile, '');
+            // Calling logFilePath() here forces lazy state-dir resolution and
+            // surfaces a clear error if neither candidate location is writable.
+            @file_put_contents($this->logFilePath(), '');
 
             // Initialize status immediately
             $this->updateStatus([
@@ -284,16 +339,16 @@ class InstallController extends AbstractController
      */
     private function drainLogFile(int &$offset, string $currentStep): void
     {
-        if (!file_exists($this->logFile)) {
+        if (!file_exists($this->logFilePath())) {
             return;
         }
-        clearstatcache(false, $this->logFile);
-        $size = @filesize($this->logFile);
+        clearstatcache(false, $this->logFilePath());
+        $size = @filesize($this->logFilePath());
         if ($size === false || $size <= $offset) {
             return;
         }
 
-        $fh = @fopen($this->logFile, 'rb');
+        $fh = @fopen($this->logFilePath(), 'rb');
         if ($fh === false) {
             return;
         }
@@ -330,10 +385,10 @@ class InstallController extends AbstractController
      */
     private function readStatus(): ?array
     {
-        if (!file_exists($this->statusFile)) {
+        if (!file_exists($this->statusFilePath())) {
             return null;
         }
-        $raw = @file_get_contents($this->statusFile);
+        $raw = @file_get_contents($this->statusFilePath());
         if ($raw === false || $raw === '') {
             return null;
         }
@@ -420,7 +475,7 @@ class InstallController extends AbstractController
 
     public function getStatus(Request $request): JsonResponse
     {
-        if (!file_exists($this->statusFile)) {
+        if (!file_exists($this->statusFilePath())) {
             return new JsonResponse([
                 'progress' => 0,
                 'currentTask' => 'Initializing...',
@@ -429,7 +484,7 @@ class InstallController extends AbstractController
             ]);
         }
 
-        $fileContent = file_get_contents($this->statusFile);
+        $fileContent = file_get_contents($this->statusFilePath());
         /** @var array<string, mixed> $status */
         $status = json_decode($fileContent !== false ? $fileContent : '{}', true);
 
@@ -450,7 +505,7 @@ class InstallController extends AbstractController
     private function runInstallation(InstallationConfig $config): void
     {
         // Register shutdown function to capture fatal errors (e.g. max_execution_time exceeded)
-        $statusFile = $this->statusFile;
+        $statusFile = $this->statusFilePath();
         register_shutdown_function(static function () use ($statusFile): void {
             $error = error_get_last();
             if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
@@ -467,7 +522,7 @@ class InstallController extends AbstractController
             }
         });
 
-        $logFile = $this->logFile;
+        $logFile = $this->logFilePath();
         $outputCallback = static function (string $line) use ($logFile): void {
             // Append raw line; installStream tails this file and emits SSE events.
             @file_put_contents($logFile, $line . "\n", FILE_APPEND | LOCK_EX);
@@ -503,7 +558,7 @@ class InstallController extends AbstractController
             // shouldn't let it linger on the host. Keep the small status file
             // so late /api/status pollers still see the success outcome; the
             // next install overwrites it anyway.
-            @file_put_contents($this->logFile, '');
+            @file_put_contents($this->logFilePath(), '');
         } catch (\Exception $e) {
             // Log the full trace server-side; never expose it to the client.
             // Stack traces can include argument values such as $adminPassword
@@ -561,6 +616,6 @@ class InstallController extends AbstractController
      */
     private function updateStatus(array $status): void
     {
-        file_put_contents($this->statusFile, json_encode($status, JSON_THROW_ON_ERROR));
+        file_put_contents($this->statusFilePath(), json_encode($status, JSON_THROW_ON_ERROR));
     }
 }

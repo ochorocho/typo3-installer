@@ -663,13 +663,19 @@ class Typo3Installer
             $this->filesystem->mkdir($configDir, self::DEFAULT_DIR_PERMISSIONS);
         }
 
-        // Pin trustedHostsPattern to the host derived from the validated baseUrl.
-        // Falls back to a deny-all pattern if parsing somehow fails (defensive —
-        // SiteConfig::fromArray already validates baseUrl format).
+        // Pin trustedHostsPattern to the host derived from the validated baseUrl,
+        // tolerating the apex/www split that's common in real deployments. If
+        // baseUrl is `https://example.com`, accept Host: `example.com` AND
+        // `www.example.com`; if it's `https://www.example.com`, accept both
+        // too. Falls back to a deny-all pattern if parsing somehow fails
+        // (defensive — SiteConfig::fromArray already validates baseUrl format).
         $parsedHost = parse_url($baseUrl, PHP_URL_HOST);
-        $trustedHostsPattern = is_string($parsedHost) && $parsedHost !== ''
-            ? preg_quote($parsedHost, '/')
-            : 'never-matching-host';
+        if (is_string($parsedHost) && $parsedHost !== '') {
+            $apex = preg_replace('/^www\./i', '', $parsedHost);
+            $trustedHostsPattern = '(?:www\.)?' . preg_quote($apex, '/');
+        } else {
+            $trustedHostsPattern = 'never-matching-host';
+        }
 
         $trustedHostsExport = var_export($trustedHostsPattern, true);
 
