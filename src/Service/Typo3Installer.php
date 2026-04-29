@@ -671,7 +671,9 @@ class Typo3Installer
         // (defensive — SiteConfig::fromArray already validates baseUrl format).
         $parsedHost = parse_url($baseUrl, PHP_URL_HOST);
         if (is_string($parsedHost) && $parsedHost !== '') {
-            $apex = preg_replace('/^www\./i', '', $parsedHost);
+            // preg_replace returns string|null; on the rare null path fall back
+            // to the original host so the pattern is still well-formed.
+            $apex = preg_replace('/^www\./i', '', $parsedHost) ?? $parsedHost;
             $trustedHostsPattern = '(?:www\.)?' . preg_quote($apex, '/');
         } else {
             $trustedHostsPattern = 'never-matching-host';
