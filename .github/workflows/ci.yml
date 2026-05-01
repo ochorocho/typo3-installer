@@ -273,11 +273,18 @@ jobs:
           check_name: e2e-sqlite
           require_tests: false
 
-  e2e-php-84:
-    name: e2e-php-84
+  # Matrix build covering every supported PHP version. Each leg spins up DDEV
+  # with the matrix's `--php-version=` and runs the SQLite Playwright project
+  # against it. Adding a new PHP version is a one-line change to the matrix.
+  e2e-php:
+    name: e2e-php-${{ matrix.php }}
     runs-on: ubuntu-latest
     needs: build-phar
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.4', '8.5']
     steps:
       - uses: actions/checkout@v5
 
@@ -294,11 +301,11 @@ jobs:
 
       - name: Configure project and start DDEV
         run: |
-          ddev config --auto --php-version=8.4 --omit-containers=db
+          ddev config --auto --php-version=${{ matrix.php }} --omit-containers=db
           rm -Rf .ddev/docker-compose.postgres.yaml
           ddev start
 
-      - name: Run Playwright (sqlite, PHP 8.4)
+      - name: Run Playwright (sqlite, PHP ${{ matrix.php }})
         run: |
           ddev exec "cd tests/e2e/ && npm install"
           ddev playwright test --dir=tests/e2e --project=sqlite
@@ -307,7 +314,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-php84-results
+          name: e2e-php${{ matrix.php }}-results
           path: |
             tests/e2e/playwright-report/
             tests/e2e/test-results/
@@ -318,55 +325,7 @@ jobs:
         uses: mikepenz/action-junit-report@v5
         with:
           report_paths: tests/e2e/test-results/junit.xml
-          check_name: e2e-php-84
-          require_tests: false
-
-  e2e-php-85:
-    name: e2e-php-85
-    runs-on: ubuntu-latest
-    needs: build-phar
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Download PHAR artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: TYPO3-Installer
-          path: test-installer-root/public/
-
-      - name: Setup DDEV
-        uses: ddev/github-action-setup-ddev@v1
-        with:
-          autostart: false
-
-      - name: Configure project and start DDEV
-        run: |
-          ddev config --auto --php-version=8.5 --omit-containers=db
-          rm -Rf .ddev/docker-compose.postgres.yaml
-          ddev start
-
-      - name: Run Playwright (sqlite, PHP 8.5)
-        run: |
-          ddev exec "cd tests/e2e/ && npm install"
-          ddev playwright test --dir=tests/e2e --project=sqlite
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-php85-results
-          path: |
-            tests/e2e/playwright-report/
-            tests/e2e/test-results/
-          retention-days: 7
-
-      - name: Publish JUnit report
-        if: always()
-        uses: mikepenz/action-junit-report@v5
-        with:
-          report_paths: tests/e2e/test-results/junit.xml
-          check_name: e2e-php-85
+          check_name: e2e-php-${{ matrix.php }}
           require_tests: false
 
   # ===========================================================================
@@ -476,8 +435,7 @@ jobs:
       - e2e-mysql
       - e2e-postgresql
       - e2e-sqlite
-      - e2e-php-84
-      - e2e-php-85
+      - e2e-php
       - e2e-live-webspaces
     if: github.event_name == 'release'
     permissions:
