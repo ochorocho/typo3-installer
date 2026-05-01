@@ -463,13 +463,22 @@ jobs:
 
   # ===========================================================================
   # RELEASE STAGE — attach PHAR to a published GitHub Release.
-  # Runs only on release events, and only after build-phar succeeds (a failed
-  # build means there is no artifact to attach, so the job is gated on it).
+  # Runs only on release events, and only after build-phar AND every e2e job
+  # succeed: a release that ships a PHAR which fails the test suite would be
+  # worse than no asset at all. `e2e-live-webspaces` already transitively
+  # covers `deploy-live-webspaces` via its own `needs:`.
   # ===========================================================================
   attach-phar-to-release:
     name: attach-phar-to-release
     runs-on: ubuntu-latest
-    needs: build-phar
+    needs:
+      - build-phar
+      - e2e-mysql
+      - e2e-postgresql
+      - e2e-sqlite
+      - e2e-php-84
+      - e2e-php-85
+      - e2e-live-webspaces
     if: github.event_name == 'release'
     permissions:
       contents: write   # required to upload assets to a release
