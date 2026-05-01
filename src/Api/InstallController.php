@@ -21,7 +21,9 @@ class InstallController extends AbstractController
      * preferred location is the parent of the docroot so the files are not
      * reachable via HTTP regardless of host config.
      */
-    private const string STATE_DIR_NAME = '.installer-state';
+    // Plain `const` (no `string` type) — typed class constants require PHP 8.3+
+    // and this installer must support PHP 8.2 per composer.json.
+    private const STATE_DIR_NAME = '.installer-state';
 
     private Typo3Installer $installer;
     private InstallationInfoService $infoService;
