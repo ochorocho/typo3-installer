@@ -173,13 +173,18 @@ OPCACHE_PHP
     esac
 
     # --- Nuke/reset call ---
+    # Coalesce curl failure to "000" so the timeout branch hits the warn path
+    # below instead of aborting the deploy under `set -e`. We deliberately
+    # don't fail the whole deploy on a single host's nuke timeout — the
+    # subsequent playwright-remote step will surface a real failure for any
+    # host that's actually broken.
     if [[ -n "$NUKE" && "$NUKE" != "null" ]]; then
         info "  Calling nuke URL: $NUKE"
         HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
                          -u "$NUKE_USER:$NUKE_PASS" \
                          --connect-timeout 15 \
-                         --max-time 60 \
-                         "$NUKE")
+                         --max-time 90 \
+                         "$NUKE" || echo "000")
         if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
             info "  Nuke OK (HTTP $HTTP_CODE)"
         else
