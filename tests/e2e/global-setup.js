@@ -18,10 +18,19 @@ export default function globalSetup() {
     const nukeUrl = process.env.NUKE_URL;
     if (nukeUrl) {
       console.log(`Remote test mode — calling nuke URL: ${nukeUrl}`);
-      const httpCode = execSync(
-        `curl -s -o /dev/null -w "%{http_code}" -u "nuke:Password.1" --connect-timeout 15 --max-time 60 "${nukeUrl}"`,
+      // Try up to 2x — some shared hosts have a cold-start delay or
+      // intermittent reverse-proxy timeouts on the first hit. `|| echo`
+      // ensures a curl exit (e.g. 28 = timeout) doesn't crash this script;
+      // we then check the captured HTTP code and decide.
+      const callNuke = () => execSync(
+        `curl -s -o /dev/null -w "%{http_code}" -u "nuke:Password.1" --connect-timeout 15 --max-time 90 "${nukeUrl}" || echo "000"`,
         { encoding: 'utf8' }
       ).trim();
+      let httpCode = callNuke();
+      if (!/^2\d\d$/.test(httpCode)) {
+        console.log(`  nuke HTTP ${httpCode} — retrying once`);
+        httpCode = callNuke();
+      }
       console.log(`  nuke HTTP ${httpCode}`);
       if (!/^2\d\d$/.test(httpCode)) {
         throw new Error(

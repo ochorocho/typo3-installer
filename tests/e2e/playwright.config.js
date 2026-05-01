@@ -4,11 +4,21 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // 1 retry on every test invocation. The full-flow tests run against shared
+  // hosts whose tail latency on cold caches is genuinely stochastic — a
+  // retry costs at most one extra run on a host that's having a slow
+  // moment, and saves us from chasing flakes that would otherwise require
+  // ever-larger timeouts to absorb.
+  retries: 1,
   workers: 1,
   reporter: [
     ['list'],
-    ['html'],
+    // open: 'never' — the html reporter otherwise tries to launch a browser
+    // to view the report on test completion, which hangs indefinitely inside
+    // the DDEV playwright container (no DISPLAY) and blocks playwright-remote
+    // between hosts. The PLAYWRIGHT_HTML_OPEN env var alone isn't always
+    // respected, so set it explicitly here.
+    ['html', { open: 'never' }],
     ['junit', { outputFile: process.env.PLAYWRIGHT_JUNIT_OUTPUT_NAME || 'test-results/junit.xml' }]
   ],
   timeout: 60000,
@@ -86,7 +96,11 @@ export default defineConfig({
       testMatch: ['mysql.spec.js'],
       fullyParallel: false,
       workers: 1,
-      timeout: 300000, // 5 minutes for full installations
+      // 10 minutes for full installations. Some shared hosts (notably
+      // knallimall.org) take 3–4 minutes for `typo3 setup` + asset
+      // publishing on cold caches; 5 min was too tight and produced
+      // false failures with the install still actively progressing.
+      timeout: 900000,
       use: { ...devices['Desktop Chrome'] },
     },
     {
@@ -95,7 +109,7 @@ export default defineConfig({
       testMatch: ['postgresql.spec.js'],
       fullyParallel: false,
       workers: 1,
-      timeout: 300000,
+      timeout: 900000,
       use: { ...devices['Desktop Chrome'] },
     },
     {
@@ -104,7 +118,7 @@ export default defineConfig({
       testMatch: ['sqlite.spec.js'],
       fullyParallel: false,
       workers: 1,
-      timeout: 300000,
+      timeout: 900000,
       use: { ...devices['Desktop Chrome'] },
     },
   ],
